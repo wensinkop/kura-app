@@ -1,0 +1,24 @@
+# Netlify build + serving config for Kura.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Single-page app: every route is served by index.html so client-side routing,
+# page refreshes, and email links (/reset-password, magic links) all work.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Serve the web manifest with the spec'd MIME type for reliable PWA install.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
+# Never cache the service worker, so updates roll out immediately.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
