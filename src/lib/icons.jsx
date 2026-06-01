@@ -49,3 +49,21 @@ export const ChevronLeft = (p) => (
 export const ChevronRight = (p) => (
   <Svg {...p}><path d="M9 18l6-6-6-6" /></Svg>
 )
+export const ChevronUp = (p) => (
+  <Svg {...p}><path d="M18 15l-6-6-6 6" /></Svg>
+)
+export const ChevronDown = (p) => (
+  <Svg {...p}><path d="M6 9l6 6 6-6" /></Svg>
+)
+export const PencilIcon = (p) => (
+  <Svg {...p}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" /></Svg>
+)
+export const TrashIcon = (p) => (
+  <Svg {...p}><path d="M3 6h18" /><path d="M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /></Svg>
+)
+export const ArchiveIcon = (p) => (
+  <Svg {...p}><rect x="3" y="4" width="18" height="4" rx="1" /><path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8" /><path d="M10 12h4" /></Svg>
+)
+export const CloseIcon = (p) => (
+  <Svg {...p}><path d="M18 6L6 18M6 6l12 12" /></Svg>
+)

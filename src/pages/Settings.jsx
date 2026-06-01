@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useTheme } from '../ThemeContext'
 
@@ -50,6 +51,7 @@ const Chevron = <span className="text-faint">›</span>
 export default function Settings() {
   const { user, profile, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const navigate = useNavigate()
 
   return (
     <div className="max-w-[640px] mx-auto">
@@ -79,8 +81,8 @@ export default function Settings() {
 
       <SectionTitle>Structure</SectionTitle>
       <Group>
-        <Row title="Categories" sub="Income & expense, sub-categories" right={Soon} disabled />
-        <Row title="Accounts & groups" sub="Create, edit, group your accounts" right={Soon} disabled />
+        <Row title="Categories" sub="Income & expense, sub-categories" right={Chevron} onClick={() => navigate('/settings/categories')} />
+        <Row title="Accounts & groups" sub="Create, edit, group your accounts" right={Chevron} onClick={() => navigate('/settings/accounts')} />
       </Group>
 
       <SectionTitle>Data</SectionTitle>

@@ -1,0 +1,330 @@
+import { useEffect, useState } from 'react'
+import { useAuth } from '../AuthContext'
+import {
+  listGroups, createGroup, renameGroup, deleteGroup,
+  listAccounts, createAccount, updateAccount, deleteAccount,
+  setAccountArchived, persistOrder,
+} from '../lib/data'
+import { currencyOptions } from '../lib/currencies'
+import { TYPE_OPTIONS, accountSubtitle } from '../lib/format'
+import SearchableSelect from '../components/SearchableSelect'
+import { Button, Field, TextInput, Segmented, IconButton, Modal, ConfirmDialog, inputClass } from '../components/ui'
+import { PlusIcon, PencilIcon, TrashIcon, ArchiveIcon, ChevronUp, ChevronDown } from '../lib/icons'
+
+const CURRENCY_OPTS = currencyOptions()
+
+export default function SettingsAccounts() {
+  const { user } = useAuth()
+  const [groups, setGroups] = useState([])
+  const [accounts, setAccounts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showArchived, setShowArchived] = useState(false)
+  const [acctForm, setAcctForm] = useState(null) // { mode, target? }
+  const [groupForm, setGroupForm] = useState(null) // { mode, target? }
+  const [confirm, setConfirm] = useState(null) // { kind:'account'|'group', item }
+  const [busy, setBusy] = useState(false)
+
+  async function reload() {
+    const [g, a] = await Promise.all([listGroups(), listAccounts()])
+    if (!g.error) setGroups(g.data ?? [])
+    if (!a.error) setAccounts(a.data ?? [])
+    setLoading(false)
+  }
+
+  // Initial load — inline so setState lands in an async callback.
+  useEffect(() => {
+    Promise.all([listGroups(), listAccounts()]).then(([g, a]) => {
+      if (!g.error) setGroups(g.data ?? [])
+      if (!a.error) setAccounts(a.data ?? [])
+      setLoading(false)
+    })
+  }, [])
+
+  const visibleAccounts = accounts.filter((a) => showArchived || !a.archived)
+  const inGroup = (gid) => visibleAccounts.filter((a) => (a.group_id ?? null) === gid)
+  const archivedCount = accounts.filter((a) => a.archived).length
+  const groupOptions = [{ value: '', label: 'No group' }, ...groups.map((g) => ({ value: g.id, label: g.name }))]
+
+  async function moveAccounts(list, index, dir) {
+    const next = index + dir
+    if (next < 0 || next >= list.length) return
+    const reordered = [...list]
+    ;[reordered[index], reordered[next]] = [reordered[next], reordered[index]]
+    await persistOrder('accounts', reordered.map((a) => a.id))
+    reload()
+  }
+
+  async function moveGroups(index, dir) {
+    const next = index + dir
+    if (next < 0 || next >= groups.length) return
+    const reordered = [...groups]
+    ;[reordered[index], reordered[next]] = [reordered[next], reordered[index]]
+    await persistOrder('account_groups', reordered.map((g) => g.id))
+    reload()
+  }
+
+  async function submitAccount(payload) {
+    setBusy(true)
+    if (acctForm.mode === 'edit') {
+      await updateAccount(acctForm.target.id, payload)
+    } else {
+      const count = accounts.filter((a) => (a.group_id ?? null) === (payload.group_id || null)).length
+      await createAccount(user.id, payload, count)
+    }
+    setBusy(false)
+    setAcctForm(null)
+    reload()
+  }
+
+  async function submitGroup(name) {
+    setBusy(true)
+    if (groupForm.mode === 'edit') {
+      await renameGroup(groupForm.target.id, name)
+    } else {
+      await createGroup(user.id, name, groups.length)
+    }
+    setBusy(false)
+    setGroupForm(null)
+    reload()
+  }
+
+  async function doDelete() {
+    setBusy(true)
+    if (confirm.kind === 'account') await deleteAccount(confirm.item.id)
+    else await deleteGroup(confirm.item.id)
+    setBusy(false)
+    setConfirm(null)
+    reload()
+  }
+
+  async function toggleArchive(a) {
+    await setAccountArchived(a.id, !a.archived)
+    reload()
+  }
+
+  if (loading) return <p className="text-muted text-sm py-8 text-center">Loading…</p>
+
+  const ungrouped = inGroup(null)
+  const hasNothing = accounts.length === 0 && groups.length === 0
+
+  return (
+    <div className="max-w-[640px] mx-auto">
+      <div className="flex gap-2.5 mb-4">
+        <Button className="flex-1" onClick={() => setAcctForm({ mode: 'create' })}>
+          <PlusIcon className="w-[18px] h-[18px]" /> Add account
+        </Button>
+        <Button variant="ghost" onClick={() => setGroupForm({ mode: 'create' })}>
+          <PlusIcon className="w-[18px] h-[18px]" /> Group
+        </Button>
+      </div>
+
+      {hasNothing && (
+        <div className="bg-surface border border-border rounded-[14px] p-6 text-center text-sm text-muted">
+          No accounts yet. Add a cash, debit, or credit-card account to get started.
+          Groups are optional folders to organise them.
+        </div>
+      )}
+
+      {/* Grouped accounts */}
+      {groups.map((g, gi) => (
+        <GroupBlock key={g.id} title={g.name}
+          headerRight={
+            <div className="flex items-center gap-0.5">
+              <IconButton label="Move group up" onClick={() => moveGroups(gi, -1)} disabled={gi === 0}><ChevronUp className="w-4 h-4" /></IconButton>
+              <IconButton label="Move group down" onClick={() => moveGroups(gi, 1)} disabled={gi === groups.length - 1}><ChevronDown className="w-4 h-4" /></IconButton>
+              <IconButton label="Rename group" onClick={() => setGroupForm({ mode: 'edit', target: g })}><PencilIcon className="w-4 h-4" /></IconButton>
+              <IconButton label="Delete group" danger onClick={() => setConfirm({ kind: 'group', item: g })}><TrashIcon className="w-4 h-4" /></IconButton>
+            </div>
+          }
+        >
+          {inGroup(g.id).length === 0 ? (
+            <EmptyRow>No accounts in this group</EmptyRow>
+          ) : (
+            inGroup(g.id).map((a, i, arr) => (
+              <AccountRow key={a.id} a={a} isFirst={i === 0} isLast={i === arr.length - 1}
+                onUp={() => moveAccounts(arr, i, -1)} onDown={() => moveAccounts(arr, i, 1)}
+                onEdit={() => setAcctForm({ mode: 'edit', target: a })}
+                onArchive={() => toggleArchive(a)} onDelete={() => setConfirm({ kind: 'account', item: a })} />
+            ))
+          )}
+        </GroupBlock>
+      ))}
+
+      {/* Ungrouped accounts */}
+      {ungrouped.length > 0 && (
+        <GroupBlock title={groups.length > 0 ? 'Ungrouped' : 'Accounts'}>
+          {ungrouped.map((a, i, arr) => (
+            <AccountRow key={a.id} a={a} isFirst={i === 0} isLast={i === arr.length - 1}
+              onUp={() => moveAccounts(arr, i, -1)} onDown={() => moveAccounts(arr, i, 1)}
+              onEdit={() => setAcctForm({ mode: 'edit', target: a })}
+              onArchive={() => toggleArchive(a)} onDelete={() => setConfirm({ kind: 'account', item: a })} />
+          ))}
+        </GroupBlock>
+      )}
+
+      {archivedCount > 0 && (
+        <button onClick={() => setShowArchived((s) => !s)} className="text-xs font-semibold text-faint hover:text-muted mt-4 px-1">
+          {showArchived ? 'Hide' : 'Show'} archived ({archivedCount})
+        </button>
+      )}
+
+      {acctForm && (
+        <AccountForm mode={acctForm.mode} target={acctForm.target} groupOptions={groupOptions}
+          busy={busy} onSubmit={submitAccount} onClose={() => setAcctForm(null)} />
+      )}
+
+      {groupForm && (
+        <GroupForm mode={groupForm.mode} initial={groupForm.target?.name ?? ''}
+          busy={busy} onSubmit={submitGroup} onClose={() => setGroupForm(null)} />
+      )}
+
+      {confirm && (
+        <ConfirmDialog
+          title={`Delete "${confirm.item.name}"?`}
+          message={
+            confirm.kind === 'group'
+              ? 'The group is removed; its accounts are kept and become ungrouped.'
+              : 'This account is permanently removed. (Archive instead to hide it while keeping its history.)'
+          }
+          confirmLabel="Delete"
+          busy={busy}
+          onConfirm={doDelete}
+          onClose={() => setConfirm(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function GroupBlock({ title, headerRight, children }) {
+  return (
+    <div className="bg-surface border border-border rounded-[14px] overflow-hidden mt-3">
+      <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-2 min-h-[42px]">
+        <span className="text-xs font-bold uppercase tracking-wide text-faint flex-1 truncate">{title}</span>
+        {headerRight}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function EmptyRow({ children }) {
+  return <div className="px-3.5 py-3 text-xs text-faint italic">{children}</div>
+}
+
+function AccountRow({ a, isFirst, isLast, onUp, onDown, onEdit, onArchive, onDelete }) {
+  return (
+    <div className="flex items-center gap-1 px-3 py-2.5 border-t border-border">
+      <div className="flex flex-col -ml-1 mr-0.5">
+        <IconButton label="Move up" onClick={onUp} disabled={isFirst}><ChevronUp className="w-4 h-4" /></IconButton>
+        <IconButton label="Move down" onClick={onDown} disabled={isLast}><ChevronDown className="w-4 h-4" /></IconButton>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className={`font-semibold text-[14.5px] truncate ${a.archived ? 'text-faint line-through' : 'text-text'}`}>{a.name}</div>
+        <div className="text-xs text-muted mt-0.5 truncate">{accountSubtitle(a)}{a.archived ? ' · Archived' : ''}</div>
+      </div>
+      <IconButton label="Edit" onClick={onEdit}><PencilIcon className="w-[16px] h-[16px]" /></IconButton>
+      <IconButton label={a.archived ? 'Unarchive' : 'Archive'} onClick={onArchive}><ArchiveIcon className="w-[16px] h-[16px]" /></IconButton>
+      <IconButton label="Delete" danger onClick={onDelete}><TrashIcon className="w-[16px] h-[16px]" /></IconButton>
+    </div>
+  )
+}
+
+function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
+  const isEdit = mode === 'edit'
+  const [name, setName] = useState(target?.name ?? '')
+  const [type, setType] = useState(target?.type ?? 'cash')
+  const [currency, setCurrency] = useState(target?.currency ?? 'IDR')
+  const [groupId, setGroupId] = useState(target?.group_id ?? '')
+  const [settlement, setSettlement] = useState(target?.settlement_day?.toString() ?? '')
+  const [payment, setPayment] = useState(target?.payment_day?.toString() ?? '')
+
+  const isCC = type === 'credit_card'
+  const dayValid = (v) => v === '' || (Number(v) >= 1 && Number(v) <= 31)
+  const canSave =
+    name.trim().length > 0 && currency && !busy && dayValid(settlement) && dayValid(payment)
+
+  function submit() {
+    if (!canSave) return
+    onSubmit({
+      name, type, currency,
+      group_id: groupId || null,
+      settlement_day: settlement,
+      payment_day: payment,
+    })
+  }
+
+  return (
+    <Modal
+      title={isEdit ? 'Edit account' : 'New account'}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="ghost" className="flex-1" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button className="flex-1" onClick={submit} disabled={!canSave}>{busy ? 'Saving…' : 'Save'}</Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3.5">
+        <Field label="Name">
+          <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. BCA — Main Savings" maxLength={60} />
+        </Field>
+
+        <Field label="Type">
+          <Segmented value={type} onChange={setType} options={TYPE_OPTIONS} />
+        </Field>
+
+        <Field
+          label="Currency"
+          hint={isEdit ? 'Currency is fixed once an account is created and can’t be changed.' : 'Fixed once created — choose carefully.'}
+        >
+          {isEdit ? (
+            <TextInput value={currency} disabled />
+          ) : (
+            <SearchableSelect value={currency} onChange={setCurrency} options={CURRENCY_OPTS} className={inputClass} placeholder="Search currency…" />
+          )}
+        </Field>
+
+        <Field label="Group">
+          <SearchableSelect value={groupId} onChange={setGroupId} options={groupOptions} className={inputClass} placeholder="No group" />
+        </Field>
+
+        {isCC && (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Settlement day" hint="1–31">
+              <TextInput type="number" min={1} max={31} inputMode="numeric" value={settlement}
+                onChange={(e) => setSettlement(e.target.value)} placeholder="e.g. 18" />
+            </Field>
+            <Field label="Payment due day" hint="1–31">
+              <TextInput type="number" min={1} max={31} inputMode="numeric" value={payment}
+                onChange={(e) => setPayment(e.target.value)} placeholder="e.g. 5" />
+            </Field>
+          </div>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+function GroupForm({ mode, initial, busy, onSubmit, onClose }) {
+  const [name, setName] = useState(initial)
+  const canSave = name.trim().length > 0 && !busy
+  return (
+    <Modal
+      title={mode === 'edit' ? 'Rename group' : 'New group'}
+      onClose={onClose}
+      footer={
+        <>
+          <Button variant="ghost" className="flex-1" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button className="flex-1" onClick={() => canSave && onSubmit(name)} disabled={!canSave}>{busy ? 'Saving…' : 'Save'}</Button>
+        </>
+      }
+    >
+      <Field label="Group name">
+        <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && canSave && onSubmit(name)}
+          placeholder="e.g. Banks" maxLength={40} />
+      </Field>
+    </Modal>
+  )
+}

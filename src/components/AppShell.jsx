@@ -22,8 +22,16 @@ function titleFor(pathname) {
   if (pathname === '/') return 'Home'
   if (pathname.startsWith('/stats')) return 'Statistics'
   if (pathname.startsWith('/accounts')) return 'Accounts'
+  if (pathname === '/settings/categories') return 'Categories'
+  if (pathname === '/settings/accounts') return 'Accounts & groups'
   if (pathname.startsWith('/settings')) return 'Settings'
   return 'Kura'
+}
+
+// Settings sub-pages get a back arrow that returns to the Settings index.
+function backTargetFor(pathname) {
+  if (pathname.startsWith('/settings/')) return '/settings'
+  return null
 }
 
 // MonthNav is cosmetic in Chunk 0 (no data wired yet); it establishes the
@@ -59,6 +67,7 @@ export default function AppShell() {
   const { user, profile } = useAuth()
   const isHome = pathname === '/'
   const title = titleFor(pathname)
+  const backTarget = backTargetFor(pathname)
 
   const sidebarLink = ({ isActive }) =>
     `flex items-center gap-3 px-3 py-2.5 rounded-[10px] font-semibold text-[14.5px] mb-0.5 ` +
@@ -98,7 +107,15 @@ export default function AppShell() {
               Kura<span className="text-primary">·</span>
             </div>
           ) : (
-            <div className="font-extrabold text-xl flex-1">{title}</div>
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              {backTarget && (
+                <button onClick={() => navigate(backTarget)} aria-label="Back"
+                  className="w-9 h-9 -ml-1.5 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
+                  <ChevronLeft />
+                </button>
+              )}
+              <div className="font-extrabold text-xl truncate">{title}</div>
+            </div>
           )}
 
           {isHome && <MonthNav />}
