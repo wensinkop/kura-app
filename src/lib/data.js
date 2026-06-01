@@ -119,6 +119,65 @@ export function setCategoryArchived(id, archived) {
   return supabase.from('categories').update({ archived }).eq('id', id)
 }
 
+// ---- Transactions ----------------------------------------------------------
+
+// Nested select: each row carries its account (name/currency/type) and its
+// category (id/name/parent_id). The parent category's NAME is resolved client
+// side from a categories map — a self-join embed here is ambiguous in PostgREST
+// (the column hint returns children, the constraint hint isn't found).
+const TX_SELECT =
+  '*, ' +
+  'account:accounts!transactions_account_id_fkey ( id, name, currency, type ), ' +
+  'category:categories!transactions_category_id_fkey ( id, name, parent_id )'
+
+// Transactions whose date falls in the given month (monthIndex is 0-based).
+// Uses a half-open [first, nextMonth) date range on the `date` column.
+export function listTransactionsForMonth(year, monthIndex) {
+  const pad = (n) => String(n).padStart(2, '0')
+  const first = `${year}-${pad(monthIndex + 1)}-01`
+  const ny = monthIndex === 11 ? year + 1 : year
+  const nm = monthIndex === 11 ? 0 : monthIndex + 1
+  const next = `${ny}-${pad(nm + 1)}-01`
+  return supabase
+    .from('transactions')
+    .select(TX_SELECT)
+    .gte('date', first)
+    .lt('date', next)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+}
+
+// Bulk insert. `rows` are payloads without user_id (added here). currency is set
+// authoritatively by the DB trigger from the account, so callers may omit it.
+export function createTransactions(userId, rows) {
+  return supabase
+    .from('transactions')
+    .insert(rows.map((r) => ({ user_id: userId, ...r })))
+    .select()
+}
+
+// Distinct recent notes for the entry-screen typeahead (most-recent first).
+export async function recentNotes(limit = 300) {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('note')
+    .not('note', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(800)
+  if (error) return []
+  const seen = new Set()
+  const out = []
+  for (const r of data ?? []) {
+    const n = (r.note ?? '').trim()
+    if (n && !seen.has(n.toLowerCase())) {
+      seen.add(n.toLowerCase())
+      out.push(n)
+      if (out.length >= limit) break
+    }
+  }
+  return out
+}
+
 // ---- Reordering ------------------------------------------------------------
 
 // Rewrite sort_order = index for the given ids, in order. Returns the first

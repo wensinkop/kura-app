@@ -1,5 +1,22 @@
 // Display helpers shared by the Accounts page and the settings screens.
 
+import { localeFor, currencyDecimals } from './currencies'
+
+// Format a number as money in its currency, e.g. 750000/IDR -> "Rp 750.000",
+// 120/USD -> "$120.00". Decimals come from our catalogue (currencyDecimals),
+// not ICU, so IDR stays whole. Pass the absolute value; add +/− at the call site.
+export function formatMoney(amount, currency) {
+  const n = Number(amount) || 0
+  const d = currencyDecimals(currency)
+  try {
+    return new Intl.NumberFormat(localeFor(currency), {
+      style: 'currency', currency, minimumFractionDigits: d, maximumFractionDigits: d,
+    }).format(n)
+  } catch {
+    return `${currency} ${n}`
+  }
+}
+
 export const TYPE_LABEL = {
   cash: 'Cash',
   debit: 'Debit',

@@ -49,6 +49,16 @@ export const CURRENCIES = {
   TWD: { name: 'New Taiwan Dollar', locale: 'zh-TW' },
 }
 
+// Currencies with NO minor unit (whole numbers only). We set this explicitly
+// because some ICU builds wrongly report IDR as 2-decimal — trusting Intl gives
+// "Rp 186.000,00" instead of the correct "Rp 186.000".
+export const ZERO_DECIMAL = new Set(['IDR', 'JPY', 'KRW', 'VND'])
+
+// Decimal places to use for a currency (overrides ICU quirks).
+export function currencyDecimals(code) {
+  return ZERO_DECIMAL.has(code) ? 0 : 2
+}
+
 // Locale to format amounts in for a given currency code. Falls back to en-US,
 // whose conventions are the safest generic default for unknown codes.
 export function localeFor(code) {
