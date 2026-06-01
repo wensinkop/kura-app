@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#047857" />
+<title>Kura — Responsive UI (mobile + desktop)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f2f5f3; --surface:#fff; --surface-2:#eef3f0; --text:#0d1a14; --muted:#5b6b63; --faint:#8a988f;
+    --primary:#047857; --primary-press:#036249; --primary-soft:#d3f0e3; --on-primary:#fff; --border:#e2e9e5;
+    --income:#15803d; --expense:#dc2626; --transfer:#2563eb;
+    --radius:14px; --shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.06);
+  }
+  [data-theme="dark"]{
+    --bg:#0a0c0b; --surface:#151918; --surface-2:#1c201e; --text:#e8efea; --muted:#8b9c93; --faint:#637068;
+    --primary:#34d399; --primary-press:#6ee7b7; --primary-soft:#0f2a20; --on-primary:#04231a; --border:#262b28;
+    --income:#4ade80; --expense:#f87171; --transfer:#60a5fa;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+  .tabular{font-variant-numeric:tabular-nums}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  .icon{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .icon-sm{width:18px;height:18px}
+  .up{color:var(--income)} .down{color:var(--expense)} .tr{color:var(--transfer)}
+
+  /* ===== Shell ===== */
+  .shell{display:flex;min-height:100vh}
+  .sidebar{display:none}
+  .main{flex:1;width:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;min-height:100vh;background:var(--bg);box-shadow:var(--shadow)}
+  .content{flex:1;padding:16px 16px 96px}
+
+  .topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px}
+  .brand{font-weight:800;font-size:18px;letter-spacing:-.3px}
+  .brand .dot{color:var(--primary)}
+  .month-nav{display:flex;align-items:center;gap:4px;flex:1;justify-content:center}
+  .arrow{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
+  .month-label{font-weight:700;font-size:16px;padding:6px 12px;border-radius:10px}
+  .tb-btn{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:var(--muted)}
+  .page-title{font-weight:800;font-size:20px;flex:1}
+
+  /* ===== Month summary (neutral, no green box) ===== */
+  .summary{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);display:flex;text-align:center;overflow:hidden}
+  .summary .col{flex:1;padding:14px 8px}
+  .summary .col + .col{border-left:1px solid var(--border)}
+  .s-lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
+  .s-val{font-size:14px;font-weight:800;margin-top:5px;letter-spacing:-.3px}
+  .home-grid{display:flex;flex-direction:column;gap:16px}
+  .home-rail{order:-1}
+
+  /* ===== Day card (card-per-day with header) ===== */
+  .day-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:14px}
+  .day-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+  .dh-left{display:flex;align-items:baseline;gap:8px}
+  .dh-num{font-size:17px;font-weight:800;letter-spacing:-.3px}
+  .dh-dow{font-size:12px;font-weight:600;color:var(--muted)}
+  .dh-tot{font-size:12px;font-weight:700;display:flex;gap:12px}
+  .tx{padding:11px 14px;border-top:1px solid var(--border)}
+  .tx:first-of-type{border-top:none}
+  .tx-r1{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+  .tx-note{font-weight:600;font-size:14.5px;line-height:1.3;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tx-amt{font-weight:700;font-size:14.5px;white-space:nowrap}
+  .tx-r2{display:flex;align-items:center;gap:8px;margin-top:5px}
+  .tx-chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--surface-2);color:var(--muted);border:1px solid var(--border);white-space:nowrap}
+  .tx-sub{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tx-acc{font-size:12px;color:var(--faint);margin-left:auto;white-space:nowrap;flex-shrink:0}
+
+  /* ===== Accounts ===== */
+  .networth{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+  .nw-l{font-size:12px;font-weight:600;color:var(--muted)}
+  .nw-v{font-size:27px;font-weight:800;margin-top:6px;letter-spacing:-.5px;color:var(--primary)}
+  .acct-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:12px}
+  .grp-head{padding:10px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);background:var(--surface-2);display:flex;justify-content:space-between;gap:10px}
+  .acct{display:flex;gap:12px;padding:12px 14px;border-top:1px solid var(--border);align-items:flex-start}
+  .acct:first-of-type{border-top:none}
+  .acct .meta{flex:1;min-width:0}
+  .acct .meta .t{font-weight:600;font-size:14.5px;line-height:1.3}
+  .acct .meta .s{font-size:12px;color:var(--muted);margin-top:3px}
+  .acct .bal{text-align:right;font-weight:700;font-size:14.5px;white-space:nowrap;flex-shrink:0}
+  .acct .bal .sub{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}
+  .acct .chev{color:var(--faint);align-self:center}
+  .section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:20px 4px 8px}
+
+  /* ===== Stats ===== */
+  .seg{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px;margin-bottom:14px}
+  .seg button{flex:1;padding:9px 0;border-radius:9px;font-weight:700;font-size:13.5px;color:var(--muted)}
+  .seg button.on{background:var(--surface);color:var(--primary);box-shadow:var(--shadow)}
+  .bar{height:6px;border-radius:3px;background:var(--surface-2);margin-top:8px;overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:3px}
+
+  /* ===== Bottom nav + FAB (mobile only) ===== */
+  .bottomnav{position:sticky;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;padding:8px 6px}
+  .nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--faint);font-size:10.5px;font-weight:600;padding:4px 0}
+  .nav-btn.active{color:var(--primary)}
+  .fab{width:54px;height:54px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;justify-self:center;margin-top:-26px;box-shadow:0 6px 16px rgba(4,120,87,.4)}
+  .fab .icon{width:26px;height:26px;stroke-width:2.4}
+
+  .hidden{display:none !important}
+  .switch{width:46px;height:27px;border-radius:14px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0}
+  .switch.on{background:var(--primary)}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:left .2s}
+  .switch.on::after{left:22px}
+
+  /* ===== Add overlay ===== */
+  .overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.45);display:none;align-items:stretch;justify-content:center}
+  .overlay.open{display:flex}
+  .ov-panel{background:var(--bg);width:100%;display:flex;flex-direction:column}
+  .ov-head{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px}
+  .ov-head .ttl{font-weight:700;font-size:17px}
+  .ov-body{flex:1;overflow-y:auto;padding:16px}
+  .typeseg{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px;max-width:420px}
+  .typeseg button{flex:1;padding:9px 0;border-radius:9px;font-weight:700;font-size:14px;color:var(--muted)}
+  .typeseg button.on[data-k="expense"]{background:var(--surface);color:var(--expense);box-shadow:var(--shadow)}
+  .typeseg button.on[data-k="income"]{background:var(--surface);color:var(--income);box-shadow:var(--shadow)}
+  .typeseg button.on[data-k="transfer"]{background:var(--surface);color:var(--transfer);box-shadow:var(--shadow)}
+  .row-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:14px}
+  .rc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .rc-head .n{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
+  .rc-head .rm{font-size:12px;color:var(--faint)}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:11px;font-weight:600;color:var(--muted);padding-left:2px}
+  .reg-labels{display:none}
+  .control{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;padding:11px 12px;font-size:15px;font-family:inherit;color:var(--text)}
+  .control:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .with-prefix{padding-left:38px}
+  .prefix-wrap{position:relative}
+  .prefix-wrap .pfx{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px}
+  select.control{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235b6b63' stroke-width='2'><path d='M4 6l4 4 4-4'/></svg>");background-repeat:no-repeat;background-position:right 10px center;padding-right:30px}
+  .typeahead{position:relative}
+  .ta-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow);overflow:hidden;z-index:5}
+  .ta-item{padding:10px 12px;font-size:14px;border-bottom:1px solid var(--border)}
+  .ta-item.hot{background:var(--primary-soft)}
+  .ta-item b{color:var(--primary)}
+  .ta-hint{font-size:11px;color:var(--faint);padding:7px 12px;background:var(--surface-2)}
+  .addrow{width:100%;margin-top:14px;padding:13px;border:1.5px dashed var(--border);border-radius:14px;color:var(--muted);font-weight:600;font-size:14px}
+  .savebar{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .savebar .tot{flex:1;font-size:13px;color:var(--muted)}
+  .savebar .tot b{display:block;font-size:18px;color:var(--text);font-weight:800}
+  .btn-primary{background:var(--primary);color:var(--on-primary);font-weight:700;font-size:15px;padding:13px 22px;border-radius:12px}
+  .btn-ghost{padding:13px 16px;border-radius:12px;border:1px solid var(--border);color:var(--muted);font-weight:600}
+  .note-mock{font-size:12px;color:var(--faint);text-align:center;padding:16px 8px 4px}
+
+  /* ============================ DESKTOP ============================ */
+  @media (min-width:920px){
+    .main{max-width:none;box-shadow:none}
+    .content{max-width:1120px;margin:0 auto;width:100%;padding:24px 32px 40px}
+    .bottomnav,.fab,.brand.only-mobile{display:none !important}
+
+    .sidebar{display:flex;flex-direction:column;width:248px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:18px 14px;position:sticky;top:0;height:100vh}
+    .sb-brand{font-weight:800;font-size:21px;letter-spacing:-.3px;padding:6px 12px 16px}
+    .sb-brand .dot{color:var(--primary)}
+    .sb-new{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--primary);color:var(--on-primary);font-weight:700;font-size:14px;padding:11px;border-radius:11px;margin-bottom:14px}
+    .sb-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:var(--muted);font-weight:600;font-size:14.5px;margin-bottom:2px}
+    .sb-item.active{background:var(--primary-soft);color:var(--primary)}
+    .sb-foot{margin-top:auto;border-top:1px solid var(--border);padding-top:12px;font-size:12px;color:var(--faint)}
+
+    .topbar{background:transparent;border-bottom:none;padding:4px 0 16px}
+    .month-nav{flex:initial}
+    .tb-spacer{flex:1}
+
+    /* home two-column */
+    .home-grid{display:grid;grid-template-columns:1fr 330px;gap:22px;align-items:start}
+    .home-rail{position:sticky;top:84px;display:flex;flex-direction:column;gap:14px;order:0}
+    .s-val{font-size:16px}
+    .summary{flex-direction:column}
+    .summary .col + .col{border-left:none;border-top:1px solid var(--border)}
+    .summary .col{text-align:left;display:flex;justify-content:space-between;align-items:baseline;padding:13px 16px}
+    .summary .s-val{margin-top:0}
+    .day-card:first-child{margin-top:0}
+
+    /* New-transaction is a full PAGE on desktop (not a modal): fills the area
+       beside the persistent sidebar, no backdrop, no floating card. */
+    .overlay{position:fixed;top:0;left:248px;right:0;bottom:0;background:var(--bg);padding:0;align-items:stretch}
+    .overlay.open{display:block}
+    .ov-panel{max-width:none;height:100vh;border-radius:0;box-shadow:none}
+    .ov-body{max-width:1100px;margin:0 auto;width:100%}
+    .savebar{justify-content:flex-end}
+    .savebar .tot{max-width:1100px}
+    /* register-style rows */
+    .reg-labels{display:grid;grid-template-columns:120px 150px 1fr 1fr 1fr 1.5fr 30px;gap:10px;padding:0 14px 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--faint)}
+    .row-card .fgrid{grid-template-columns:120px 150px 1fr 1fr 1fr 1.5fr 30px;align-items:end}
+    .row-card .field label{display:none}
+    .row-card .field.full{grid-column:auto}
+    .row-card .rc-head{display:none}
+    .row-card{padding:8px 14px;margin-top:8px}
+    .rc-remove{display:grid;place-items:center;color:var(--faint);align-self:center;padding-bottom:2px}
+  }
+  @media (max-width:919px){ .rc-remove{display:none} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ===== Desktop sidebar ===== -->
+  <aside class="sidebar">
+    <div class="sb-brand">Kura<span class="dot">·</span></div>
+    <button class="sb-new" onclick="openAdd()"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> New transaction</button>
+    <div class="sb-item active" data-screen="home" onclick="go('home')"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg> Home</div>
+    <div class="sb-item" data-screen="stats" onclick="go('stats')"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Statistics</div>
+    <div class="sb-item" data-screen="accounts" onclick="go('accounts')"><svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg> Accounts</div>
+    <div class="sb-item" data-screen="settings" onclick="go('settings')"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 12a7 7 0 000-2l2-1.5-2-3.4-2.3 1a7 7 0 00-1.7-1L15 2h-4l-.4 2.6a7 7 0 00-1.7 1l-2.3-1-2 3.4 2 1.5a7 7 0 000 2l-2 1.5 2 3.4 2.3-1a7 7 0 001.7 1L11 22h4l.4-2.6a7 7 0 001.7-1l2.3 1 2-3.4-2-1.5z"/></svg> Settings</div>
+    <div class="sb-foot">stan.leeansyah@gmail.com<br>Base currency · IDR</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="brand only-mobile" id="brand">Kura<span class="dot">·</span></div>
+      <div class="page-title hidden" id="pageTitle">Home</div>
+      <div class="month-nav" id="monthnav">
+        <button class="arrow" onclick="shiftMonth(-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="month-label" id="monthLabel">June 2026</button>
+        <button class="arrow" onclick="shiftMonth(1)"><svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="tb-spacer hidden"></div>
+      <button class="tb-btn" id="searchBtn"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></button>
+      <button class="tb-btn" id="filterBtn"><svg class="icon" viewBox="0 0 24 24"><path d="M4 5h16M7 12h10M10 19h4"/></svg></button>
+    </header>
+
+    <div class="content">
+
+      <!-- HOME -->
+      <div class="screen" id="screen-home">
+        <div class="home-grid">
+          <div class="home-main">
+            <!-- Day card: 25 Jun -->
+            <div class="day-card">
+              <div class="day-head">
+                <div class="dh-left"><span class="dh-num">25</span><span class="dh-dow">June 2026 · Wednesday</span></div>
+                <div class="dh-tot"><span class="down tabular">−Rp 936.000</span></div>
+              </div>
+              <div class="tx">
+                <div class="tx-r1"><span class="tx-note">Monthly groceries &amp; household supplies</span><span class="tx-amt down tabular">−Rp 750.000</span></div>
+                <div class="tx-r2"><span class="tx-chip">Food &amp; Groceries</span><span class="tx-sub">Supermarket</span><span class="tx-acc">BCA — Main Savings</span></div>
+              </div>
+              <div class="tx">
+                <div class="tx-r1"><span class="tx-note">Netflix Premium subscription</span><span class="tx-amt down tabular">−Rp 186.000</span></div>
+                <div class="tx-r2"><span class="tx-chip">Subscriptions</span><span class="tx-sub">Streaming Services</span><span class="tx-acc">BCA Everyday CC</span></div>
+              </div>
+            </div>
+            <!-- Day card: 24 Jun -->
+            <div class="day-card">
+              <div class="day-head">
+                <div class="dh-left"><span class="dh-num">24</span><span class="dh-dow">June 2026 · Tuesday</span></div>
+                <div class="dh-tot"><span class="up tabular">+Rp 12.000.000</span><span class="down tabular">−Rp 38.000</span></div>
+              </div>
+              <div class="tx">
+                <div class="tx-r1"><span class="tx-note">Monthly salary — June payroll</span><span class="tx-amt up tabular">+Rp 12.000.000</span></div>
+                <div class="tx-r2"><span class="tx-chip">Income</span><span class="tx-sub">Salary</span><span class="tx-acc">BCA — Main Savings</span></div>
+              </div>
+              <div class="tx">
+                <div class="tx-r1"><span class="tx-note">Bought USD 100 @ 15.900</span><span class="tx-amt tr tabular">Rp 1.590.000</span></div>
+                <div class="tx-r2"><span class="tx-chip">Transfer</span><span class="tx-sub">Cash IDR → Cash USD</span><span class="tx-acc">travel fund</span></div>
+              </div>
+              <div class="tx">
+                <div class="tx-r1"><span class="tx-note">Grab ride to the office</span><span class="tx-amt down tabular">−Rp 38.000</span></div>
+                <div class="tx-r2"><span class="tx-chip">Transport</span><span class="tx-sub">Ride-hailing</span><span class="tx-acc">GoPay e-wallet</span></div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="home-rail">
+            <div class="summary">
+              <div class="col"><div class="s-lbl">Income</div><div class="s-val up tabular">Rp 12.000.000</div></div>
+              <div class="col"><div class="s-lbl">Expenses</div><div class="s-val down tabular">Rp 1.247.000</div></div>
+              <div class="col"><div class="s-lbl">Net</div><div class="s-val up tabular">+Rp 10.753.000</div></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="screen hidden" id="screen-stats">
+        <div class="seg"><button class="on">Week</button><button>Month</button><button>Year</button><button>Period</button></div>
+        <div class="summary" style="margin-bottom:4px">
+          <div class="col"><div class="s-lbl">Income</div><div class="s-val up tabular">Rp 12.000.000</div></div>
+          <div class="col"><div class="s-lbl">Expenses</div><div class="s-val down tabular">Rp 3.280.000</div></div>
+        </div>
+        <div class="section-title">Expenses by category</div>
+        <div class="acct-group">
+          <div class="acct"><div class="meta"><div class="t">Food &amp; Groceries</div><div class="bar"><i style="width:38%;background:#f59e0b"></i></div></div><div class="bal tabular">Rp 1.240.000<div class="sub">38%</div></div><span class="chev">›</span></div>
+          <div class="acct"><div class="meta"><div class="t">Bills &amp; Utilities</div><div class="bar"><i style="width:21%;background:#8b5cf6"></i></div></div><div class="bal tabular">Rp 700.000<div class="sub">21%</div></div><span class="chev">›</span></div>
+          <div class="acct"><div class="meta"><div class="t">Subscriptions</div><div class="bar"><i style="width:16%;background:#ec4899"></i></div></div><div class="bal tabular">Rp 540.000<div class="sub">16%</div></div><span class="chev">›</span></div>
+          <div class="acct"><div class="meta"><div class="t">Transport</div><div class="bar"><i style="width:13%;background:#06b6d4"></i></div></div><div class="bal tabular">Rp 420.000<div class="sub">13%</div></div><span class="chev">›</span></div>
+        </div>
+        <div class="note-mock">Tap a category → sub-categories + every transaction in the period</div>
+      </div>
+
+      <!-- ACCOUNTS -->
+      <div class="screen hidden" id="screen-accounts">
+        <div class="networth"><div class="nw-l">Net worth · in base currency (IDR)</div><div class="nw-v tabular">Rp 45.231.000</div></div>
+        <div class="acct-group">
+          <div class="grp-head"><span>Cash</span><span class="tabular">Rp 9.100.000</span></div>
+          <div class="acct"><div class="meta"><div class="t">Cash IDR — daily wallet</div><div class="s">Cash · IDR</div></div><div class="bal tabular">Rp 2.300.000</div></div>
+          <div class="acct"><div class="meta"><div class="t">Cash USD (travel fund)</div><div class="s">Cash · USD</div></div><div class="bal tabular">$ 420.00<div class="sub">≈ Rp 6.800.000</div></div></div>
+        </div>
+        <div class="acct-group">
+          <div class="grp-head"><span>Banks</span><span class="tabular">Rp 37.631.000</span></div>
+          <div class="acct"><div class="meta"><div class="t">BCA — Main Savings Account</div><div class="s">Debit · IDR</div></div><div class="bal tabular">Rp 28.400.000</div></div>
+          <div class="acct"><div class="meta"><div class="t">Mandiri — Payroll Account</div><div class="s">Debit · IDR</div></div><div class="bal tabular">Rp 9.231.000</div></div>
+        </div>
+        <div class="acct-group">
+          <div class="grp-head"><span>Credit Cards</span></div>
+          <div class="acct"><div class="meta"><div class="t">BCA Everyday Credit Card</div><div class="s">Settles 18th · due 5th</div></div>
+            <div class="bal down tabular">−Rp 2.500.000<div class="sub">Payable Rp 2.000.000 · due 5 Jul</div></div></div>
+        </div>
+        <div class="note-mock">Outstanding = all unpaid · Payable = billed slice due next payment date</div>
+      </div>
+
+      <!-- SETTINGS (theme toggle lives here only) -->
+      <div class="screen hidden" id="screen-settings">
+        <div class="section-title">Structure</div>
+        <div class="acct-group">
+          <div class="acct"><div class="meta"><div class="t">Categories</div><div class="s">Income &amp; expense, sub-categories</div></div><span class="chev">›</span></div>
+          <div class="acct"><div class="meta"><div class="t">Accounts &amp; groups</div><div class="s">Create, edit, group your accounts</div></div><span class="chev">›</span></div>
+          <div class="acct"><div class="meta"><div class="t">Base currency</div><div class="s">Used for combined totals</div></div><span class="chev">IDR ›</span></div>
+        </div>
+        <div class="section-title">Appearance</div>
+        <div class="acct-group">
+          <div class="acct"><div class="meta"><div class="t">Dark mode</div><div class="s">Switch between light and dark</div></div>
+            <div class="switch" id="darkSwitch" onclick="toggleTheme()"></div></div>
+        </div>
+        <div class="section-title">Data</div>
+        <div class="acct-group">
+          <div class="acct"><div class="meta"><div class="t">Export / Import</div><div class="s">CSV / Excel · import never deletes</div></div><span class="chev">›</span></div>
+          <div class="acct"><div class="meta"><div class="t">Bank statement upload</div><div class="s">PDF / CSV → pre-filled rows · Premium</div></div><span class="chev">›</span></div>
+          <div class="acct"><div class="meta"><div class="t">Back up / Reset</div><div class="s">Full · keep structure · per-account</div></div><span class="chev">›</span></div>
+        </div>
+        <div class="note-mock">Kura · steady, patient, protected 🐢</div>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- mobile bottom nav -->
+    <nav class="bottomnav">
+      <button class="nav-btn active" data-screen="home" onclick="go('home')"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</button>
+      <button class="nav-btn" data-screen="stats" onclick="go('stats')"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Stats</button>
+      <button class="fab" onclick="openAdd()"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="nav-btn" data-screen="accounts" onclick="go('accounts')"><svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>Accounts</button>
+      <button class="nav-btn" data-screen="settings" onclick="go('settings')"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 12a7 7 0 000-2l2-1.5-2-3.4-2.3 1a7 7 0 00-1.7-1L15 2h-4l-.4 2.6a7 7 0 00-1.7 1l-2.3-1-2 3.4 2 1.5a7 7 0 000 2l-2 1.5 2 3.4 2.3-1a7 7 0 001.7 1L11 22h4l.4-2.6a7 7 0 001.7-1l2.3 1 2-3.4-2-1.5z"/></svg>Settings</button>
+    </nav>
+  </div>
+</div>
+
+<!-- ADD OVERLAY (responsive: stacked card on mobile, register row on desktop) -->
+<div class="overlay" id="addOverlay">
+  <div class="ov-panel">
+    <div class="ov-head"><button onclick="closeAdd()"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button><div class="ttl">New transactions</div></div>
+    <div class="ov-body">
+      <div class="typeseg"><button class="on" data-k="expense" onclick="setType('expense')">Expense</button><button data-k="income" onclick="setType('income')">Income</button><button data-k="transfer" onclick="setType('transfer')">Transfer</button></div>
+      <div class="reg-labels"><span>Date</span><span>Amount</span><span>Category</span><span>Sub-category</span><span>Account</span><span>Note</span><span></span></div>
+      <div class="row-card">
+        <div class="rc-head"><span class="n">Row 1</span><button class="rm">✕ Remove</button></div>
+        <div class="fgrid">
+          <div class="field"><label>Date</label><input class="control" value="25/06/2026"></div>
+          <div class="field"><label>Amount</label><div class="prefix-wrap"><span class="pfx">Rp</span><input class="control with-prefix tabular" value="750.000"></div></div>
+          <div class="field"><label>Category</label><select class="control"><option>Food &amp; Groceries</option></select></div>
+          <div class="field"><label>Sub-category</label><select class="control"><option>Supermarket</option></select></div>
+          <div class="field"><label>Account</label><select class="control"><option>BCA — Main Savings</option></select></div>
+          <div class="field"><label>Note</label><div class="typeahead"><input class="control" value="Monthly groceries" autocomplete="off"></div></div>
+          <button class="rc-remove" title="Remove">✕</button>
+        </div>
+      </div>
+      <div class="row-card">
+        <div class="rc-head"><span class="n">Row 2</span><button class="rm">✕ Remove</button></div>
+        <div class="fgrid">
+          <div class="field"><label>Date</label><input class="control" value="25/06/2026"></div>
+          <div class="field"><label>Amount</label><div class="prefix-wrap"><span class="pfx">Rp</span><input class="control with-prefix tabular" value="186.000"></div></div>
+          <div class="field"><label>Category</label><select class="control"><option>Subscriptions</option></select></div>
+          <div class="field"><label>Sub-category</label><select class="control"><option>Streaming Services</option></select></div>
+          <div class="field"><label>Account</label><select class="control"><option>BCA Everyday CC</option></select></div>
+          <div class="field"><label>Note</label><div class="typeahead"><input class="control" value="net" autocomplete="off">
+            <div class="ta-list"><div class="ta-item hot"><b>Net</b>flix Premium subscription</div><div class="ta-item"><b>Net</b> bill (internet)</div><div class="ta-hint">↑↓ navigate · Tab/Enter accept · Esc close</div></div></div></div>
+          <button class="rc-remove" title="Remove">✕</button>
+        </div>
+      </div>
+      <button class="addrow">＋ Add another row</button>
+    </div>
+    <div class="savebar"><div class="tot">Total · 2 rows<br><b class="tabular">Rp 936.000</b></div><button class="btn-ghost">Reset</button><button class="btn-primary">Save all</button></div>
+  </div>
+</div>
+
+<script>
+  function toggleTheme(){
+    const h=document.documentElement, dark=h.getAttribute('data-theme')==='dark';
+    h.setAttribute('data-theme',dark?'light':'dark');
+    document.getElementById('darkSwitch').classList.toggle('on',!dark);
+  }
+  const titles={home:'Home',stats:'Statistics',accounts:'Accounts',settings:'Settings'};
+  function go(name){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+    document.getElementById('screen-'+name).classList.remove('hidden');
+    document.querySelectorAll('.nav-btn,.sb-item').forEach(b=>b.classList.toggle('active',b.dataset.screen===name));
+    const home=name==='home';
+    document.getElementById('monthnav').style.display=home?'flex':'none';
+    document.getElementById('searchBtn').classList.toggle('hidden',!home);
+    document.getElementById('filterBtn').classList.toggle('hidden',!home);
+    document.getElementById('brand').classList.toggle('hidden',!home);
+    const pt=document.getElementById('pageTitle'); pt.textContent=titles[name]; pt.classList.toggle('hidden',home);
+    document.querySelector('.tb-spacer').classList.toggle('hidden',home);
+    window.scrollTo(0,0);
+  }
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  let mi=5, yr=2026;
+  function shiftMonth(d){ mi+=d; if(mi>11){mi=0;yr++} if(mi<0){mi=11;yr--} document.getElementById('monthLabel').textContent=months[mi]+' '+yr; }
+  function setType(k){ document.querySelectorAll('.typeseg button').forEach(b=>b.classList.toggle('on',b.dataset.k===k)); }
+  function openAdd(){document.getElementById('addOverlay').classList.add('open')}
+  function closeAdd(){document.getElementById('addOverlay').classList.remove('open')}
+  go('home');
+</script>
+</body>
+</html>

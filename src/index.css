@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* Dark mode is driven by a `.dark` class on <html> (set by ThemeContext),
+   not the OS preference, so the in-app Settings toggle is authoritative. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================================
+   Kura design tokens — ported verbatim from the LOCKED mockup design/kura-v5.html
+   (Emerald palette; neutral near-black dark mode). Light = :root, dark = .dark.
+   ========================================================================== */
+:root {
+  --bg: #f2f5f3;
+  --surface: #ffffff;
+  --surface-2: #eef3f0;
+  --text: #0d1a14;
+  --muted: #5b6b63;
+  --faint: #8a988f;
+  --primary: #047857;
+  --primary-press: #036249;
+  --primary-soft: #d3f0e3;
+  --on-primary: #ffffff;
+  --border: #e2e9e5;
+  --income: #15803d;
+  --expense: #dc2626;
+  --transfer: #2563eb;
+}
+
+.dark {
+  --bg: #0a0c0b;
+  --surface: #151918;
+  --surface-2: #1c201e;
+  --text: #e8efea;
+  --muted: #8b9c93;
+  --faint: #637068;
+  --primary: #34d399;
+  --primary-press: #6ee7b7;
+  --primary-soft: #0f2a20;
+  --on-primary: #04231a;
+  --border: #262b28;
+  --income: #4ade80;
+  --expense: #f87171;
+  --transfer: #60a5fa;
+}
+
+/* Expose the tokens to Tailwind as semantic color/utility names. `inline` so the
+   utilities resolve to the live CSS variables — when `.dark` swaps a variable,
+   every `bg-surface` / `text-muted` / `text-primary` updates with no extra CSS. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-primary: var(--primary);
+  --color-primary-press: var(--primary-press);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-border: var(--border);
+  --color-income: var(--income);
+  --color-expense: var(--expense);
+  --color-transfer: var(--transfer);
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  --radius-card: 14px;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tabular figures for all money/number displays (matches the mockup). */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

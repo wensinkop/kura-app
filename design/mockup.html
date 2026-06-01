@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0f766e" />
+<title>Kura — UI Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef2f1; --surface:#ffffff; --surface-2:#f6f9f8;
+    --text:#0d1c20; --muted:#5c6f74; --faint:#8b9ca0;
+    --primary:#0f766e; --primary-press:#0b5d56; --primary-soft:#d7efec; --on-primary:#ffffff;
+    --income:#15803d; --income-soft:#dcfce7;
+    --expense:#dc2626; --expense-soft:#fee2e2;
+    --transfer:#2563eb; --transfer-soft:#dbeafe;
+    --border:#e1e8e7; --shadow:0 1px 2px rgba(13,28,32,.06),0 6px 20px rgba(13,28,32,.05);
+    --radius:16px;
+  }
+  [data-theme="dark"]{
+    --bg:#0c1416; --surface:#15201f; --surface-2:#1b2827;
+    --text:#e8efee; --muted:#93a6a8; --faint:#6c8084;
+    --primary:#2dd4bf; --primary-press:#5eead4; --primary-soft:#13403b; --on-primary:#04201c;
+    --income:#4ade80; --income-soft:#0f3320;
+    --expense:#f87171; --expense-soft:#3a1717;
+    --transfer:#60a5fa; --transfer-soft:#152744;
+    --border:#26332f; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{
+    font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);
+    -webkit-font-smoothing:antialiased;display:flex;justify-content:center;min-height:100vh;
+  }
+  /* Phone frame */
+  .app{
+    width:100%;max-width:430px;background:var(--bg);min-height:100vh;position:relative;
+    display:flex;flex-direction:column;box-shadow:var(--shadow);overflow:hidden;
+  }
+  .tabular{font-variant-numeric:tabular-nums}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  .icon{width:22px;height:22px;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .icon-sm{width:18px;height:18px}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);
+    padding:14px 16px;display:flex;align-items:center;gap:10px;
+  }
+  .month-nav{display:flex;align-items:center;gap:4px;flex:1;justify-content:center}
+  .month-nav button.arrow{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
+  .month-nav button.arrow:active{background:var(--surface-2)}
+  .month-label{font-weight:700;font-size:16px;padding:6px 12px;border-radius:10px}
+  .month-label:active{background:var(--surface-2)}
+  .topbar .tb-btn{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:var(--muted)}
+  .topbar .tb-btn:active{background:var(--surface-2)}
+  .brand{font-weight:800;font-size:18px;letter-spacing:-.3px;display:flex;align-items:center;gap:7px}
+  .brand .dot{color:var(--primary)}
+
+  /* ---------- Screen scroll area ---------- */
+  .screen{flex:1;overflow-y:auto;padding:16px 16px 96px}
+  .screen.hidden{display:none}
+  .section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:18px 4px 8px}
+
+  /* ---------- Summary cards (Home) ---------- */
+  .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sum-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+  .sum-card.full{grid-column:1/-1;background:linear-gradient(135deg,var(--primary),var(--primary-press));border:none;color:var(--on-primary)}
+  .sum-card .lbl{font-size:12px;font-weight:600;opacity:.85;display:flex;align-items:center;gap:6px}
+  .sum-card .val{font-size:20px;font-weight:800;margin-top:6px;letter-spacing:-.4px}
+  .sum-card.full .val{font-size:26px}
+  .pill-up{color:var(--income)} .pill-down{color:var(--expense)}
+
+  /* ---------- Transaction list ---------- */
+  .day-group{margin-top:18px}
+  .day-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 8px}
+  .day-head .d{font-weight:700;font-size:13px}
+  .day-head .dt{font-size:12px;color:var(--faint)}
+  .tx-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  .tx{display:flex;align-items:center;gap:12px;padding:13px 14px;border-bottom:1px solid var(--border)}
+  .tx:last-child{border-bottom:none}
+  .tx .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex-shrink:0}
+  .tx .meta{flex:1;min-width:0}
+  .tx .meta .t{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tx .meta .s{font-size:12.5px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px}
+  .tx .amt{font-weight:700;font-size:14.5px;white-space:nowrap}
+  .badge-acc{background:var(--surface-2);border:1px solid var(--border);padding:1px 7px;border-radius:6px;font-size:11px;color:var(--muted)}
+
+  /* ---------- Bottom nav ---------- */
+  .bottomnav{
+    position:sticky;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--border);
+    display:grid;grid-template-columns:repeat(5,1fr);align-items:center;padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  }
+  .nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--faint);font-size:10.5px;font-weight:600;padding:4px 0}
+  .nav-btn.active{color:var(--primary)}
+  .fab{width:54px;height:54px;border-radius:50%;background:var(--primary);color:var(--on-primary);display:grid;place-items:center;justify-self:center;margin-top:-26px;box-shadow:0 6px 16px rgba(15,118,110,.45)}
+  .fab .icon{width:26px;height:26px;stroke-width:2.4}
+
+  /* ---------- Add Transaction (full overlay) ---------- */
+  .overlay{position:absolute;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease}
+  .overlay.open{transform:none}
+  .ov-head{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px}
+  .ov-head .ttl{font-weight:700;font-size:17px}
+  .ov-body{flex:1;overflow-y:auto;padding:16px 16px 120px}
+  .seg{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:4px;gap:4px}
+  .seg button{flex:1;padding:9px 0;border-radius:9px;font-weight:700;font-size:14px;color:var(--muted)}
+  .seg button.on[data-k="expense"]{background:var(--expense-soft);color:var(--expense)}
+  .seg button.on[data-k="income"]{background:var(--income-soft);color:var(--income)}
+  .seg button.on[data-k="transfer"]{background:var(--transfer-soft);color:var(--transfer)}
+  .row-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:14px}
+  .row-card .rc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .row-card .rc-head .n{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--faint)}
+  .row-card .rc-head .rm{font-size:12px;color:var(--faint)}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field.full{grid-column:1/-1}
+  .field label{font-size:11px;font-weight:600;color:var(--muted);padding-left:2px}
+  .control{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:11px;
+    padding:11px 12px;font-size:15px;font-family:inherit;color:var(--text);
+  }
+  .control:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+  .control.with-prefix{padding-left:38px}
+  .prefix-wrap{position:relative}
+  .prefix-wrap .pfx{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+  select.control{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235c6f74' stroke-width='2'><path d='M4 6l4 4 4-4'/></svg>");background-repeat:no-repeat;background-position:right 12px center}
+  .typeahead{position:relative}
+  .ta-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow);overflow:hidden;z-index:5}
+  .ta-list .ta-item{padding:10px 12px;font-size:14px;border-bottom:1px solid var(--border)}
+  .ta-list .ta-item:last-child{border-bottom:none}
+  .ta-list .ta-item.hot{background:var(--primary-soft)}
+  .ta-list .ta-item b{color:var(--primary)}
+  .ta-hint{font-size:11px;color:var(--faint);padding:7px 12px;background:var(--surface-2)}
+  .addrow{width:100%;margin-top:14px;padding:13px;border:1.5px dashed var(--border);border-radius:14px;color:var(--muted);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:7px}
+  .addrow:active{border-color:var(--primary);color:var(--primary)}
+  .savebar{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px}
+  .savebar .tot{flex:1;font-size:13px;color:var(--muted)}
+  .savebar .tot b{display:block;font-size:18px;color:var(--text);font-weight:800}
+  .btn-primary{background:var(--primary);color:var(--on-primary);font-weight:700;font-size:15px;padding:13px 22px;border-radius:12px}
+  .btn-primary:active{background:var(--primary-press)}
+  .btn-ghost{padding:13px 16px;border-radius:12px;border:1px solid var(--border);color:var(--muted);font-weight:600}
+
+  /* ---------- Accounts ---------- */
+  .networth{background:linear-gradient(135deg,var(--primary),var(--primary-press));color:var(--on-primary);border-radius:var(--radius);padding:18px}
+  .networth .l{font-size:12px;font-weight:600;opacity:.85}
+  .networth .v{font-size:28px;font-weight:800;margin-top:6px;letter-spacing:-.5px}
+  .acct-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:10px}
+  .acct-group .grp-head{padding:11px 14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);background:var(--surface-2);display:flex;justify-content:space-between}
+  .acct{display:flex;align-items:center;gap:12px;padding:13px 14px;border-top:1px solid var(--border)}
+  .acct .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary);flex-shrink:0}
+  .acct .meta{flex:1}
+  .acct .meta .t{font-weight:600;font-size:14.5px}
+  .acct .meta .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .acct .bal{text-align:right;font-weight:700;font-size:14.5px}
+  .acct .bal .sub{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}
+
+  /* ---------- Stats ---------- */
+  .stat-tabs{display:flex;gap:8px;margin-top:14px}
+  .stat-tabs button{flex:1;padding:10px;border-radius:11px;font-weight:700;font-size:14px;background:var(--surface);border:1px solid var(--border);color:var(--muted)}
+  .stat-tabs button.on{background:var(--expense-soft);color:var(--expense);border-color:transparent}
+  .donut-wrap{display:flex;justify-content:center;padding:18px 0 6px}
+  .cat-row{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-top:10px}
+  .cat-row .top{display:flex;align-items:center;gap:10px}
+  .cat-row .top .nm{flex:1;font-weight:600;font-size:14.5px}
+  .cat-row .top .am{font-weight:700;font-size:14px}
+  .cat-row .top .pc{font-size:12px;color:var(--muted);width:38px;text-align:right}
+  .bar{height:7px;border-radius:4px;background:var(--surface-2);margin-top:9px;overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:4px}
+  .dotc{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+
+  /* ---------- Settings ---------- */
+  .set-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:10px}
+  .set-item{display:flex;align-items:center;gap:13px;padding:14px;border-top:1px solid var(--border)}
+  .set-item:first-child{border-top:none}
+  .set-item .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary);flex-shrink:0}
+  .set-item .lbl{flex:1}
+  .set-item .lbl .t{font-weight:600;font-size:14.5px}
+  .set-item .lbl .s{font-size:12px;color:var(--muted);margin-top:1px}
+  .set-item .chev{color:var(--faint)}
+  .switch{width:46px;height:27px;border-radius:14px;background:var(--border);position:relative;transition:background .2s;flex-shrink:0}
+  .switch.on{background:var(--primary)}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:left .2s}
+  .switch.on::after{left:22px}
+
+  .note-mock{font-size:12px;color:var(--faint);text-align:center;padding:14px 8px 4px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ TOP BAR ============ -->
+  <div class="topbar" id="topbar">
+    <div class="brand" id="brand">Kura<span class="dot">·</span></div>
+    <div class="month-nav" id="monthnav" style="display:none">
+      <button class="arrow" onclick="shiftMonth(-1)" aria-label="Previous month">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <button class="month-label" id="monthLabel">June 2026</button>
+      <button class="arrow" onclick="shiftMonth(1)" aria-label="Next month">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <button class="tb-btn" id="searchBtn" title="Search" style="display:none">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></button>
+    <button class="tb-btn" id="filterBtn" title="Filter" style="display:none">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M4 5h16M7 12h10M10 19h4"/></svg></button>
+    <button class="tb-btn" onclick="toggleTheme()" title="Theme">
+      <svg class="icon" id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/></svg></button>
+  </div>
+
+  <!-- ============ HOME ============ -->
+  <div class="screen" id="screen-home">
+    <div class="summary">
+      <div class="sum-card">
+        <div class="lbl pill-up">▲ Income</div>
+        <div class="val pill-up tabular">Rp 12.000.000</div>
+      </div>
+      <div class="sum-card">
+        <div class="lbl pill-down">▼ Expenses</div>
+        <div class="val pill-down tabular">Rp 519.000</div>
+      </div>
+      <div class="sum-card full">
+        <div class="lbl">Net this month</div>
+        <div class="val tabular">+ Rp 11.481.000</div>
+      </div>
+    </div>
+
+    <div class="day-group">
+      <div class="day-head"><span class="d">Today</span><span class="dt">25 Jun 2026 · Wed</span></div>
+      <div class="tx-list">
+        <div class="tx">
+          <div class="ic" style="background:var(--expense-soft);color:var(--expense)">🛒</div>
+          <div class="meta"><div class="t">Weekly groceries</div>
+            <div class="s">Food · Supermarket <span class="badge-acc">BCA</span></div></div>
+          <div class="amt pill-down tabular">−Rp 250.000</div>
+        </div>
+        <div class="tx">
+          <div class="ic" style="background:var(--expense-soft);color:var(--expense)">🎬</div>
+          <div class="meta"><div class="t">Netflix</div>
+            <div class="s">Subscription · Netflix <span class="badge-acc">Visa</span></div></div>
+          <div class="amt pill-down tabular">−Rp 186.000</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="day-group">
+      <div class="day-head"><span class="d">Yesterday</span><span class="dt">24 Jun 2026 · Tue</span></div>
+      <div class="tx-list">
+        <div class="tx">
+          <div class="ic" style="background:var(--income-soft);color:var(--income)">💼</div>
+          <div class="meta"><div class="t">Monthly salary</div>
+            <div class="s">Income · Salary <span class="badge-acc">BCA</span></div></div>
+          <div class="amt pill-up tabular">+Rp 12.000.000</div>
+        </div>
+        <div class="tx">
+          <div class="ic" style="background:var(--transfer-soft);color:var(--transfer)">🔄</div>
+          <div class="meta"><div class="t">Buy USD @ 15.900</div>
+            <div class="s">Transfer · Cash IDR → Cash USD</div></div>
+          <div class="amt tabular" style="color:var(--transfer)">Rp 1.590.000</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="day-group">
+      <div class="day-head"><span class="d">23 Jun</span><span class="dt">Sun</span></div>
+      <div class="tx-list">
+        <div class="tx">
+          <div class="ic" style="background:var(--expense-soft);color:var(--expense)">☕</div>
+          <div class="meta"><div class="t">Kopi Tuku</div>
+            <div class="s">Food · Coffee <span class="badge-acc">Cash IDR</span></div></div>
+          <div class="amt pill-down tabular">−Rp 45.000</div>
+        </div>
+        <div class="tx">
+          <div class="ic" style="background:var(--expense-soft);color:var(--expense)">🛵</div>
+          <div class="meta"><div class="t">Grab to office</div>
+            <div class="s">Transport · Ride <span class="badge-acc">GoPay</span></div></div>
+          <div class="amt pill-down tabular">−Rp 38.000</div>
+        </div>
+      </div>
+    </div>
+    <div class="note-mock">Tap a month above to jump by month/year · ◀ ▶ to step · search & filter top-right</div>
+  </div>
+
+  <!-- ============ STATS ============ -->
+  <div class="screen hidden" id="screen-stats">
+    <div class="seg" style="margin-top:2px">
+      <button class="on">Week</button><button>Month</button><button>Year</button><button>Period</button>
+    </div>
+    <div class="stat-tabs">
+      <button class="on" id="stExpense">Expenses</button>
+      <button onclick="swapStat()" id="stIncome" style="background:var(--surface)">Income</button>
+    </div>
+
+    <div class="sum-card full" style="margin-top:14px;text-align:center">
+      <div class="lbl">Total expenses · June 2026</div>
+      <div class="val tabular">Rp 3.280.000</div>
+    </div>
+
+    <div class="section-title">By category</div>
+    <div class="cat-row" onclick="alert('Drill-down: opens Food → shows Supermarket / Coffee / Restaurant sub-categories + all transactions in period')">
+      <div class="top"><span class="dotc" style="background:#f59e0b"></span><span class="nm">Food</span><span class="am tabular">Rp 1.240.000</span><span class="pc">38%</span></div>
+      <div class="bar"><i style="width:38%;background:#f59e0b"></i></div>
+    </div>
+    <div class="cat-row">
+      <div class="top"><span class="dotc" style="background:#8b5cf6"></span><span class="nm">Bills</span><span class="am tabular">Rp 700.000</span><span class="pc">21%</span></div>
+      <div class="bar"><i style="width:21%;background:#8b5cf6"></i></div>
+    </div>
+    <div class="cat-row">
+      <div class="top"><span class="dotc" style="background:#ec4899"></span><span class="nm">Subscription</span><span class="am tabular">Rp 540.000</span><span class="pc">16%</span></div>
+      <div class="bar"><i style="width:16%;background:#ec4899"></i></div>
+    </div>
+    <div class="cat-row">
+      <div class="top"><span class="dotc" style="background:#06b6d4"></span><span class="nm">Transport</span><span class="am tabular">Rp 420.000</span><span class="pc">13%</span></div>
+      <div class="bar"><i style="width:13%;background:#06b6d4"></i></div>
+    </div>
+    <div class="cat-row">
+      <div class="top"><span class="dotc" style="background:#10b981"></span><span class="nm">Shopping</span><span class="am tabular">Rp 380.000</span><span class="pc">12%</span></div>
+      <div class="bar"><i style="width:12%;background:#10b981"></i></div>
+    </div>
+    <div class="note-mock">Tap a category → see its sub-categories and every transaction in the period</div>
+  </div>
+
+  <!-- ============ ACCOUNTS ============ -->
+  <div class="screen hidden" id="screen-accounts">
+    <div class="networth">
+      <div class="l">Net worth · in base currency (IDR)</div>
+      <div class="v tabular">Rp 45.231.000</div>
+    </div>
+
+    <div class="acct-group">
+      <div class="grp-head"><span>Cash</span><span class="tabular">Rp 9.100.000</span></div>
+      <div class="acct">
+        <div class="ic">💵</div>
+        <div class="meta"><div class="t">Cash IDR</div><div class="s">Cash · IDR</div></div>
+        <div class="bal tabular">Rp 2.300.000</div>
+      </div>
+      <div class="acct">
+        <div class="ic">💵</div>
+        <div class="meta"><div class="t">Cash USD</div><div class="s">Cash · USD</div></div>
+        <div class="bal tabular">$ 420.00<div class="sub">≈ Rp 6.800.000</div></div>
+      </div>
+    </div>
+
+    <div class="acct-group">
+      <div class="grp-head"><span>Banks</span><span class="tabular">Rp 37.631.000</span></div>
+      <div class="acct">
+        <div class="ic">🏦</div>
+        <div class="meta"><div class="t">BCA</div><div class="s">Debit · IDR</div></div>
+        <div class="bal tabular">Rp 28.400.000</div>
+      </div>
+      <div class="acct">
+        <div class="ic">🏦</div>
+        <div class="meta"><div class="t">Mandiri</div><div class="s">Debit · IDR</div></div>
+        <div class="bal tabular">Rp 9.231.000</div>
+      </div>
+    </div>
+
+    <div class="acct-group">
+      <div class="grp-head"><span>Credit Cards</span></div>
+      <div class="acct">
+        <div class="ic" style="background:var(--expense-soft);color:var(--expense)">💳</div>
+        <div class="meta"><div class="t">BCA Visa</div><div class="s">Settles 18th · due 5th</div></div>
+        <div class="bal pill-down tabular">−Rp 2.500.000
+          <div class="sub">Payable Rp 2.000.000 · due 5 Jul</div></div>
+      </div>
+    </div>
+    <div class="note-mock">Outstanding = all unpaid · Payable = billed slice due next payment date</div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div class="screen hidden" id="screen-settings">
+    <div class="section-title">Structure</div>
+    <div class="set-group">
+      <div class="set-item"><div class="ic">🏷️</div><div class="lbl"><div class="t">Categories</div><div class="s">Income & expense, sub-categories</div></div><span class="chev">›</span></div>
+      <div class="set-item"><div class="ic">👛</div><div class="lbl"><div class="t">Accounts & groups</div><div class="s">Create, edit, group your accounts</div></div><span class="chev">›</span></div>
+      <div class="set-item"><div class="ic">🌐</div><div class="lbl"><div class="t">Base currency</div><div class="s">Used for combined totals</div></div><span class="badge-acc">IDR ›</span></div>
+    </div>
+
+    <div class="section-title">Appearance</div>
+    <div class="set-group">
+      <div class="set-item"><div class="ic">🎨</div><div class="lbl"><div class="t">Dark mode</div><div class="s">Easier on the eyes at night</div></div>
+        <div class="switch" id="darkSwitch" onclick="toggleTheme()"></div></div>
+    </div>
+
+    <div class="section-title">Data</div>
+    <div class="set-group">
+      <div class="set-item"><div class="ic">⬆️</div><div class="lbl"><div class="t">Export</div><div class="s">All data or a period · CSV / Excel</div></div><span class="chev">›</span></div>
+      <div class="set-item"><div class="ic">⬇️</div><div class="lbl"><div class="t">Import</div><div class="s">Add data — never deletes existing</div></div><span class="chev">›</span></div>
+      <div class="set-item"><div class="ic">📄</div><div class="lbl"><div class="t">Bank statement upload</div><div class="s">PDF / CSV → pre-filled rows</div></div><span class="badge-acc">Premium</span></div>
+      <div class="set-item"><div class="ic">💾</div><div class="lbl"><div class="t">Back up</div><div class="s">Safe copy of everything</div></div><span class="chev">›</span></div>
+      <div class="set-item"><div class="ic">♻️</div><div class="lbl"><div class="t">Reset</div><div class="s">Full · keep structure · per-account</div></div><span class="chev">›</span></div>
+    </div>
+
+    <div class="section-title">Account</div>
+    <div class="set-group">
+      <div class="set-item"><div class="ic">👤</div><div class="lbl"><div class="t">Profile & security</div><div class="s">stan.leeansyah@gmail.com</div></div><span class="chev">›</span></div>
+    </div>
+    <div class="note-mock">Kura · steady, patient, protected 🐢</div>
+  </div>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <div class="bottomnav">
+    <button class="nav-btn active" data-screen="home" onclick="go('home')">
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Home</button>
+    <button class="nav-btn" data-screen="stats" onclick="go('stats')">
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Stats</button>
+    <button class="fab" onclick="openAdd()"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="nav-btn" data-screen="accounts" onclick="go('accounts')">
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>Accounts</button>
+    <button class="nav-btn" data-screen="settings" onclick="go('settings')">
+      <svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 00-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 00-1.7-1l-.4-2.6h-4l-.4 2.6a7 7 0 00-1.7 1l-2.3-1-2 3.4 2 1.5a7 7 0 000 2l-2 1.5 2 3.4 2.3-1a7 7 0 001.7 1l.4 2.6h4l.4-2.6a7 7 0 001.7-1l2.3 1 2-3.4-2-1.5a7 7 0 00.1-1z"/></svg>Settings</button>
+  </div>
+
+  <!-- ============ ADD TRANSACTION OVERLAY ============ -->
+  <div class="overlay" id="addOverlay">
+    <div class="ov-head">
+      <button onclick="closeAdd()"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="ttl">New transactions</div>
+    </div>
+    <div class="ov-body">
+      <div class="seg" id="typeSeg">
+        <button class="on" data-k="expense" onclick="setType('expense')">Expense</button>
+        <button data-k="income" onclick="setType('income')">Income</button>
+        <button data-k="transfer" onclick="setType('transfer')">Transfer</button>
+      </div>
+
+      <div id="rowsWrap">
+        <!-- row template injected by JS -->
+      </div>
+
+      <button class="addrow" onclick="addRow()">＋ Add another row</button>
+    </div>
+
+    <div class="savebar">
+      <div class="tot">Total · <span id="rowCount">1</span> row<br><b class="tabular" id="totVal">Rp 0</b></div>
+      <button class="btn-ghost" onclick="resetRows()">Reset</button>
+      <button class="btn-primary" onclick="alert('Saved! (mockup)')">Save all</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  /* ---------- Theme ---------- */
+  function toggleTheme(){
+    const h=document.documentElement;
+    const dark = h.getAttribute('data-theme')==='dark';
+    h.setAttribute('data-theme', dark?'light':'dark');
+    document.getElementById('darkSwitch')?.classList.toggle('on', !dark);
+    const ic=document.getElementById('themeIcon');
+    ic.innerHTML = dark
+      ? '<path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/>'
+      : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>';
+  }
+
+  /* ---------- Screen switching ---------- */
+  const titles={home:null,stats:'Statistics',accounts:'Accounts',settings:'Settings'};
+  function go(name){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+    document.getElementById('screen-'+name).classList.remove('hidden');
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.screen===name));
+    // top bar adapts: month nav + search/filter only on Home
+    const home = name==='home';
+    document.getElementById('monthnav').style.display = home?'flex':'none';
+    document.getElementById('searchBtn').style.display = home?'grid':'none';
+    document.getElementById('filterBtn').style.display = home?'grid':'none';
+    document.getElementById('brand').style.display = home?'flex':'none';
+    if(!home){
+      let b=document.getElementById('brand'); b.style.display='flex'; b.textContent=titles[name];
+    } else { document.getElementById('brand').innerHTML='Kura<span class="dot">·</span>'; }
+    document.querySelector('.screen:not(.hidden)').scrollTop=0;
+  }
+
+  /* ---------- Month nav ---------- */
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  let mi=5, yr=2026;
+  function shiftMonth(d){ mi+=d; if(mi>11){mi=0;yr++} if(mi<0){mi=11;yr--} document.getElementById('monthLabel').textContent=months[mi]+' '+yr; }
+
+  /* ---------- Add overlay ---------- */
+  function openAdd(){ document.getElementById('addOverlay').classList.add('open'); if(document.getElementById('rowsWrap').children.length===0) addRow(); }
+  function closeAdd(){ document.getElementById('addOverlay').classList.remove('open'); }
+
+  let curType='expense';
+  function setType(k){
+    curType=k;
+    document.querySelectorAll('#typeSeg button').forEach(b=>b.classList.toggle('on', b.dataset.k===k));
+    document.querySelectorAll('.row-card').forEach(rc=>renderFields(rc));
+  }
+
+  const NOTE_HISTORY=['Netflix','Net bill (internet)','Nasi Padang','Groceries','Grab to office','Gym membership','Spotify','Salary'];
+  let rowN=0;
+  function addRow(){
+    rowN++;
+    const wrap=document.getElementById('rowsWrap');
+    const div=document.createElement('div');
+    div.className='row-card';
+    div.dataset.idx=rowN;
+    wrap.appendChild(div);
+    renderFields(div);
+    updateCount();
+    div.querySelector('.amt-in')?.focus();
+  }
+  function renderFields(rc){
+    const idx=rc.dataset.idx;
+    const isTransfer=curType==='transfer';
+    const catBlock = isTransfer ? '' : `
+      <div class="field"><label>Category</label>
+        <select class="control"><option>— select —</option>
+          ${curType==='income'
+            ? '<option>Salary</option><option>Bonus</option><option>Gift</option><option>Other income</option>'
+            : '<option>Food ›</option><option>Transport ›</option><option>Subscription ›</option><option>Bills ›</option><option>Shopping ›</option>'}
+        </select></div>`;
+    const acctBlock = isTransfer ? `
+      <div class="field"><label>From account</label>
+        <select class="control"><option>Cash IDR</option><option>BCA</option><option>Mandiri</option></select></div>
+      <div class="field"><label>To account</label>
+        <select class="control"><option>Cash USD</option><option>BCA</option><option>Mandiri</option></select></div>
+      <div class="field full"><label>Exchange rate (1 USD = ? IDR)</label>
+        <input class="control tabular" value="15.900" inputmode="decimal"></div>`
+      : `
+      <div class="field"><label>Account</label>
+        <select class="control"><option>— select —</option><option>BCA</option><option>Cash IDR</option><option>GoPay</option><option>BCA Visa</option></select></div>`;
+    rc.innerHTML = `
+      <div class="rc-head"><span class="n">Row ${idx}</span>
+        <button class="rm" onclick="this.closest('.row-card').remove();updateCount()">✕ Remove</button></div>
+      <div class="fgrid">
+        <div class="field"><label>Date</label>
+          <input class="control" type="text" value="25/06/2026" inputmode="numeric"></div>
+        <div class="field"><label>Amount</label>
+          <div class="prefix-wrap"><span class="pfx">Rp</span>
+            <input class="control with-prefix amt-in tabular" placeholder="0" inputmode="decimal"
+                   oninput="formatAmount(this);updateCount()"></div></div>
+        ${catBlock}
+        ${acctBlock}
+        <div class="field full"><label>Note</label>
+          <div class="typeahead">
+            <input class="control note-in" placeholder="What was this for?" autocomplete="off"
+                   oninput="typeahead(this)" onblur="setTimeout(()=>closeTA(this),150)">
+          </div></div>
+      </div>`;
+  }
+  function resetRows(){ document.getElementById('rowsWrap').innerHTML=''; rowN=0; addRow(); document.getElementById('totVal').textContent='Rp 0'; }
+  function updateCount(){
+    const rows=document.querySelectorAll('.row-card');
+    document.getElementById('rowCount').textContent=rows.length;
+    let tot=0;
+    rows.forEach(r=>{ const v=r.querySelector('.amt-in')?.value.replace(/\./g,'').replace(/,/g,'.'); tot+=parseFloat(v)||0; });
+    document.getElementById('totVal').textContent='Rp '+fmt(tot);
+  }
+  /* Indonesian number formatting: 10000000 -> 10.000.000 */
+  function fmt(n){ return Math.round(n).toLocaleString('id-ID'); }
+  function formatAmount(el){
+    let raw=el.value.replace(/[^\d]/g,'');
+    el.value = raw? Number(raw).toLocaleString('id-ID') : '';
+  }
+  /* ---------- Note typeahead (substring match, like spec's "Ap -> ple") ---------- */
+  function typeahead(el){
+    closeTA(el);
+    const q=el.value.trim().toLowerCase();
+    if(q.length<2) return;
+    const matches=NOTE_HISTORY.filter(s=>s.toLowerCase().includes(q)).slice(0,5);
+    if(!matches.length) return;
+    const list=document.createElement('div'); list.className='ta-list';
+    matches.forEach((m,i)=>{
+      const at=m.toLowerCase().indexOf(q);
+      const html=m.slice(0,at)+'<b>'+m.slice(at,at+q.length)+'</b>'+m.slice(at+q.length);
+      const item=document.createElement('div');
+      item.className='ta-item'+(i===0?' hot':'');
+      item.innerHTML=html;
+      item.onmousedown=(e)=>{e.preventDefault(); el.value=m; closeTA(el);};
+      list.appendChild(item);
+    });
+    const hint=document.createElement('div'); hint.className='ta-hint'; hint.textContent='↑↓ navigate · Tab/Enter accept · Esc close';
+    list.appendChild(hint);
+    el.closest('.typeahead').appendChild(list);
+  }
+  function closeTA(el){ el.closest('.typeahead')?.querySelector('.ta-list')?.remove(); }
+
+  /* ---------- Stats tab swap ---------- */
+  function swapStat(){
+    document.getElementById('stExpense').classList.toggle('on');
+    document.getElementById('stIncome').classList.toggle('on');
+    const inc=document.getElementById('stIncome').classList.contains('on');
+    document.querySelectorAll('.stat-tabs button').forEach(b=>{ if(!b.classList.contains('on')) b.style.background='var(--surface)'; else b.style.background=''; });
+  }
+
+  go('home');
+</script>
+</body>
+</html>
