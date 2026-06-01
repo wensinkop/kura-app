@@ -65,6 +65,10 @@
   --font-sans: 'Inter', system-ui, sans-serif;
 
   --radius-card: 14px;
+
+  /* Width at which the layout switches from mobile (bottom nav) to desktop
+     (left sidebar). Tunable in one place — used via the `desk:` variant. */
+  --breakpoint-desk: 768px;
 }
 
 html, body, #root {

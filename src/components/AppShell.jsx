@@ -39,7 +39,7 @@ function MonthNav() {
     setMi(m); setYr(y)
   }
   return (
-    <div className="flex items-center gap-1 flex-1 justify-center min-[920px]:flex-initial">
+    <div className="flex items-center gap-1 flex-1 justify-center desk:flex-initial">
       <button onClick={() => shift(-1)} aria-label="Previous month"
         className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
         <ChevronLeft />
@@ -70,8 +70,8 @@ export default function AppShell() {
 
   return (
     <div className="flex min-h-screen">
-      {/* ===== Desktop sidebar (≥920px) ===== */}
-      <aside className="hidden min-[920px]:flex flex-col w-[248px] shrink-0 bg-surface border-r border-border px-3.5 py-[18px] sticky top-0 h-screen">
+      {/* ===== Desktop sidebar (≥ --breakpoint-desk) ===== */}
+      <aside className="hidden desk:flex flex-col w-[248px] shrink-0 bg-surface border-r border-border px-3.5 py-[18px] sticky top-0 h-screen">
         <div className="font-extrabold text-[21px] tracking-[-.3px] px-3 pt-1.5 pb-4">
           Kura<span className="text-primary">·</span>
         </div>
@@ -91,10 +91,10 @@ export default function AppShell() {
       </aside>
 
       {/* ===== Main column ===== */}
-      <div className="flex-1 w-full max-w-[520px] mx-auto min-[920px]:max-w-none flex flex-col min-h-screen bg-bg">
-        <header className="sticky top-0 z-20 bg-surface min-[920px]:bg-transparent border-b border-border min-[920px]:border-0 px-4 py-3 min-[920px]:px-8 min-[920px]:pt-2 min-[920px]:pb-4 flex items-center gap-2.5 w-full min-[920px]:max-w-[1120px] min-[920px]:mx-auto">
+      <div className="flex-1 w-full max-w-[520px] mx-auto desk:max-w-none flex flex-col min-h-screen bg-bg">
+        <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 py-3 desk:px-8 desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
           {isHome ? (
-            <div className="font-extrabold text-[18px] tracking-[-.3px] min-[920px]:hidden">
+            <div className="font-extrabold text-[18px] tracking-[-.3px] desk:hidden">
               Kura<span className="text-primary">·</span>
             </div>
           ) : (
@@ -117,12 +117,12 @@ export default function AppShell() {
           )}
         </header>
 
-        <main className="flex-1 px-4 pb-24 pt-4 min-[920px]:px-8 min-[920px]:pb-10 min-[920px]:pt-0 w-full min-[920px]:max-w-[1120px] min-[920px]:mx-auto">
+        <main className="flex-1 px-4 pb-24 pt-4 desk:px-8 desk:pb-10 desk:pt-0 w-full desk:max-w-[1120px] desk:mx-auto">
           <Outlet />
         </main>
 
-        {/* ===== Mobile bottom nav + center FAB (<920px) ===== */}
-        <nav className="min-[920px]:hidden sticky bottom-0 z-20 bg-surface border-t border-border grid grid-cols-5 items-center px-1.5 py-2">
+        {/* ===== Mobile bottom nav + center FAB (< --breakpoint-desk) ===== */}
+        <nav className="desk:hidden sticky bottom-0 z-20 bg-surface border-t border-border grid grid-cols-5 items-center px-1.5 py-2">
           <NavLink to="/" end className={bottomLink}>
             <HomeIcon className="w-[18px] h-[18px]" />Home
           </NavLink>
