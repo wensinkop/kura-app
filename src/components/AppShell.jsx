@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
 import { useAccountFilter } from '../FilterContext'
@@ -51,6 +51,11 @@ export default function AppShell() {
   const { isFiltered } = useAccountFilter()
   const [filterOpen, setFilterOpen] = useState(false)
   const isHome = pathname === '/'
+
+  // Each route should open scrolled to the top — navigating from a scrolled
+  // page (e.g. Settings → Backup & data) otherwise inherits the old offset.
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+
   const title = titleFor(pathname)
   const backTarget = backTargetFor(pathname)
   // The bottom nav / sidebar already names the top-level pages, so they show no

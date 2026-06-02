@@ -151,6 +151,18 @@ export function downloadFile(filename, content, mime = 'text/plain;charset=utf-8
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+// A starter CSV users can open in Google Sheets / Excel to build an import: the
+// exact header row plus one example of each kind (expense with a sub-category,
+// income, and a transfer). The `currency` column is informational — on import
+// the currency is taken from the account, so it can be left blank.
+export function buildImportTemplate() {
+  return toCSV(TX_CSV_COLUMNS, [
+    ['2026-06-01', 'expense', '25000', 'IDR', 'Cash', '', '', 'Food', 'Eat out', 'Lunch'],
+    ['2026-06-02', 'income', '5000000', 'IDR', 'Bank A', '', '', 'Salary', '', 'June salary'],
+    ['2026-06-03', 'transfer', '100000', 'IDR', 'Bank A', 'Cash', '100000', '', '', 'Cash withdrawal'],
+  ])
+}
+
 // "kura-transactions-2026-06-02.csv" — a stable, sortable, dated filename.
 export function datedFilename(prefix, ext) {
   const d = new Date()

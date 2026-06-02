@@ -23,6 +23,7 @@ export default function SettingsAccounts() {
   const [acctForm, setAcctForm] = useState(null) // { mode, target? }
   const [groupForm, setGroupForm] = useState(null) // { mode, target? }
   const [confirm, setConfirm] = useState(null) // { kind:'account'|'group', item }
+  const [deleteError, setDeleteError] = useState(null) // message shown when a delete is blocked
   const [busy, setBusy] = useState(false)
 
   async function reload() {
@@ -91,11 +92,27 @@ export default function SettingsAccounts() {
 
   async function doDelete() {
     setBusy(true)
-    if (confirm.kind === 'account') await deleteAccount(confirm.item.id)
-    else await deleteGroup(confirm.item.id)
+    const res =
+      confirm.kind === 'account' ? await deleteAccount(confirm.item.id) : await deleteGroup(confirm.item.id)
     setBusy(false)
+    if (res?.error) {
+      // Usually the FK RESTRICT: the account still has transactions, so the DB
+      // refuses to delete it (history is never silently lost). Explain, don't
+      // fail quietly.
+      setDeleteError(
+        confirm.kind === 'account'
+          ? `“${confirm.item.name}” still has transactions, so it can’t be deleted — your history is protected. Archive it instead to hide it while keeping its records, or remove its transactions first (Settings → Backup & data → “Delete one account’s transactions”).`
+          : 'That couldn’t be deleted. Please try again.'
+      )
+      return
+    }
     setConfirm(null)
     reload()
+  }
+
+  function closeDeleteDialogs() {
+    setConfirm(null)
+    setDeleteError(null)
   }
 
   async function toggleArchive(a) {
@@ -179,18 +196,29 @@ export default function SettingsAccounts() {
           busy={busy} onSubmit={submitGroup} onClose={() => setGroupForm(null)} />
       )}
 
-      {confirm && (
+      {confirm && !deleteError && (
         <ConfirmDialog
           title={`Delete "${confirm.item.name}"?`}
           message={
             confirm.kind === 'group'
               ? 'The group is removed; its accounts are kept and become ungrouped.'
-              : 'This account is permanently removed. (Archive instead to hide it while keeping its history.)'
+              : 'This account is permanently removed. If it has transactions, deleting is blocked to protect your history — archive it instead to hide it while keeping its records.'
           }
           confirmLabel="Delete"
           busy={busy}
           onConfirm={doDelete}
           onClose={() => setConfirm(null)}
+        />
+      )}
+
+      {deleteError && (
+        <ConfirmDialog
+          title="Can’t delete account"
+          message={deleteError}
+          confirmLabel="OK"
+          tone="primary"
+          onConfirm={closeDeleteDialogs}
+          onClose={closeDeleteDialogs}
         />
       )}
     </div>

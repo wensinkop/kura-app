@@ -11,7 +11,7 @@ import {
   restoreFromBackup, importKuraTransactions,
   deleteAllTransactions, deleteAccountTransactions, fullReset,
 } from '../lib/data'
-import { transactionsToCSV, parseTransactionsCSV, downloadFile, datedFilename } from '../lib/csv'
+import { transactionsToCSV, parseTransactionsCSV, buildImportTemplate, downloadFile, datedFilename } from '../lib/csv'
 import { buildBackupObject, validateBackup, backupSummary } from '../lib/backup'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -161,6 +161,11 @@ export default function SettingsData() {
   }
 
   // ---- Import --------------------------------------------------------------
+  function handleTemplate() {
+    setStatus(null)
+    downloadFile('kura-import-template.csv', buildImportTemplate(), 'text/csv;charset=utf-8')
+  }
+
   async function onImportFile(e) {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -272,6 +277,28 @@ export default function SettingsData() {
         </Button>
       </Card>
 
+      {/* ===== Import ===== */}
+      <SectionTitle>Import</SectionTitle>
+      <Card>
+        <p className="text-[13px] text-muted mb-3">
+          Add transactions from a CSV in Kura’s format (the same one Export produces). Import never deletes.
+        </p>
+        <ol className="text-[12.5px] text-muted list-decimal pl-4 space-y-1 mb-3">
+          <li>Download the template below and open it in Google Sheets or Excel.</li>
+          <li>Fill in your rows, then export as <strong>CSV</strong> (File → Download → .csv).</li>
+          <li><strong>Account</strong> names must exactly match your existing accounts — rows for unknown accounts are skipped and listed. Missing categories are created automatically.</li>
+        </ol>
+        <Button variant="ghost" onClick={handleTemplate} className="w-full mb-2.5">
+          <DownloadIcon className="w-[18px] h-[18px]" />
+          Download CSV template
+        </Button>
+        <Button variant="ghost" onClick={() => importInput.current?.click()} disabled={busy === 'import'} className="w-full">
+          <UploadIcon className="w-[18px] h-[18px]" />
+          Choose CSV file to import…
+        </Button>
+        <input ref={importInput} type="file" accept="text/csv,.csv" className="hidden" onChange={onImportFile} />
+      </Card>
+
       {/* ===== Backup & restore ===== */}
       <SectionTitle>Backup & restore</SectionTitle>
       <Card>
@@ -288,21 +315,8 @@ export default function SettingsData() {
         </Button>
         <input ref={restoreInput} type="file" accept="application/json,.json" className="hidden" onChange={onRestoreFile} />
         <p className="text-[11.5px] text-faint mt-2.5 leading-relaxed">
-          Restore <strong>merges</strong> into your current data: matching accounts &amp; categories are reused, and the backup’s transactions are added. It never deletes.
+          Use a Kura backup file (the <strong>.json</strong> you got from “Download backup” above) — not a CSV. Restore <strong>merges</strong> into your current data: matching accounts &amp; categories are reused, and the backup’s transactions are added. It never deletes.
         </p>
-      </Card>
-
-      {/* ===== Import ===== */}
-      <SectionTitle>Import</SectionTitle>
-      <Card>
-        <p className="text-[13px] text-muted mb-3">
-          Add transactions from a Kura CSV (the same format Export produces). Accounts must already exist — rows for unknown accounts are skipped and listed. Import never deletes.
-        </p>
-        <Button variant="ghost" onClick={() => importInput.current?.click()} disabled={busy === 'import'} className="w-full">
-          <UploadIcon className="w-[18px] h-[18px]" />
-          Choose CSV file…
-        </Button>
-        <input ref={importInput} type="file" accept="text/csv,.csv" className="hidden" onChange={onImportFile} />
       </Card>
 
       {/* ===== Reset ===== */}
