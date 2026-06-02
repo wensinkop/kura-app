@@ -93,9 +93,8 @@ export default function Settings() {
 
       <SectionTitle>Data</SectionTitle>
       <Group>
-        <Row title="Export / Import" sub="CSV / Excel · import never deletes" right={Soon} disabled />
+        <Row title="Backup & data" sub="Export / import CSV · backup · restore · reset" right={Chevron} onClick={() => navigate('/settings/data')} />
         <Row title="Bank statement upload" sub="PDF / CSV → pre-filled rows · Premium" right={Soon} disabled />
-        <Row title="Back up / Reset" sub="Full · keep structure · per-account" right={Soon} disabled />
       </Group>
 
       <div className="mt-5">

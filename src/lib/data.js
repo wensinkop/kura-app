@@ -232,6 +232,16 @@ export function listAllTransactions() {
     .select('id, kind, amount, account_id, to_account_id, to_amount, date')
 }
 
+// Every transaction with the rich embeds, newest first (for CSV export + JSON
+// backup — both want the whole history regardless of month).
+export function listAllTransactionsFull() {
+  return supabase
+    .from('transactions')
+    .select(TX_SELECT)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+}
+
 // ---- Exchange rates (manual, value of 1 unit of currency in base currency) --
 
 export function listRates() {
@@ -246,6 +256,261 @@ export function upsertRate(userId, currency, rate) {
 
 export function deleteRate(userId, currency) {
   return supabase.from('exchange_rates').delete().eq('user_id', userId).eq('currency', currency)
+}
+
+// ---- Backup / restore / import (Chunk 5) -----------------------------------
+
+const norm = (s) => (s ?? '').trim().toLowerCase()
+
+// Insert transactions in chunks so a very large history doesn't hit request
+// limits. Returns { inserted, error } (first error stops the run).
+async function insertTransactionsChunked(userId, rows, size = 500) {
+  let inserted = 0
+  for (let i = 0; i < rows.length; i += size) {
+    const slice = rows.slice(i, i + size)
+    const { error } = await createTransactions(userId, slice)
+    if (error) return { inserted, error }
+    inserted += slice.length
+  }
+  return { inserted, error: null }
+}
+
+// Find an existing category by (kind, name, parent) or create it; mutates
+// `existing` so repeated lookups within one run reuse what we just made.
+// Returns { id, created }.
+async function ensureCategory(userId, kind, name, parentId, existing) {
+  const match = existing.find(
+    (c) => c.kind === kind && norm(c.name) === norm(name) && (c.parent_id ?? null) === (parentId ?? null)
+  )
+  if (match) return { id: match.id, created: false }
+  const { data, error } = await createCategory(userId, { kind, name, parent_id: parentId ?? null }, existing.length)
+  if (error) throw error
+  existing.push(data)
+  return { id: data.id, created: true }
+}
+
+// Merge a validated backup into the signed-in user's data (the restore model
+// Stanley chose). Structure (groups/accounts/categories) is matched by name and
+// reused if present, else created — so accounts never duplicate. Exchange rates
+// are upserted. Transactions are always inserted (re-pointed at the matched
+// accounts/categories), so re-running a restore adds them again by design.
+// Inserts run structure-first to satisfy the DB integrity trigger + FKs.
+export async function restoreFromBackup(userId, backup) {
+  const d = backup.data ?? {}
+  const summary = { groupsCreated: 0, accountsCreated: 0, categoriesCreated: 0, ratesSet: 0, transactionsAdded: 0 }
+
+  const [groupsR, accountsR, catsR] = await Promise.all([listGroups(), listAccounts(), listCategories()])
+  if (groupsR.error) throw groupsR.error
+  if (accountsR.error) throw accountsR.error
+  if (catsR.error) throw catsR.error
+  const exGroups = groupsR.data ?? []
+  const exAccounts = accountsR.data ?? []
+  const exCats = catsR.data ?? []
+
+  // Groups: match-or-create by name. oldId -> id.
+  const groupMap = {}
+  for (const g of d.account_groups ?? []) {
+    const found = exGroups.find((e) => norm(e.name) === norm(g.name))
+    if (found) { groupMap[g.id] = found.id; continue }
+    const { data, error } = await createGroup(userId, g.name, g.sort_order ?? exGroups.length)
+    if (error) throw error
+    exGroups.push(data)
+    groupMap[g.id] = data.id
+    summary.groupsCreated++
+  }
+
+  // Accounts: match-or-create by name + currency (currency is fixed per account).
+  const accountMap = {}
+  for (const a of d.accounts ?? []) {
+    const found = exAccounts.find((e) => norm(e.name) === norm(a.name) && e.currency === a.currency)
+    if (found) { accountMap[a.id] = found.id; continue }
+    const { data, error } = await createAccount(
+      userId,
+      {
+        name: a.name,
+        type: a.type,
+        currency: a.currency,
+        group_id: a.group_id ? groupMap[a.group_id] ?? null : null,
+        opening_balance: a.opening_balance ?? 0,
+        settlement_day: a.settlement_day,
+        payment_day: a.payment_day,
+      },
+      a.sort_order ?? exAccounts.length
+    )
+    if (error) throw error
+    exAccounts.push(data)
+    accountMap[a.id] = data.id
+    summary.accountsCreated++
+  }
+
+  // Categories: parents first so children can map their new parent id.
+  const catMap = {}
+  const cats = d.categories ?? []
+  for (const c of cats.filter((c) => !c.parent_id)) {
+    const r = await ensureCategory(userId, c.kind, c.name, null, exCats)
+    catMap[c.id] = r.id
+    if (r.created) summary.categoriesCreated++
+  }
+  for (const c of cats.filter((c) => c.parent_id)) {
+    const parentNew = catMap[c.parent_id] ?? null
+    const r = await ensureCategory(userId, c.kind, c.name, parentNew, exCats)
+    catMap[c.id] = r.id
+    if (r.created) summary.categoriesCreated++
+  }
+
+  // Exchange rates: upsert by currency.
+  for (const r of d.exchange_rates ?? []) {
+    const { error } = await upsertRate(userId, r.currency, r.rate)
+    if (error) throw error
+    summary.ratesSet++
+  }
+
+  // Transactions: always insert, re-pointed at the matched structure.
+  const rows = []
+  for (const t of d.transactions ?? []) {
+    const account_id = accountMap[t.account_id]
+    if (!account_id) continue // its account couldn't be created/matched — skip rather than orphan
+    rows.push({
+      kind: t.kind,
+      date: t.date,
+      amount: t.amount,
+      account_id,
+      category_id: t.category_id ? catMap[t.category_id] ?? null : null,
+      note: t.note ?? null,
+      transfer_group_id: t.transfer_group_id ?? null,
+      to_account_id: t.to_account_id ? accountMap[t.to_account_id] ?? null : null,
+      exchange_rate: t.exchange_rate ?? null,
+      to_amount: t.to_amount ?? null,
+    })
+  }
+  const ins = await insertTransactionsChunked(userId, rows)
+  if (ins.error) throw ins.error
+  summary.transactionsAdded = ins.inserted
+  return summary
+}
+
+// Import a Kura-format transactions CSV (array of header-keyed row objects).
+// Accounts must already exist (matched by name) — unknown ones are skipped and
+// reported (import never creates accounts or deletes anything). Missing
+// categories are auto-created. Returns { inserted, skipped:[{line,reason}],
+// categoriesCreated }.
+export async function importKuraTransactions(userId, parsedRows) {
+  const [accountsR, catsR] = await Promise.all([listAccounts(), listCategories()])
+  if (accountsR.error) throw accountsR.error
+  if (catsR.error) throw catsR.error
+  const accounts = accountsR.data ?? []
+  const exCats = catsR.data ?? []
+  const accountByName = (n) => accounts.find((a) => norm(a.name) === norm(n))
+
+  const skipped = []
+  const payloads = []
+  let categoriesCreated = 0
+
+  for (let i = 0; i < parsedRows.length; i++) {
+    const r = parsedRows[i]
+    const line = i + 2 // +1 for the header row, +1 for 1-based display
+    const kind = norm(r.kind)
+    if (!['income', 'expense', 'transfer'].includes(kind)) {
+      skipped.push({ line, reason: `unknown kind "${r.kind || ''}"` })
+      continue
+    }
+    const date = (r.date ?? '').trim()
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      skipped.push({ line, reason: `invalid date "${r.date || ''}" (need YYYY-MM-DD)` })
+      continue
+    }
+    const amount = Number(r.amount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      skipped.push({ line, reason: `invalid amount "${r.amount || ''}"` })
+      continue
+    }
+    const account = accountByName(r.account)
+    if (!account) {
+      skipped.push({ line, reason: `unknown account "${r.account || ''}"` })
+      continue
+    }
+
+    const base = { kind, date, amount, account_id: account.id, note: (r.note ?? '').trim() || null }
+
+    if (kind === 'transfer') {
+      const dest = accountByName(r.to_account)
+      if (!dest) {
+        skipped.push({ line, reason: `unknown destination account "${r.to_account || ''}"` })
+        continue
+      }
+      if (dest.id === account.id) {
+        skipped.push({ line, reason: 'transfer source and destination are the same account' })
+        continue
+      }
+      const toAmount = Number(r.to_amount)
+      payloads.push({
+        ...base,
+        to_account_id: dest.id,
+        to_amount: Number.isFinite(toAmount) && toAmount > 0 ? toAmount : null,
+      })
+    } else {
+      // income / expense: resolve (category, sub_category) -> a category id.
+      let categoryId = null
+      const catName = (r.category ?? '').trim()
+      const subName = (r.sub_category ?? '').trim()
+      try {
+        if (catName) {
+          const parent = await ensureCategory(userId, kind, catName, null, exCats)
+          if (parent.created) categoriesCreated++
+          if (subName) {
+            const child = await ensureCategory(userId, kind, subName, parent.id, exCats)
+            if (child.created) categoriesCreated++
+            categoryId = child.id
+          } else {
+            categoryId = parent.id
+          }
+        }
+      } catch (e) {
+        skipped.push({ line, reason: `could not create category (${e.message})` })
+        continue
+      }
+      payloads.push({ ...base, category_id: categoryId })
+    }
+  }
+
+  const ins = await insertTransactionsChunked(userId, payloads)
+  if (ins.error) throw ins.error
+  return { inserted: ins.inserted, skipped, categoriesCreated }
+}
+
+// ---- Reset (destructive) ---------------------------------------------------
+
+// Delete every transaction (keeps accounts/categories/groups/rates).
+export function deleteAllTransactions(userId) {
+  return supabase.from('transactions').delete().eq('user_id', userId)
+}
+
+// Delete one account's transactions, including transfers where it's the
+// destination leg.
+export function deleteAccountTransactions(userId, accountId) {
+  return supabase
+    .from('transactions')
+    .delete()
+    .eq('user_id', userId)
+    .or(`account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+}
+
+// Wipe everything: transactions, rates, categories (children before parents to
+// respect the self-FK), accounts, then groups. Stops at the first error.
+export async function fullReset(userId) {
+  const steps = [
+    () => supabase.from('transactions').delete().eq('user_id', userId),
+    () => supabase.from('exchange_rates').delete().eq('user_id', userId),
+    () => supabase.from('categories').delete().eq('user_id', userId).not('parent_id', 'is', null),
+    () => supabase.from('categories').delete().eq('user_id', userId).is('parent_id', null),
+    () => supabase.from('accounts').delete().eq('user_id', userId),
+    () => supabase.from('account_groups').delete().eq('user_id', userId),
+  ]
+  for (const step of steps) {
+    const { error } = await step()
+    if (error) return { error }
+  }
+  return { error: null }
 }
 
 // ---- Reordering ------------------------------------------------------------

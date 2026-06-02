@@ -16,6 +16,7 @@ import Settings from './pages/Settings'
 import SettingsCategories from './pages/SettingsCategories'
 import SettingsAccounts from './pages/SettingsAccounts'
 import SettingsRates from './pages/SettingsRates'
+import SettingsData from './pages/SettingsData'
 import NewTransaction from './pages/NewTransaction'
 import EditTransaction from './pages/EditTransaction'
 import Search from './pages/Search'
@@ -67,6 +68,7 @@ export default function App() {
               <Route path="/settings/categories" element={<SettingsCategories />} />
               <Route path="/settings/accounts" element={<SettingsAccounts />} />
               <Route path="/settings/rates" element={<SettingsRates />} />
+              <Route path="/settings/data" element={<SettingsData />} />
             </Route>
 
             {/* Full-screen entry (signed-in, outside the shell) */}

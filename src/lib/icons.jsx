@@ -67,3 +67,9 @@ export const ArchiveIcon = (p) => (
 export const CloseIcon = (p) => (
   <Svg {...p}><path d="M18 6L6 18M6 6l12 12" /></Svg>
 )
+export const DownloadIcon = (p) => (
+  <Svg {...p}><path d="M12 3v12" /><path d="M7 11l5 5 5-5" /><path d="M4 21h16" /></Svg>
+)
+export const UploadIcon = (p) => (
+  <Svg {...p}><path d="M12 17V5" /><path d="M7 9l5-5 5 5" /><path d="M4 21h16" /></Svg>
+)

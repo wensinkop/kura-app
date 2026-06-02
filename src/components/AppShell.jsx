@@ -16,6 +16,7 @@ function titleFor(pathname) {
   if (pathname === '/settings/categories') return 'Categories'
   if (pathname === '/settings/accounts') return 'Accounts & groups'
   if (pathname === '/settings/rates') return 'Exchange rates'
+  if (pathname === '/settings/data') return 'Backup & data'
   if (pathname.startsWith('/settings')) return 'Settings'
   return 'Kura'
 }
