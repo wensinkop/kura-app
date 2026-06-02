@@ -98,9 +98,25 @@ export default function Home() {
 
   return (
     <div className="flex flex-col desk:grid desk:grid-cols-[1fr_330px] desk:gap-[22px] desk:items-start">
+      {/* Mobile: compact summary bar, pinned below the header while scrolling */}
+      <div className="desk:hidden sticky top-[52px] z-10 bg-bg pt-1 pb-2.5 flex flex-col gap-2">
+        {(summaryCurs.length === 0 ? [null] : summaryCurs).map((cur) => {
+          const s = cur ? summary[cur] : { income: 0, expense: 0 }
+          const net = s.income - s.expense
+          const fmt = (v) => (cur ? formatMoney(v, cur) : '—')
+          return (
+            <div key={cur ?? 'none'} className="flex bg-surface border border-border rounded-xl overflow-hidden text-center">
+              <CompactCell label="Income" value={fmt(s.income)} color="text-income" />
+              <CompactCell label="Expenses" value={fmt(s.expense)} color="text-expense" border />
+              <CompactCell label="Net" value={cur ? formatMoney(Math.abs(net), cur) : '—'} color={amountColor(net)} border />
+            </div>
+          )
+        })}
+      </div>
+
       <div className="min-w-0">
         {days.length === 0 ? (
-          <div className="bg-surface border border-border rounded-[14px] p-8 text-center mt-3.5 desk:mt-0">
+          <div className="bg-surface border border-border rounded-[14px] p-8 text-center mt-0">
             <p className="text-sm text-muted mb-4">No transactions this month yet.</p>
             <Button onClick={() => navigate('/new')}>
               <PlusIcon className="w-[18px] h-[18px]" /> Add a transaction
@@ -116,7 +132,7 @@ export default function Home() {
               else if (t.kind === 'expense') exp[t.currency] = (exp[t.currency] ?? 0) + Number(t.amount)
             }
             return (
-              <div key={date} className={`bg-surface border border-border rounded-[14px] overflow-hidden mt-3.5 ${di === 0 ? 'desk:mt-0' : ''}`}>
+              <div key={date} className={`bg-surface border border-border rounded-[14px] overflow-hidden ${di === 0 ? 'mt-0' : 'mt-3.5'}`}>
                 <div className="flex items-center justify-between gap-2.5 px-3.5 py-2.5 bg-surface-2 border-b border-border">
                   <div className="flex items-baseline gap-2 min-w-0">
                     <span className="text-[17px] font-extrabold tracking-[-.3px]">{h.num}</span>
@@ -137,8 +153,8 @@ export default function Home() {
         )}
       </div>
 
-      {/* Summary rail — on top on mobile (order-first), 330px right column on desktop */}
-      <aside className="order-first desk:order-none desk:sticky desk:top-[84px] flex flex-col gap-3.5">
+      {/* Summary rail — desktop only (mobile uses the compact sticky bar above) */}
+      <aside className="hidden desk:flex desk:sticky desk:top-[84px] flex-col gap-3.5">
         {summaryCurs.length === 0 ? (
           <SummaryCard label="This month" rows={[['Income', '—', ''], ['Expenses', '—', ''], ['Net', '—', '']]} />
         ) : (
@@ -181,6 +197,16 @@ export default function Home() {
           onClose={() => setConfirmBulk(false)}
         />
       )}
+    </div>
+  )
+}
+
+// One cell of the compact mobile summary bar (Income / Expenses / Net).
+function CompactCell({ label, value, color, border }) {
+  return (
+    <div className={`flex-1 py-1.5 px-1 ${border ? 'border-l border-border' : ''}`}>
+      <div className="text-[9.5px] font-semibold uppercase tracking-wide text-faint">{label}</div>
+      <div className={`text-[12.5px] font-extrabold tabular leading-tight mt-0.5 ${color}`}>{value}</div>
     </div>
   )
 }

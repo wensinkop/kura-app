@@ -69,7 +69,7 @@ export default function AppShell() {
         {/* ===== Main column ===== */}
         <div className="flex-1 w-full max-w-[520px] mx-auto desk:max-w-none flex flex-col min-h-screen bg-bg">
           {showHeader && (
-            <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 py-3 desk:px-8 desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
+            <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 desk:px-8 h-[52px] desk:h-auto desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
               {isHome ? (
                 <div className="font-extrabold text-[18px] tracking-[-.3px] desk:hidden">
                   Kura<span className="text-primary">·</span>
