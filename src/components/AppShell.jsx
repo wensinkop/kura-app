@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useLayoutEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
 import { useAccountFilter } from '../FilterContext'
@@ -27,6 +27,13 @@ function backTargetFor(pathname) {
   return null
 }
 
+// Remembered scroll offset per top-level path, so leaving Home/Stats and coming
+// back lands where you left off. Module-level so it survives AppShell remounts
+// (e.g. after a detour through the full-screen /new screen). Drill-in sub-pages
+// (/settings/*) always open at the top instead — see the effect below.
+const scrollMemory = {}
+const restoresScroll = (pathname) => !pathname.startsWith('/settings/')
+
 // Selected-month control in the Home top bar; reads/writes the shared MonthContext.
 function MonthNav() {
   const { label, prev, next } = useMonth()
@@ -52,9 +59,38 @@ export default function AppShell() {
   const [filterOpen, setFilterOpen] = useState(false)
   const isHome = pathname === '/'
 
-  // Each route should open scrolled to the top — navigating from a scrolled
-  // page (e.g. Settings → Backup & data) otherwise inherits the old offset.
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  // Scroll handling on navigation. Top-level tabs (Home/Stats/Accounts/Settings)
+  // restore where you left off; drill-in sub-pages (/settings/*) open at the top.
+  // We record the offset continuously *while scrolling* (not at unmount) — the
+  // browser clamps scroll to 0 the instant a shorter page mounts, so reading it
+  // late captures 0. Restore retries until ~1.5s because the page (e.g. the Home
+  // list) may still be loading and too short to scroll onto when it first mounts.
+  useLayoutEffect(() => {
+    const path = pathname
+    const track = restoresScroll(path)
+    let frame = 0
+
+    if (track && scrollMemory[path]) {
+      const target = scrollMemory[path]
+      const start = Date.now()
+      const restore = () => {
+        window.scrollTo(0, target)
+        if (window.scrollY < target - 1 && Date.now() - start < 1500) frame = requestAnimationFrame(restore)
+      }
+      frame = requestAnimationFrame(restore)
+    } else {
+      window.scrollTo(0, 0)
+    }
+
+    if (!track) return () => cancelAnimationFrame(frame)
+
+    const onScroll = () => { scrollMemory[path] = window.scrollY }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [pathname])
 
   const title = titleFor(pathname)
   const backTarget = backTargetFor(pathname)
