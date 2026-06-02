@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { MonthProvider, useMonth } from '../MonthContext'
+import { useMonth } from '../MonthContext'
 import Sidebar from './Sidebar'
 import {
   HomeIcon, StatsIcon, AccountsIcon, SettingsIcon,
@@ -53,7 +53,6 @@ export default function AppShell() {
     (isActive ? 'text-primary' : 'text-faint')
 
   return (
-    <MonthProvider>
       <div className="flex min-h-screen">
         {/* ===== Desktop sidebar (≥ --breakpoint-desk) ===== */}
         <Sidebar />
@@ -118,6 +117,5 @@ export default function AppShell() {
           </nav>
         </div>
       </div>
-    </MonthProvider>
   )
 }

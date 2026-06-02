@@ -115,24 +115,28 @@ function AccountRow({ a, balance, txns, rates, base }) {
   const approx = a.currency !== base ? toBase(balance, a.currency, rates, base) : null
 
   return (
-    <div className="flex gap-3 items-start px-3.5 py-3 border-t border-border">
-      <div className="flex-1 min-w-0">
-        <div className="font-semibold text-[14.5px] leading-tight truncate">{a.name}</div>
-        <div className="text-xs text-muted mt-1 truncate">{accountSubtitle(a)}</div>
-      </div>
-      <div className="text-right shrink-0">
-        <div className={`font-bold text-[14.5px] tabular ${amountColor(balance)}`}>
-          {formatAbs(balance, a.currency)}
+    <div className="px-3.5 py-3 border-t border-border">
+      <div className="flex gap-3 items-start">
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-[14.5px] leading-tight truncate">{a.name}</div>
+          <div className="text-xs text-muted mt-1 truncate">{accountSubtitle(a)}</div>
         </div>
-        {isCC && billing.outstanding > 0 && (
-          <div className="text-[11px] text-muted mt-0.5">
-            Payable {formatAbs(billing.payable, a.currency)}{billing.nextDue ? ` · due ${shortDate(billing.nextDue)}` : ''}
+        <div className="text-right shrink-0">
+          <div className={`font-bold text-[14.5px] tabular ${amountColor(balance)}`}>
+            {formatAbs(balance, a.currency)}
           </div>
-        )}
-        {approx != null && (
-          <div className="text-[11px] text-faint mt-0.5">≈ {formatAbs(approx, base)}</div>
-        )}
+          {approx != null && (
+            <div className="text-[11px] text-faint mt-0.5">≈ {formatAbs(approx, base)}</div>
+          )}
+        </div>
       </div>
+      {/* Credit-card billing on its own full-width line so it never clips on mobile. */}
+      {isCC && billing.outstanding > 0 && (
+        <div className="text-[11px] text-muted mt-1.5 pt-1.5 border-t border-border/60 flex justify-between gap-2">
+          <span>Payable {formatAbs(billing.payable, a.currency)}</span>
+          {billing.nextDue && <span className="text-faint">due {shortDate(billing.nextDue)}</span>}
+        </div>
+      )}
     </div>
   )
 }

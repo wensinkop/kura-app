@@ -158,6 +158,23 @@ export function createTransactions(userId, rows) {
     .select()
 }
 
+// Single transaction with its account/to_account/category embeds (for editing).
+export function getTransaction(id) {
+  return supabase.from('transactions').select(TX_SELECT).eq('id', id).single()
+}
+
+export function updateTransaction(id, fields) {
+  return supabase.from('transactions').update(fields).eq('id', id)
+}
+
+export function deleteTransaction(id) {
+  return supabase.from('transactions').delete().eq('id', id)
+}
+
+export function deleteTransactions(ids) {
+  return supabase.from('transactions').delete().in('id', ids)
+}
+
 // Distinct recent notes for the entry-screen typeahead (most-recent first).
 export async function recentNotes(limit = 300) {
   const { data, error } = await supabase

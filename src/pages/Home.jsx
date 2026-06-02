@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
-import { listTransactionsForMonth, listCategories } from '../lib/data'
+import { listTransactionsForMonth, listCategories, deleteTransactions } from '../lib/data'
 import { formatMoney, amountColor } from '../lib/format'
-import { Button } from '../components/ui'
-import { PlusIcon } from '../lib/icons'
+import { Button, ConfirmDialog } from '../components/ui'
+import { PlusIcon, TrashIcon, CloseIcon } from '../lib/icons'
 
 const KIND_COLOR = { income: 'text-income', expense: 'text-expense', transfer: 'text-transfer' }
 
@@ -19,9 +19,6 @@ function dayHeading(dateStr) {
   }
 }
 
-// chip = top-level category; sub = sub-category name (only when the tx points at
-// a sub). Null category -> "Uncategorised". Parent name comes from catMap since
-// the row only carries the category's own id/name/parent_id.
 function catLabels(tx, catMap) {
   const c = tx.category
   if (!c) return { chip: 'Uncategorised', sub: null }
@@ -36,16 +33,18 @@ export default function Home() {
   const [catMap, setCatMap] = useState(new Map())
   const [loading, setLoading] = useState(true)
 
-  // Categories rarely change; load once for parent-name resolution.
+  // Selection (long-press to multi-select + bulk delete).
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState(() => new Set())
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
   useEffect(() => {
     listCategories().then(({ data, error }) => {
       if (!error) setCatMap(new Map((data ?? []).map((c) => [c.id, c])))
     })
   }, [])
 
-  // Refetch whenever the selected month changes. setState only inside the async
-  // callback (keeps react-hooks/set-state-in-effect happy); the existing list
-  // stays visible until the new month's data arrives.
   useEffect(() => {
     listTransactionsForMonth(year, monthIndex).then(({ data, error }) => {
       if (!error) setTxns(data ?? [])
@@ -53,7 +52,35 @@ export default function Home() {
     })
   }, [year, monthIndex])
 
-  // Group into day-cards (already date-desc from the query).
+  function reloadTxns() {
+    listTransactionsForMonth(year, monthIndex).then(({ data, error }) => {
+      if (!error) setTxns(data ?? [])
+    })
+  }
+
+  function enterSelect(id) { setSelectMode(true); setSelected(new Set([id])) }
+  function exitSelect() { setSelectMode(false); setSelected(new Set()) }
+  function toggle(id) {
+    setSelected((prev) => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      if (n.size === 0) setSelectMode(false)
+      return n
+    })
+  }
+  function activate(t) {
+    if (selectMode) toggle(t.id)
+    else navigate(`/tx/${t.id}`)
+  }
+  async function deleteSelected() {
+    setDeleting(true)
+    await deleteTransactions([...selected])
+    setDeleting(false)
+    setConfirmBulk(false)
+    exitSelect()
+    reloadTxns()
+  }
+
   const days = []
   const byDate = new Map()
   for (const t of txns) {
@@ -61,7 +88,6 @@ export default function Home() {
     byDate.get(t.date).push(t)
   }
 
-  // Month summary per currency: { [cur]: { income, expense } }.
   const summary = {}
   for (const t of txns) {
     const cur = t.currency
@@ -87,7 +113,6 @@ export default function Home() {
           days.map((date, di) => {
             const list = byDate.get(date)
             const h = dayHeading(date)
-            // Per-currency day totals.
             const inc = {}, exp = {}
             for (const t of list) {
               if (t.kind === 'income') inc[t.currency] = (inc[t.currency] ?? 0) + Number(t.amount)
@@ -105,7 +130,10 @@ export default function Home() {
                     {Object.entries(exp).map(([c, v]) => <span key={'e' + c} className="text-expense">{formatMoney(v, c)}</span>)}
                   </div>
                 </div>
-                {list.map((t) => <TxRow key={t.id} t={t} catMap={catMap} />)}
+                {list.map((t) => (
+                  <TxRow key={t.id} t={t} catMap={catMap} selectMode={selectMode}
+                    selected={selected.has(t.id)} onActivate={activate} onLongPress={(tx) => enterSelect(tx.id)} />
+                ))}
               </div>
             )
           })
@@ -130,6 +158,32 @@ export default function Home() {
           })
         )}
       </aside>
+
+      {/* Floating selection action bar */}
+      {selectMode && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[76px] desk:bottom-6 z-40 bg-surface border border-border rounded-full shadow-lg flex items-center gap-1.5 pl-2 pr-2 py-1.5">
+          <button onClick={exitSelect} aria-label="Cancel selection"
+            className="w-9 h-9 grid place-items-center rounded-full text-muted hover:bg-surface-2">
+            <CloseIcon className="w-[18px] h-[18px]" />
+          </button>
+          <span className="text-sm font-semibold px-1 tabular">{selected.size} selected</span>
+          <button onClick={() => setConfirmBulk(true)} disabled={selected.size === 0}
+            className="flex items-center gap-1.5 bg-expense text-white font-bold text-sm rounded-full px-4 py-2 disabled:opacity-50">
+            <TrashIcon className="w-4 h-4" /> Delete
+          </button>
+        </div>
+      )}
+
+      {confirmBulk && (
+        <ConfirmDialog
+          title={`Delete ${selected.size} transaction${selected.size === 1 ? '' : 's'}?`}
+          message="They will be permanently removed and balances will update."
+          confirmLabel="Delete"
+          busy={deleting}
+          onConfirm={deleteSelected}
+          onClose={() => setConfirmBulk(false)}
+        />
+      )}
     </div>
   )
 }
@@ -148,25 +202,48 @@ function SummaryCard({ label, rows }) {
   )
 }
 
-function TxRow({ t, catMap }) {
+function TxRow({ t, catMap, selectMode, selected, onActivate, onLongPress }) {
   const isTransfer = t.kind === 'transfer'
   const { chip, sub } = isTransfer
     ? { chip: 'Transfer', sub: `${t.account?.name ?? '?'} → ${t.to_account?.name ?? '?'}` }
     : catLabels(t, catMap)
+
+  // Long-press (touch hold or right-click) enters multi-select; a tap activates.
+  const timer = useRef(null)
+  const longFired = useRef(false)
+  const startPress = () => { longFired.current = false; timer.current = setTimeout(() => { longFired.current = true; onLongPress(t) }, 450) }
+  const cancelPress = () => clearTimeout(timer.current)
+  const handleClick = () => { if (longFired.current) { longFired.current = false; return } onActivate(t) }
+
   return (
-    <div className="px-3.5 py-2.5 border-t border-border first:border-t-0">
-      <div className="flex justify-between gap-3 items-baseline">
-        <span className="font-semibold text-[14.5px] leading-tight truncate min-w-0">{t.note || chip}</span>
-        <span className={`font-bold text-[14.5px] tabular whitespace-nowrap ${KIND_COLOR[t.kind]}`}>
-          {formatMoney(t.amount, t.currency)}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 mt-1.5">
-        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap ${
-          isTransfer ? 'bg-transfer/10 text-transfer border-transfer/30' : 'bg-surface-2 text-muted border-border'
-        }`}>{chip}</span>
-        {sub && <span className="text-xs text-muted truncate">{sub}</span>}
-        {!isTransfer && <span className="text-xs text-faint ml-auto whitespace-nowrap shrink-0">{t.account?.name}</span>}
+    <div
+      onClick={handleClick}
+      onContextMenu={(e) => { e.preventDefault(); onLongPress(t) }}
+      onTouchStart={startPress} onTouchEnd={cancelPress} onTouchMove={cancelPress}
+      onMouseDown={startPress} onMouseUp={cancelPress} onMouseLeave={cancelPress}
+      className={`flex gap-3 px-3.5 py-2.5 border-t border-border first:border-t-0 cursor-pointer select-none ${
+        selected ? 'bg-primary-soft' : 'hover:bg-surface-2'
+      }`}
+    >
+      {selectMode && (
+        <span className={`mt-0.5 w-5 h-5 rounded-full border grid place-items-center shrink-0 text-[11px] font-bold ${
+          selected ? 'bg-primary border-primary text-on-primary' : 'border-border text-transparent'
+        }`}>✓</span>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between gap-3 items-baseline">
+          <span className="font-semibold text-[14.5px] leading-tight truncate min-w-0">{t.note || chip}</span>
+          <span className={`font-bold text-[14.5px] tabular whitespace-nowrap ${KIND_COLOR[t.kind]}`}>
+            {formatMoney(t.amount, t.currency)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mt-1.5">
+          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap ${
+            isTransfer ? 'bg-transfer/10 text-transfer border-transfer/30' : 'bg-surface-2 text-muted border-border'
+          }`}>{chip}</span>
+          {sub && <span className="text-xs text-muted truncate">{sub}</span>}
+          {!isTransfer && <span className="text-xs text-faint ml-auto whitespace-nowrap shrink-0">{t.account?.name}</span>}
+        </div>
       </div>
     </div>
   )
