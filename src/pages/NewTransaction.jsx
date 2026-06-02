@@ -7,6 +7,7 @@ import { formatMoney } from '../lib/format'
 import NumberInput from '../components/NumberInput'
 import AutocompleteInput from '../components/AutocompleteInput'
 import SearchableSelect from '../components/SearchableSelect'
+import MobileSelect from '../components/MobileSelect'
 import DatePicker from '../components/DatePicker'
 import Sidebar from '../components/Sidebar'
 import { Button, inputClass } from '../components/ui'
@@ -21,11 +22,6 @@ const KINDS = [
 // Desktop register column template (Date | Amount | Category | Sub | Account | Note | ✕).
 const REG_COLS =
   'desk:grid-cols-[110px_140px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_28px]'
-
-// Native <select> styling on mobile — matches the input look and keeps the OS
-// picker (slides up like the keyboard, never covered by it) plus its native
-// dropdown arrow as the affordance.
-const selectClass = inputClass
 
 function todayISO() {
   const d = new Date()
@@ -113,7 +109,7 @@ export default function NewTransaction() {
   useEffect(() => {
     if (!openSubFor) return
     const t = setTimeout(() => {
-      try { subRefs.current[openSubFor]?.showPicker?.() } catch { /* unsupported / no activation */ }
+      subRefs.current[openSubFor]?.open?.()
       setOpenSubFor(null)
     }, 0)
     return () => clearTimeout(t)
@@ -285,25 +281,20 @@ export default function NewTransaction() {
                               locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
                           </MField>
                           <MField label="Category" full={subs.length === 0}>
-                            <select value={row.categoryId} onChange={(e) => onMobileCat(row.tempId, e.target.value)} className={selectClass}>
-                              <option value="">— Category —</option>
-                              {topCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
+                            <MobileSelect title="Category" placeholder="— Category —"
+                              value={row.categoryId} onChange={(v) => onMobileCat(row.tempId, v)} options={catOptions} />
                           </MField>
                           {subs.length > 0 && (
                             <MField label="Sub-category">
-                              <select ref={(el) => { subRefs.current[row.tempId] = el }}
-                                value={row.subId} onChange={(e) => update(row.tempId, { subId: e.target.value })} className={selectClass}>
-                                <option value="">— none —</option>
-                                {subs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                              </select>
+                              <MobileSelect ref={(el) => { subRefs.current[row.tempId] = el }}
+                                title="Sub-category" placeholder="— none —" noneLabel="— none —"
+                                value={row.subId} onChange={(v) => update(row.tempId, { subId: v })}
+                                options={subs.map((s) => ({ value: s.id, label: s.name }))} />
                             </MField>
                           )}
                           <MField label="Account" full>
-                            <select value={row.accountId} onChange={(e) => update(row.tempId, { accountId: e.target.value })} className={selectClass}>
-                              <option value="">Choose account…</option>
-                              <NativeGroupedOptions options={accountOptions} />
-                            </select>
+                            <MobileSelect title="Account" placeholder="Choose account…"
+                              value={row.accountId} onChange={(v) => update(row.tempId, { accountId: v })} options={accountOptions} />
                           </MField>
                           <MField label="Note" full>
                             <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
@@ -388,25 +379,3 @@ function MField({ label, full, children }) {
   )
 }
 
-// Native <option>/<optgroup> list from grouped options (used in the mobile selects).
-function NativeGroupedOptions({ options }) {
-  const groups = new Map()
-  for (const o of options) {
-    const g = o.group || ''
-    if (!groups.has(g)) groups.set(g, [])
-    groups.get(g).push(o)
-  }
-  return (
-    <>
-      {[...groups.entries()].map(([g, items]) =>
-        g ? (
-          <optgroup key={g} label={g}>
-            {items.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </optgroup>
-        ) : (
-          items.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)
-        )
-      )}
-    </>
-  )
-}
