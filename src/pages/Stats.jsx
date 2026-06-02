@@ -105,35 +105,38 @@ export default function Stats() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, range?.start, range?.end])
 
-  // Aggregate income/expense (base currency) + expenses grouped by top-level
+  // Aggregate income/expense (base currency) + both grouped by top-level
   // category. Transfers are excluded; currencies without a rate are reported.
   const agg = useMemo(() => {
     let income = 0
     let expense = 0
     const missing = new Set()
-    const byParent = new Map() // pid -> { id, name, total, txns: [] }
-    for (const t of txns) {
-      if (t.kind === 'transfer') continue
-      const v = toBase(Number(t.amount) || 0, t.currency, rates, base)
-      if (v == null) { missing.add(t.currency); continue }
-      if (t.kind === 'income') { income += v; continue }
-      // expense
-      expense += v
+    const incByParent = new Map() // pid -> { id, name, total, txns: [] }
+    const expByParent = new Map()
+    const bucket = (map, t, v) => {
       const c = t.category
       let pid, pname
       if (!c) { pid = '__none'; pname = 'Uncategorised' }
       else if (c.parent_id) { pid = c.parent_id; pname = catMap.get(c.parent_id)?.name ?? '…' }
       else { pid = c.id; pname = c.name }
-      if (!byParent.has(pid)) byParent.set(pid, { id: pid, name: pname, total: 0, txns: [] })
-      const g = byParent.get(pid)
+      if (!map.has(pid)) map.set(pid, { id: pid, name: pname, total: 0, txns: [] })
+      const g = map.get(pid)
       g.total += v
       g.txns.push(t)
     }
-    const groups = [...byParent.values()].sort((a, b) => b.total - a.total)
-    return { income, expense, groups, missing: [...missing] }
+    for (const t of txns) {
+      if (t.kind === 'transfer') continue
+      const v = toBase(Number(t.amount) || 0, t.currency, rates, base)
+      if (v == null) { missing.add(t.currency); continue }
+      if (t.kind === 'income') { income += v; bucket(incByParent, t, v) }
+      else { expense += v; bucket(expByParent, t, v) }
+    }
+    const sortG = (m) => [...m.values()].sort((a, b) => b.total - a.total)
+    return { income, expense, incomeGroups: sortG(incByParent), expenseGroups: sortG(expByParent), missing: [...missing] }
   }, [txns, rates, base, catMap])
 
-  const drillGroup = drill ? agg.groups.find((g) => g.id === drill.id) || null : null
+  const drillGroups = drill?.kind === 'income' ? agg.incomeGroups : agg.expenseGroups
+  const drillGroup = drill ? drillGroups.find((g) => g.id === drill.id) || null : null
 
   function shift(delta) {
     setAnchor((a) => {
@@ -203,7 +206,7 @@ export default function Stats() {
       ) : loading ? (
         <p className="text-sm text-muted text-center py-10">Loading…</p>
       ) : drill ? (
-        <CategoryDrill name={drill.name} group={drillGroup} base={base} rates={rates} catMap={catMap}
+        <CategoryDrill name={drill.name} kind={drill.kind} group={drillGroup} base={base} rates={rates} catMap={catMap}
           onBack={() => setDrill(null)} onTx={(id) => navigate(`/tx/${id}`)} />
       ) : (
         <>
@@ -227,44 +230,58 @@ export default function Stats() {
             </button>
           )}
 
-          <div className="text-xs font-bold uppercase tracking-wide text-faint mt-5 mb-2 px-1">Expenses by category</div>
-          {agg.groups.length === 0 ? (
-            <div className="bg-surface border border-border rounded-[14px] p-8 text-center">
-              <p className="text-sm text-muted">No expenses in this period.</p>
-            </div>
-          ) : (
-            <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
-              {agg.groups.map((g, i) => {
-                const pct = agg.expense > 0 ? Math.round((g.total / agg.expense) * 100) : 0
-                return (
-                  <button key={g.id} onClick={() => setDrill({ id: g.id, name: g.name })}
-                    className="w-full flex items-center gap-3 px-3.5 py-3 border-t border-border first:border-t-0 hover:bg-surface-2 text-left">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-[14.5px] truncate">{g.name}</div>
-                      <div className="h-1.5 rounded-full bg-surface-2 mt-2 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: PALETTE[i % PALETTE.length] }} />
-                      </div>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="font-bold text-[14.5px] tabular">{formatMoney(g.total, base)}</div>
-                      <div className="text-[11px] text-muted">{pct}%</div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-faint shrink-0" />
-                  </button>
-                )
-              })}
-            </div>
-          )}
+          <CategoryList title="Expenses by category" kindWord="expenses" groups={agg.expenseGroups} total={agg.expense} base={base}
+            onOpen={(g) => setDrill({ id: g.id, name: g.name, kind: 'expense' })} />
+          <CategoryList title="Income by category" kindWord="income" groups={agg.incomeGroups} total={agg.income} base={base}
+            onOpen={(g) => setDrill({ id: g.id, name: g.name, kind: 'income' })} />
         </>
       )}
     </div>
   )
 }
 
+// A "… by category" list with proportion bars + percentages; tap a row to drill.
+function CategoryList({ title, kindWord, groups, total, base, onOpen }) {
+  return (
+    <>
+      <div className="text-xs font-bold uppercase tracking-wide text-faint mt-5 mb-2 px-1">{title}</div>
+      {groups.length === 0 ? (
+        <div className="bg-surface border border-border rounded-[14px] p-6 text-center">
+          <p className="text-sm text-muted">No {kindWord} in this period.</p>
+        </div>
+      ) : (
+        <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+          {groups.map((g, i) => {
+            const pct = total > 0 ? Math.round((g.total / total) * 100) : 0
+            return (
+              <button key={g.id} onClick={() => onOpen(g)}
+                className="w-full flex items-center gap-3 px-3.5 py-3 border-t border-border first:border-t-0 hover:bg-surface-2 text-left">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-[14.5px] truncate">{g.name}</div>
+                  <div className="h-1.5 rounded-full bg-surface-2 mt-2 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: PALETTE[i % PALETTE.length] }} />
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-bold text-[14.5px] tabular">{formatMoney(g.total, base)}</div>
+                  <div className="text-[11px] text-muted">{pct}%</div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-faint shrink-0" />
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+}
+
 // Drilldown for the tapped top-level category: a sub-category breakdown (only
 // shown when the category actually has sub-categories) + every transaction in
 // the current period. `group` is null when the category has nothing this period.
-function CategoryDrill({ name, group, base, rates, catMap, onBack, onTx }) {
+function CategoryDrill({ name, kind, group, base, rates, catMap, onBack, onTx }) {
+  const kindWord = kind === 'income' ? 'income' : 'expenses'
+  const totalColor = kind === 'income' ? 'text-income' : 'text-expense'
   const total = group?.total ?? 0
   const txns = group ? [...group.txns].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)) : []
 
@@ -288,12 +305,12 @@ function CategoryDrill({ name, group, base, rates, catMap, onBack, onTx }) {
   return (
     <>
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-muted mt-4 mb-2 hover:text-text">
-        <ChevronLeft className="w-4 h-4" /> Expenses by category
+        <ChevronLeft className="w-4 h-4" /> {kind === 'income' ? 'Income' : 'Expenses'} by category
       </button>
 
       <div className="bg-surface border border-border rounded-[14px] px-4 py-3.5 flex justify-between items-baseline">
         <span className="font-bold text-[15px]">{name}</span>
-        <span className="font-extrabold text-[15px] tabular text-expense">{formatMoney(total, base)}</span>
+        <span className={`font-extrabold text-[15px] tabular ${totalColor}`}>{formatMoney(total, base)}</span>
       </div>
 
       {subList.length > 0 && (
@@ -314,7 +331,7 @@ function CategoryDrill({ name, group, base, rates, catMap, onBack, onTx }) {
       )}
 
       {txns.length === 0 ? (
-        <p className="text-sm text-muted text-center py-10">No expenses in this category for this period.</p>
+        <p className="text-sm text-muted text-center py-10">No {kindWord} in this category for this period.</p>
       ) : (
         <>
           <div className="text-xs font-bold uppercase tracking-wide text-faint mt-5 mb-2 px-1">Transactions</div>
