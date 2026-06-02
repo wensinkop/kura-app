@@ -99,31 +99,48 @@ export default function NewTransaction() {
   const subsFor = (catId) => categories.filter((c) => c.parent_id === catId)
 
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts])
-  const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
 
-  // ---- Mobile combined category picker (category OR sub in one tap) ----------
-  // Encodes the selection as "cat:<id>" / "sub:<id>" so one <select> covers both.
-  function comboValue(row) {
-    return row.subId ? `sub:${row.subId}` : row.categoryId ? `cat:${row.categoryId}` : ''
+  // ---- Mobile category → sub-category (two short native pickers) -------------
+  // Pick the category first (short top-level list); if it has sub-categories the
+  // sub picker opens automatically so you flow straight into it without having
+  // to tap a second placeholder.
+  const subRefs = useRef({})
+  const [openSubFor, setOpenSubFor] = useState(null)
+  function onMobileCat(id, val) {
+    update(id, { categoryId: val, subId: '' })
+    if (val && subsFor(val).length) setOpenSubFor(id)
   }
-  function onCombo(id, val) {
-    if (!val) return update(id, { categoryId: '', subId: '' })
-    if (val.startsWith('cat:')) return update(id, { categoryId: val.slice(4), subId: '' })
-    const subId = val.slice(4)
-    update(id, { subId, categoryId: catById.get(subId)?.parent_id ?? '' })
-  }
+  useEffect(() => {
+    if (!openSubFor) return
+    const t = setTimeout(() => {
+      try { subRefs.current[openSubFor]?.showPicker?.() } catch { /* unsupported / no activation */ }
+      setOpenSubFor(null)
+    }, 0)
+    return () => clearTimeout(t)
+  }, [openSubFor])
 
   // ---- New-row focus + keep the active card above the keyboard ---------------
+  const HEADER_OFFSET = 64 // sticky header height; leave the card just below it
   const rowRefs = useRef({})
   const [focusId, setFocusId] = useState(null)
+
+  // Scroll the window so a card sits just below the sticky header. Computed
+  // target + window.scrollTo is reliable (scrollIntoView was slow/flaky here);
+  // the bottom spacer guarantees even the last row can reach the top.
+  function scrollCardToTop(card) {
+    if (!card) return
+    const y = window.scrollY + card.getBoundingClientRect().top - HEADER_OFFSET
+    window.scrollTo(0, Math.max(0, y)) // instant: reliable across browsers + snappy
+  }
+
   useEffect(() => {
     if (!focusId) return
     const t = setTimeout(() => {
       const card = rowRefs.current[focusId]
       if (card) {
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' })
         const first = [...card.querySelectorAll('input,select')].find((el) => el.offsetParent !== null)
-        try { first?.focus() } catch { /* ignore */ }
+        try { first?.focus({ preventScroll: true }) } catch { /* ignore */ }
+        scrollCardToTop(card)
       }
       setFocusId(null)
     }, 60)
@@ -133,7 +150,7 @@ export default function NewTransaction() {
   // Whenever a field in a row gains focus, lift that card to the top so the
   // on-screen keyboard never covers it.
   function liftRow(tempId) {
-    rowRefs.current[tempId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    scrollCardToTop(rowRefs.current[tempId])
   }
 
   function switchKind(k) {
@@ -267,22 +284,21 @@ export default function NewTransaction() {
                             <NumberInput value={row.amount} onChange={(v) => update(row.tempId, { amount: v })}
                               locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
                           </MField>
-                          <MField label="Category" full>
-                            <select value={comboValue(row)} onChange={(e) => onCombo(row.tempId, e.target.value)} className={selectClass}>
+                          <MField label="Category" full={subs.length === 0}>
+                            <select value={row.categoryId} onChange={(e) => onMobileCat(row.tempId, e.target.value)} className={selectClass}>
                               <option value="">— Category —</option>
-                              {topCats.map((c) => {
-                                const cs = subsFor(c.id)
-                                return cs.length === 0 ? (
-                                  <option key={c.id} value={`cat:${c.id}`}>{c.name}</option>
-                                ) : (
-                                  <optgroup key={c.id} label={c.name}>
-                                    <option value={`cat:${c.id}`}>{c.name} — all</option>
-                                    {cs.map((s) => <option key={s.id} value={`sub:${s.id}`}>{s.name}</option>)}
-                                  </optgroup>
-                                )
-                              })}
+                              {topCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                           </MField>
+                          {subs.length > 0 && (
+                            <MField label="Sub-category">
+                              <select ref={(el) => { subRefs.current[row.tempId] = el }}
+                                value={row.subId} onChange={(e) => update(row.tempId, { subId: e.target.value })} className={selectClass}>
+                                <option value="">— none —</option>
+                                {subs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                              </select>
+                            </MField>
+                          )}
                           <MField label="Account" full>
                             <select value={row.accountId} onChange={(e) => update(row.tempId, { accountId: e.target.value })} className={selectClass}>
                               <option value="">Choose account…</option>
@@ -335,6 +351,9 @@ export default function NewTransaction() {
                   <p className="text-sm text-expense">{saveError}</p>
                 </div>
               )}
+
+              {/* Lets the last row scroll all the way to the top (above the keyboard). */}
+              <div aria-hidden="true" className="h-[60vh] desk:hidden" />
             </>
           )}
         </main>
