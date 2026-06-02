@@ -64,6 +64,7 @@ export default function Stats() {
 
   const [mode, setMode] = useState('month')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [view, setView] = useState('expense') // which breakdown is shown: 'expense' | 'income'
   // Anchor for week/month/year navigation; seeded from the Home-selected month.
   const [anchor, setAnchor] = useState(() => new Date(year, monthIndex, 1))
   const [periodStart, setPeriodStart] = useState('')
@@ -210,16 +211,20 @@ export default function Stats() {
           onBack={() => setDrill(null)} onTx={(id) => navigate(`/tx/${id}`)} />
       ) : (
         <>
-          {/* Income / Expenses summary */}
-          <div className="bg-surface border border-border rounded-[14px] mt-4 flex">
-            <div className="flex-1 px-4 py-3.5 border-r border-border">
-              <div className="text-[11px] font-semibold text-muted">Income</div>
-              <div className="text-[17px] font-extrabold tabular text-income mt-0.5">{formatMoney(agg.income, base)}</div>
-            </div>
-            <div className="flex-1 px-4 py-3.5">
+          {/* Expenses / Income totals double as tabs — tap to switch breakdown */}
+          <div className="bg-surface border border-border rounded-[14px] mt-4 flex overflow-hidden">
+            <button onClick={() => setView('expense')}
+              className={`flex-1 px-4 py-3.5 text-left border-r border-border relative ${view === 'expense' ? '' : 'opacity-50'}`}>
               <div className="text-[11px] font-semibold text-muted">Expenses</div>
               <div className="text-[17px] font-extrabold tabular text-expense mt-0.5">{formatMoney(agg.expense, base)}</div>
-            </div>
+              {view === 'expense' && <span className="absolute left-0 right-0 bottom-0 h-[3px] bg-expense" />}
+            </button>
+            <button onClick={() => setView('income')}
+              className={`flex-1 px-4 py-3.5 text-left relative ${view === 'income' ? '' : 'opacity-50'}`}>
+              <div className="text-[11px] font-semibold text-muted">Income</div>
+              <div className="text-[17px] font-extrabold tabular text-income mt-0.5">{formatMoney(agg.income, base)}</div>
+              {view === 'income' && <span className="absolute left-0 right-0 bottom-0 h-[3px] bg-income" />}
+            </button>
           </div>
 
           {agg.missing.length > 0 && (
@@ -230,10 +235,13 @@ export default function Stats() {
             </button>
           )}
 
-          <CategoryList title="Expenses by category" kindWord="expenses" groups={agg.expenseGroups} total={agg.expense} base={base}
-            onOpen={(g) => setDrill({ id: g.id, name: g.name, kind: 'expense' })} />
-          <CategoryList title="Income by category" kindWord="income" groups={agg.incomeGroups} total={agg.income} base={base}
-            onOpen={(g) => setDrill({ id: g.id, name: g.name, kind: 'income' })} />
+          {view === 'expense' ? (
+            <CategoryList title="Expenses by category" kindWord="expenses" groups={agg.expenseGroups} total={agg.expense} base={base}
+              onOpen={(g) => setDrill({ id: g.id, name: g.name, kind: 'expense' })} />
+          ) : (
+            <CategoryList title="Income by category" kindWord="income" groups={agg.incomeGroups} total={agg.income} base={base}
+              onOpen={(g) => setDrill({ id: g.id, name: g.name, kind: 'income' })} />
+          )}
         </>
       )}
     </div>
