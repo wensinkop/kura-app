@@ -309,7 +309,7 @@ export default function NewTransaction() {
                         <ResponsiveSelect title="Type" placeholder="Type…" value={row.kind}
                           onChange={(v) => setRowKind(row.tempId, v)} options={KIND_OPTIONS} />
                       </MField>
-                      <MField label="Date" field="date" deskW="desk:w-[130px] desk:flex-none">
+                      <MField label="Date" field="date" deskW="desk:w-[158px] desk:flex-none">
                         <DatePicker value={row.date} onChange={(v) => update(row.tempId, { date: v })} className={inputClass} />
                       </MField>
                       <MField label={cross ? 'Amount sent' : 'Amount'} field="amount" deskW="desk:w-[130px] desk:flex-none">
