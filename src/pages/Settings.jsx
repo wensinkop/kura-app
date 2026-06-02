@@ -77,6 +77,12 @@ export default function Settings() {
           sub="Used for combined totals across currencies"
           right={<span className="text-faint font-semibold">{profile?.base_currency ?? 'IDR'}</span>}
         />
+        <Row
+          title="Exchange rates"
+          sub="Convert foreign-currency balances to net worth"
+          right={Chevron}
+          onClick={() => navigate('/settings/rates')}
+        />
       </Group>
 
       <SectionTitle>Structure</SectionTitle>

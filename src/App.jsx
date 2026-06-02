@@ -13,6 +13,7 @@ import Accounts from './pages/Accounts'
 import Settings from './pages/Settings'
 import SettingsCategories from './pages/SettingsCategories'
 import SettingsAccounts from './pages/SettingsAccounts'
+import SettingsRates from './pages/SettingsRates'
 import NewTransaction from './pages/NewTransaction'
 
 function Loading() {
@@ -59,6 +60,7 @@ export default function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/categories" element={<SettingsCategories />} />
               <Route path="/settings/accounts" element={<SettingsAccounts />} />
+              <Route path="/settings/rates" element={<SettingsRates />} />
             </Route>
 
             {/* Full-screen entry (signed-in, outside the shell) */}

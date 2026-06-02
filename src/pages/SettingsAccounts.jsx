@@ -5,9 +5,10 @@ import {
   listAccounts, createAccount, updateAccount, deleteAccount,
   setAccountArchived, persistOrder,
 } from '../lib/data'
-import { currencyOptions } from '../lib/currencies'
+import { currencyOptions, localeFor, currencyDecimals } from '../lib/currencies'
 import { TYPE_OPTIONS, accountSubtitle } from '../lib/format'
 import SearchableSelect from '../components/SearchableSelect'
+import NumberInput from '../components/NumberInput'
 import { Button, Field, TextInput, Segmented, IconButton, Modal, ConfirmDialog, inputClass } from '../components/ui'
 import { PlusIcon, PencilIcon, TrashIcon, ArchiveIcon, ChevronUp, ChevronDown } from '../lib/icons'
 
@@ -236,6 +237,7 @@ function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
   const [type, setType] = useState(target?.type ?? 'cash')
   const [currency, setCurrency] = useState(target?.currency ?? 'IDR')
   const [groupId, setGroupId] = useState(target?.group_id ?? '')
+  const [opening, setOpening] = useState(target?.opening_balance != null ? Number(target.opening_balance) : null)
   const [settlement, setSettlement] = useState(target?.settlement_day?.toString() ?? '')
   const [payment, setPayment] = useState(target?.payment_day?.toString() ?? '')
 
@@ -249,6 +251,7 @@ function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
     onSubmit({
       name, type, currency,
       group_id: groupId || null,
+      opening_balance: opening ?? 0,
       settlement_day: settlement,
       payment_day: payment,
     })
@@ -287,6 +290,14 @@ function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
 
         <Field label="Group">
           <SearchableSelect value={groupId} onChange={setGroupId} options={groupOptions} className={inputClass} placeholder="No group" />
+        </Field>
+
+        <Field
+          label="Opening balance"
+          hint={isCC ? 'What you currently owe — enter as a negative number.' : 'Current amount in this account before logged transactions.'}
+        >
+          <NumberInput value={opening} onChange={setOpening} allowNegative
+            locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
         </Field>
 
         {isCC && (

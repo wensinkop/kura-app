@@ -16,8 +16,10 @@ import { ChevronLeft, CloseIcon } from '../lib/icons'
 const KINDS = [
   { value: 'expense', label: 'Expense' },
   { value: 'income', label: 'Income' },
-  { value: 'transfer', label: 'Transfer' }, // disabled — Chunk 3
+  { value: 'transfer', label: 'Transfer' },
 ]
+
+const KIND_ON_COLOR = { income: 'text-income', expense: 'text-expense', transfer: 'text-transfer' }
 
 // Desktop register column template (Date | Amount | Category | Sub | Account | Note | ✕).
 const REG_COLS =
@@ -37,6 +39,9 @@ function newRow(prev) {
     categoryId: '',
     subId: '',
     note: '',
+    // Transfer-only
+    toAccountId: prev?.toAccountId ?? '',
+    toAmount: null,
   }
 }
 
@@ -150,7 +155,6 @@ export default function NewTransaction() {
   }
 
   function switchKind(k) {
-    if (k === 'transfer') return
     setKind(k)
     setRows((rs) => rs.map((r) => ({ ...r, categoryId: '', subId: '' }))) // categories are kind-specific
   }
@@ -177,12 +181,25 @@ export default function NewTransaction() {
     return [...m.entries()]
   }, [rows, accountById])
 
+  function isCross(r) {
+    const f = accountById.get(r.accountId)?.currency
+    const t = accountById.get(r.toAccountId)?.currency
+    return f && t && f !== t
+  }
+
   function validate() {
     const errs = {}
     for (const r of rows) {
-      if (!r.date) errs[r.tempId] = 'Pick a date.'
-      else if (!r.accountId) errs[r.tempId] = 'Choose an account.'
-      else if (!r.amount || r.amount <= 0) errs[r.tempId] = 'Enter an amount greater than zero.'
+      if (!r.date) { errs[r.tempId] = 'Pick a date.'; continue }
+      if (kind === 'transfer') {
+        if (!r.accountId || !r.toAccountId) errs[r.tempId] = 'Choose both the From and To accounts.'
+        else if (r.accountId === r.toAccountId) errs[r.tempId] = 'From and To must be different accounts.'
+        else if (!r.amount || r.amount <= 0) errs[r.tempId] = 'Enter an amount greater than zero.'
+        else if (isCross(r) && (!r.toAmount || r.toAmount <= 0)) errs[r.tempId] = 'Enter the received amount.'
+      } else {
+        if (!r.accountId) errs[r.tempId] = 'Choose an account.'
+        else if (!r.amount || r.amount <= 0) errs[r.tempId] = 'Enter an amount greater than zero.'
+      }
     }
     setRowErrors(errs)
     return Object.keys(errs).length === 0
@@ -192,14 +209,30 @@ export default function NewTransaction() {
     setSaveError('')
     if (!validate()) return
     setSaving(true)
-    const payload = rows.map((r) => ({
-      kind,
-      date: r.date,
-      amount: r.amount,
-      account_id: r.accountId,
-      category_id: r.subId || r.categoryId || null,
-      note: r.note.trim() || null,
-    }))
+    const payload = rows.map((r) => {
+      if (kind === 'transfer') {
+        const cross = isCross(r)
+        return {
+          kind: 'transfer',
+          date: r.date,
+          amount: r.amount,
+          account_id: r.accountId,
+          to_account_id: r.toAccountId,
+          to_amount: cross ? r.toAmount : r.amount,
+          exchange_rate: cross && r.toAmount ? r.amount / r.toAmount : null,
+          category_id: null,
+          note: r.note.trim() || null,
+        }
+      }
+      return {
+        kind,
+        date: r.date,
+        amount: r.amount,
+        account_id: r.accountId,
+        category_id: r.subId || r.categoryId || null,
+        note: r.note.trim() || null,
+      }
+    })
     const { error } = await createTransactions(user.id, payload)
     if (error) { setSaveError(error.message); setSaving(false); return }
     navigate('/')
@@ -234,25 +267,23 @@ export default function NewTransaction() {
               <div className="flex bg-surface-2 border border-border rounded-xl p-1 gap-1 max-w-[420px]">
                 {KINDS.map((k) => {
                   const on = kind === k.value
-                  const disabled = k.value === 'transfer'
                   return (
-                    <button key={k.value} onClick={() => switchKind(k.value)} disabled={disabled}
-                      title={disabled ? 'Transfers arrive in Chunk 3' : undefined}
+                    <button key={k.value} onClick={() => switchKind(k.value)}
                       className={`flex-1 py-2 rounded-[9px] font-bold text-[14px] transition-colors ${
-                        on
-                          ? k.value === 'income' ? 'bg-surface text-income shadow-sm' : 'bg-surface text-expense shadow-sm'
-                          : disabled ? 'text-faint/50 cursor-not-allowed' : 'text-muted'
+                        on ? `bg-surface ${KIND_ON_COLOR[k.value]} shadow-sm` : 'text-muted'
                       }`}>
-                      {k.label}{disabled && ' · soon'}
+                      {k.label}
                     </button>
                   )
                 })}
               </div>
 
-              {/* Desktop column labels */}
-              <div className={`hidden desk:grid ${REG_COLS} gap-2.5 px-1 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-faint`}>
-                <span>Date</span><span>Amount</span><span>Category</span><span>Sub-category</span><span>Account</span><span>Note</span><span />
-              </div>
+              {/* Desktop column labels (income/expense register only) */}
+              {kind !== 'transfer' && (
+                <div className={`hidden desk:grid ${REG_COLS} gap-2.5 px-1 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-faint`}>
+                  <span>Date</span><span>Amount</span><span>Category</span><span>Sub-category</span><span>Account</span><span>Note</span><span />
+                </div>
+              )}
 
               {/* Rows */}
               <div className="flex flex-col">
@@ -266,6 +297,11 @@ export default function NewTransaction() {
                       onFocusCapture={() => liftRow(row.tempId)}
                       className="scroll-mt-[68px] mt-2.5 desk:mt-1.5">
 
+                      {kind === 'transfer' ? (
+                        <TransferCard row={row} idx={idx} err={err} accountOptions={accountOptions}
+                          accountById={accountById} notes={notes} onUpdate={update} onRemove={removeRow} />
+                      ) : (
+                      <>
                       {/* ===== MOBILE: compact card with native pickers ===== */}
                       <div className={`desk:hidden bg-surface border rounded-[14px] p-3 ${err ? 'border-expense' : 'border-border'}`}>
                         <div className="flex justify-between items-center mb-2">
@@ -325,6 +361,8 @@ export default function NewTransaction() {
                           <CloseIcon className="w-4 h-4" />
                         </button>
                       </div>
+                      </>
+                      )}
 
                       {err && <p className="text-sm text-expense mt-1.5 px-1">{err}</p>}
                     </div>
@@ -375,6 +413,69 @@ function MField({ label, full, children }) {
     <div className={`flex flex-col gap-1.5 ${full ? 'col-span-2' : ''}`}>
       <label className="text-[10.5px] font-semibold text-muted pl-0.5">{label}</label>
       {children}
+    </div>
+  )
+}
+
+// Account picker that adapts: bottom-sheet on mobile, type-to-search on desktop.
+function AccountField({ title, placeholder, value, onChange, options }) {
+  return (
+    <>
+      <div className="desk:hidden">
+        <MobileSelect title={title} placeholder={placeholder} value={value} onChange={onChange} options={options} />
+      </div>
+      <div className="hidden desk:block">
+        <SearchableSelect value={value} onChange={onChange} options={options} className={inputClass} placeholder={placeholder} />
+      </div>
+    </>
+  )
+}
+
+// Transfer row — one card (same on mobile + desktop): From → To, amount, and a
+// received amount + rate hint when the two accounts use different currencies.
+function TransferCard({ row, idx, accountOptions, accountById, notes, onUpdate, onRemove }) {
+  const fromCur = accountById.get(row.accountId)?.currency ?? 'IDR'
+  const toCur = accountById.get(row.toAccountId)?.currency
+  const cross = toCur && fromCur !== toCur
+  const set = (patch) => onUpdate(row.tempId, patch)
+  return (
+    <div className="bg-surface border border-border rounded-[14px] p-3 desk:max-w-[560px]">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Transfer {idx + 1}</span>
+        <button onClick={() => onRemove(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        <MField label="Date">
+          <DatePicker value={row.date} onChange={(v) => set({ date: v })} className={inputClass} />
+        </MField>
+        <MField label={cross ? 'Amount sent' : 'Amount'}>
+          <NumberInput value={row.amount} onChange={(v) => set({ amount: v })}
+            locale={localeFor(fromCur)} currency={fromCur} decimals={currencyDecimals(fromCur)} placeholder="0" />
+        </MField>
+        <MField label="From account" full>
+          <AccountField title="From account" placeholder="From…" value={row.accountId}
+            onChange={(v) => set({ accountId: v })} options={accountOptions} />
+        </MField>
+        <MField label="To account" full>
+          <AccountField title="To account" placeholder="To…" value={row.toAccountId}
+            onChange={(v) => set({ toAccountId: v })} options={accountOptions} />
+        </MField>
+        {cross && (
+          <MField label={`Received (${toCur})`} full>
+            <NumberInput value={row.toAmount} onChange={(v) => set({ toAmount: v })}
+              locale={localeFor(toCur)} currency={toCur} decimals={currencyDecimals(toCur)} placeholder="0" />
+          </MField>
+        )}
+        <MField label="Note" full>
+          <AutocompleteInput value={row.note} onChange={(v) => set({ note: v })}
+            suggestions={notes} placeholder="e.g. Move to savings" className={inputClass} />
+        </MField>
+      </div>
+      {cross && row.amount > 0 && row.toAmount > 0 && (
+        <div className="text-[11px] text-faint mt-2 px-0.5">
+          Rate · 1 {toCur} ≈ {formatMoney(row.amount / row.toAmount, fromCur)}
+        </div>
+      )}
     </div>
   )
 }

@@ -73,6 +73,7 @@ function normalizeAccount(p) {
     type: p.type,
     currency: p.currency,
     group_id: p.group_id || null,
+    opening_balance: Number(p.opening_balance) || 0,
     settlement_day: isCC ? toDay(p.settlement_day) : null,
     payment_day: isCC ? toDay(p.payment_day) : null,
   }
@@ -128,6 +129,7 @@ export function setCategoryArchived(id, archived) {
 const TX_SELECT =
   '*, ' +
   'account:accounts!transactions_account_id_fkey ( id, name, currency, type ), ' +
+  'to_account:accounts!transactions_to_account_id_fkey ( id, name, currency ), ' +
   'category:categories!transactions_category_id_fkey ( id, name, parent_id )'
 
 // Transactions whose date falls in the given month (monthIndex is 0-based).
@@ -176,6 +178,29 @@ export async function recentNotes(limit = 300) {
     }
   }
   return out
+}
+
+// All transactions (minimal fields) for client-side balance + credit-card math.
+export function listAllTransactions() {
+  return supabase
+    .from('transactions')
+    .select('id, kind, amount, account_id, to_account_id, to_amount, date')
+}
+
+// ---- Exchange rates (manual, value of 1 unit of currency in base currency) --
+
+export function listRates() {
+  return supabase.from('exchange_rates').select('*')
+}
+
+export function upsertRate(userId, currency, rate) {
+  return supabase
+    .from('exchange_rates')
+    .upsert({ user_id: userId, currency, rate }, { onConflict: 'user_id,currency' })
+}
+
+export function deleteRate(userId, currency) {
+  return supabase.from('exchange_rates').delete().eq('user_id', userId).eq('currency', currency)
 }
 
 // ---- Reordering ------------------------------------------------------------

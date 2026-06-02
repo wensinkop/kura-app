@@ -150,7 +150,10 @@ function SummaryCard({ label, rows }) {
 }
 
 function TxRow({ t, catMap }) {
-  const { chip, sub } = catLabels(t, catMap)
+  const isTransfer = t.kind === 'transfer'
+  const { chip, sub } = isTransfer
+    ? { chip: 'Transfer', sub: `${t.account?.name ?? '?'} → ${t.to_account?.name ?? '?'}` }
+    : catLabels(t, catMap)
   return (
     <div className="px-3.5 py-2.5 border-t border-border first:border-t-0">
       <div className="flex justify-between gap-3 items-baseline">
@@ -160,9 +163,11 @@ function TxRow({ t, catMap }) {
         </span>
       </div>
       <div className="flex items-center gap-2 mt-1.5">
-        <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-surface-2 text-muted border border-border whitespace-nowrap">{chip}</span>
+        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap ${
+          isTransfer ? 'bg-transfer/10 text-transfer border-transfer/30' : 'bg-surface-2 text-muted border-border'
+        }`}>{chip}</span>
         {sub && <span className="text-xs text-muted truncate">{sub}</span>}
-        <span className="text-xs text-faint ml-auto whitespace-nowrap shrink-0">{t.account?.name}</span>
+        {!isTransfer && <span className="text-xs text-faint ml-auto whitespace-nowrap shrink-0">{t.account?.name}</span>}
       </div>
     </div>
   )
