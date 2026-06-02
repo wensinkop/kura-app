@@ -52,6 +52,10 @@ export default function AppShell() {
   const isHome = pathname === '/'
   const title = titleFor(pathname)
   const backTarget = backTargetFor(pathname)
+  // The bottom nav / sidebar already names the top-level pages, so they show no
+  // header. Home keeps its month/search/filter bar; settings sub-pages keep a
+  // header for the back arrow.
+  const showHeader = isHome || !!backTarget
 
   const bottomLink = ({ isActive }) =>
     `flex flex-col items-center gap-[3px] text-[10.5px] font-semibold py-1 ` +
@@ -64,43 +68,45 @@ export default function AppShell() {
 
         {/* ===== Main column ===== */}
         <div className="flex-1 w-full max-w-[520px] mx-auto desk:max-w-none flex flex-col min-h-screen bg-bg">
-          <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 py-3 desk:px-8 desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
-            {isHome ? (
-              <div className="font-extrabold text-[18px] tracking-[-.3px] desk:hidden">
-                Kura<span className="text-primary">·</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                {backTarget && (
-                  <button onClick={() => navigate(backTarget)} aria-label="Back"
-                    className="w-9 h-9 -ml-1.5 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
-                    <ChevronLeft />
+          {showHeader && (
+            <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 py-3 desk:px-8 desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
+              {isHome ? (
+                <div className="font-extrabold text-[18px] tracking-[-.3px] desk:hidden">
+                  Kura<span className="text-primary">·</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  {backTarget && (
+                    <button onClick={() => navigate(backTarget)} aria-label="Back"
+                      className="w-9 h-9 -ml-1.5 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
+                      <ChevronLeft />
+                    </button>
+                  )}
+                  <div className="font-extrabold text-xl truncate">{title}</div>
+                </div>
+              )}
+
+              {isHome && <MonthNav />}
+
+              {isHome && (
+                <>
+                  <button onClick={() => navigate('/search')} title="Search" aria-label="Search"
+                    className="w-[38px] h-[38px] rounded-[11px] grid place-items-center text-muted hover:bg-surface-2">
+                    <SearchIcon />
                   </button>
-                )}
-                <div className="font-extrabold text-xl truncate">{title}</div>
-              </div>
-            )}
+                  <button onClick={() => setFilterOpen(true)} title="Filter by account" aria-label="Filter"
+                    className={`relative w-[38px] h-[38px] rounded-[11px] grid place-items-center hover:bg-surface-2 ${
+                      isFiltered ? 'text-primary bg-primary-soft' : 'text-muted'
+                    }`}>
+                    <FilterIcon />
+                    {isFiltered && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />}
+                  </button>
+                </>
+              )}
+            </header>
+          )}
 
-            {isHome && <MonthNav />}
-
-            {isHome && (
-              <>
-                <button onClick={() => navigate('/search')} title="Search" aria-label="Search"
-                  className="w-[38px] h-[38px] rounded-[11px] grid place-items-center text-muted hover:bg-surface-2">
-                  <SearchIcon />
-                </button>
-                <button onClick={() => setFilterOpen(true)} title="Filter by account" aria-label="Filter"
-                  className={`relative w-[38px] h-[38px] rounded-[11px] grid place-items-center hover:bg-surface-2 ${
-                    isFiltered ? 'text-primary bg-primary-soft' : 'text-muted'
-                  }`}>
-                  <FilterIcon />
-                  {isFiltered && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />}
-                </button>
-              </>
-            )}
-          </header>
-
-          <main className="flex-1 px-4 pb-24 pt-4 desk:px-8 desk:pb-10 desk:pt-0 w-full desk:max-w-[1120px] desk:mx-auto">
+          <main className={`flex-1 px-4 pb-24 w-full desk:max-w-[1120px] desk:mx-auto desk:px-8 desk:pb-10 ${showHeader ? 'pt-4 desk:pt-0' : 'pt-5 desk:pt-6'}`}>
             <Outlet />
           </main>
 
