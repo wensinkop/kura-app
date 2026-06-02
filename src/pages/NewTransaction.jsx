@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listAccounts, listGroups, listCategories, recentNotes, createTransactions } from '../lib/data'
@@ -120,20 +120,30 @@ export default function NewTransaction() {
     return () => clearTimeout(t)
   }, [openSubFor])
 
-  // ---- New-row focus + keep the active card above the keyboard ---------------
-  const HEADER_OFFSET = 64 // sticky header height; leave the card just below it
+  // ---- Keep the focused field in view (above the save bar + keyboard) --------
+  const HEADER_OFFSET = 64 // sticky header height
   const rowRefs = useRef({})
+  const saveBarRef = useRef(null)
   const [focusId, setFocusId] = useState(null)
 
-  // Scroll the window so a card sits just below the sticky header. Computed
-  // target + window.scrollTo is reliable (scrollIntoView was slow/flaky here);
-  // the bottom spacer guarantees even the last row can reach the top.
-  function scrollCardToTop(card) {
-    if (!card) return
-    const y = window.scrollY + card.getBoundingClientRect().top - HEADER_OFFSET
-    window.scrollTo(0, Math.max(0, y)) // instant: reliable across browsers + snappy
-  }
+  // Scroll minimally so a focused field stays in the band between the sticky
+  // header and the sticky save bar — and, on mobile, above the on-screen
+  // keyboard (visualViewport height). This keeps the *focused field* visible
+  // rather than lifting the whole card, so the Note (last field) isn't hidden
+  // behind the save bar/keyboard.
+  const ensureFieldVisible = useCallback((el) => {
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const vh = window.visualViewport?.height ?? window.innerHeight
+    const top = HEADER_OFFSET + 8
+    const bottom = vh - ((saveBarRef.current?.offsetHeight ?? 76) + 12)
+    let dy = 0
+    if (rect.bottom > bottom) dy = rect.bottom - bottom
+    else if (rect.top < top) dy = rect.top - top
+    if (dy) window.scrollBy({ top: dy, behavior: 'auto' }) // instant: snappy + reliable
+  }, [])
 
+  // New rows: focus the first field and bring it into view.
   useEffect(() => {
     if (!focusId) return
     const t = setTimeout(() => {
@@ -141,18 +151,25 @@ export default function NewTransaction() {
       if (card) {
         const first = [...card.querySelectorAll('input,select')].find((el) => el.offsetParent !== null)
         try { first?.focus({ preventScroll: true }) } catch { /* ignore */ }
-        scrollCardToTop(card)
+        ensureFieldVisible(first ?? card)
       }
       setFocusId(null)
     }, 60)
     return () => clearTimeout(t)
-  }, [focusId])
+  }, [focusId, ensureFieldVisible])
 
-  // Whenever a field in a row gains focus, lift that card to the top so the
-  // on-screen keyboard never covers it.
-  function liftRow(tempId) {
-    scrollCardToTop(rowRefs.current[tempId])
-  }
+  // The keyboard opens *after* focus fires (the viewport resizes a beat later),
+  // so re-run for the active field whenever the visual viewport changes.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => {
+      const el = document.activeElement
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) ensureFieldVisible(el)
+    }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [ensureFieldVisible])
 
   function switchKind(k) {
     setKind(k)
@@ -294,7 +311,7 @@ export default function NewTransaction() {
                   return (
                     <div key={row.tempId}
                       ref={(el) => { rowRefs.current[row.tempId] = el }}
-                      onFocusCapture={() => liftRow(row.tempId)}
+                      onFocusCapture={(e) => ensureFieldVisible(e.target)}
                       className="scroll-mt-[68px] mt-2.5 desk:mt-1.5">
 
                       {kind === 'transfer' ? (
@@ -389,7 +406,7 @@ export default function NewTransaction() {
 
         {/* Sticky save bar */}
         {!loading && !noAccounts && (
-          <div className="sticky bottom-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
+          <div ref={saveBarRef} className="sticky bottom-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
             <div className="flex-1 text-[13px] text-muted">
               Total · {rows.length} row{rows.length === 1 ? '' : 's'}
               <div className="text-[17px] font-extrabold text-text tabular">
