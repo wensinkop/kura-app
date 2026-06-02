@@ -47,7 +47,7 @@ const MobileSelect = forwardRef(function MobileSelect(
       {open && createPortal(
         <div className="fixed inset-0 z-50 flex items-end bg-black/45"
           onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false) }}>
-          <div className="bg-surface w-full rounded-t-2xl border-t border-border max-h-[78vh] flex flex-col">
+          <div className="bg-surface w-full rounded-t-2xl border-t border-border max-h-[70vh] flex flex-col">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
               <div className="font-bold text-[15px] flex-1">{title}</div>
               <button onClick={() => setOpen(false)} aria-label="Close"

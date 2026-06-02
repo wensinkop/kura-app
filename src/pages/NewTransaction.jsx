@@ -6,43 +6,51 @@ import { localeFor, currencyDecimals } from '../lib/currencies'
 import { formatMoney } from '../lib/format'
 import NumberInput from '../components/NumberInput'
 import AutocompleteInput from '../components/AutocompleteInput'
-import SearchableSelect from '../components/SearchableSelect'
-import MobileSelect from '../components/MobileSelect'
+import ResponsiveSelect from '../components/ResponsiveSelect'
 import DatePicker from '../components/DatePicker'
 import Sidebar from '../components/Sidebar'
 import { Button, inputClass } from '../components/ui'
-import { ChevronLeft, CloseIcon } from '../lib/icons'
+import { ChevronLeft } from '../lib/icons'
 
-const KINDS = [
+// Each row picks its own type (the next row inherits it). Shown via the same
+// adaptive picker as account/category — bottom-sheet on mobile, type on desktop.
+const KIND_OPTIONS = [
   { value: 'expense', label: 'Expense' },
   { value: 'income', label: 'Income' },
   { value: 'transfer', label: 'Transfer' },
 ]
-
-const KIND_ON_COLOR = { income: 'text-income', expense: 'text-expense', transfer: 'text-transfer' }
-
-// Desktop register column template (Date | Amount | Category | Sub | Account | Note | ✕).
-const REG_COLS =
-  'desk:grid-cols-[110px_140px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_28px]'
 
 function todayISO() {
   const d = new Date()
   return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-')
 }
 
+// A new row carries over the previous row's type, date and account(s) — the
+// common case is several entries of the same kind on the same day.
 function newRow(prev) {
   return {
     tempId: crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2),
+    kind: prev?.kind ?? 'expense',
     date: prev?.date ?? todayISO(),
     accountId: prev?.accountId ?? '',
     amount: null,
     categoryId: '',
     subId: '',
     note: '',
-    // Transfer-only
     toAccountId: prev?.toAccountId ?? '',
     toAmount: null,
   }
+}
+
+// Where to scroll when a field is focused: bring this element to the top of the
+// scroll area so the focused field clears the keyboard while keeping its own
+// label/context in view. (Account → Category title; Note → Account title; the
+// rest → the card top.)
+function scrollTargetEl(card, field) {
+  const q = (f) => card.querySelector(`[data-field="${f}"]`)
+  if (field === 'account') return q('category') ?? card
+  if (field === 'note') return q('account') ?? q('to') ?? card
+  return card
 }
 
 export default function NewTransaction() {
@@ -55,7 +63,6 @@ export default function NewTransaction() {
   const [notes, setNotes] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [kind, setKind] = useState('expense')
   const [rows, setRows] = useState([newRow()])
   const [rowErrors, setRowErrors] = useState({})
   const [saving, setSaving] = useState(false)
@@ -75,8 +82,7 @@ export default function NewTransaction() {
     )
   }, [])
 
-  // Account options grouped by their account-group (Ungrouped last), ordered by
-  // group sort then account sort.
+  // Account options grouped by their account-group (Ungrouped last).
   const accountOptions = useMemo(() => {
     const gName = new Map(groups.map((g) => [g.id, g.name]))
     const gSort = new Map(groups.map((g) => [g.id, g.sort_order]))
@@ -94,20 +100,15 @@ export default function NewTransaction() {
       }))
   }, [accounts, groups])
 
-  // Top-level categories of the current kind, and the sub-categories of each.
-  const topCats = useMemo(() => categories.filter((c) => c.kind === kind && !c.parent_id), [categories, kind])
-  const catOptions = useMemo(() => topCats.map((c) => ({ value: c.id, label: c.name })), [topCats])
+  const catOptionsFor = (kind) =>
+    categories.filter((c) => c.kind === kind && !c.parent_id).map((c) => ({ value: c.id, label: c.name }))
   const subsFor = (catId) => categories.filter((c) => c.parent_id === catId)
-
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts])
 
-  // ---- Mobile category → sub-category (two short native pickers) -------------
-  // Pick the category first (short top-level list); if it has sub-categories the
-  // sub picker opens automatically so you flow straight into it without having
-  // to tap a second placeholder.
+  // ---- Mobile category → sub-category (open the sub picker automatically) -----
   const subRefs = useRef({})
   const [openSubFor, setOpenSubFor] = useState(null)
-  function onMobileCat(id, val) {
+  function onPickCat(id, val) {
     update(id, { categoryId: val, subId: '' })
     if (val && subsFor(val).length) setOpenSubFor(id)
   }
@@ -120,58 +121,62 @@ export default function NewTransaction() {
     return () => clearTimeout(t)
   }, [openSubFor])
 
-  // ---- Keep the focused field in view (above the keyboard) -------------------
+  // ---- Scroll handling -------------------------------------------------------
   const rowRefs = useRef({})
   const scrollRef = useRef(null) // the internal scroll area (between header + save bar)
   const [focusId, setFocusId] = useState(null)
 
-  // Lift the focused field to the top of the scroll area (just below the header),
-  // so it's fully visible with the keyboard below it. The middle column scrolls
-  // internally — the header and save bar are fixed — so the save bar never
-  // overlaps fields or the Add-row button. Used for the Note (last field) and
-  // newly added rows; the bottom spacer lets even the last row reach the top.
-  const liftFieldToTop = useCallback((el) => {
+  // Scroll the internal area so `el` sits at the top (just below the header).
+  const liftToTop = useCallback((el) => {
     const sc = scrollRef.current
     if (!el || !sc) return
     const y = sc.scrollTop + (el.getBoundingClientRect().top - sc.getBoundingClientRect().top) - 8
-    sc.scrollTo({ top: Math.max(0, y), behavior: 'auto' }) // instant: snappy + reliable
+    sc.scrollTo({ top: Math.max(0, y), behavior: 'auto' })
   }, [])
 
-  // New rows: focus the first field and bring it into view.
+  // On focus, bring the field's scroll target to the top. Deferred one frame so
+  // it wins over the browser's minimal native scroll-into-view.
+  function handleCardFocus(e, tempId) {
+    const fieldEl = e.target.closest('[data-field]')
+    const card = rowRefs.current[tempId]
+    if (!card) return
+    const target = scrollTargetEl(card, fieldEl?.dataset.field)
+    requestAnimationFrame(() => liftToTop(target))
+  }
+
+  // New row → bring the new card to the top.
   useEffect(() => {
     if (!focusId) return
     const t = setTimeout(() => {
       const card = rowRefs.current[focusId]
-      if (card) {
-        const first = [...card.querySelectorAll('input,select')].find((el) => el.offsetParent !== null)
-        try { first?.focus({ preventScroll: true }) } catch { /* ignore */ }
-        liftFieldToTop(first ?? card)
-      }
+      if (card) liftToTop(card)
       setFocusId(null)
     }, 60)
     return () => clearTimeout(t)
-  }, [focusId, liftFieldToTop])
+  }, [focusId, liftToTop])
 
-  // The keyboard opens *after* focus fires (the viewport resizes a beat later),
-  // so re-lift the active field whenever the visual viewport changes.
+  // The keyboard opens a beat after focus (the viewport resizes), so re-apply
+  // the active field's target then too.
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
     const onResize = () => {
       const el = document.activeElement
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) liftFieldToTop(el)
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return
+      const card = el.closest('[data-row-card]')
+      const fieldEl = el.closest('[data-field]')
+      if (card && fieldEl) liftToTop(scrollTargetEl(card, fieldEl.dataset.field))
     }
     vv.addEventListener('resize', onResize)
     return () => vv.removeEventListener('resize', onResize)
-  }, [liftFieldToTop])
+  }, [liftToTop])
 
-  function switchKind(k) {
-    setKind(k)
-    setRows((rs) => rs.map((r) => ({ ...r, categoryId: '', subId: '' }))) // categories are kind-specific
-  }
-
+  // ---- Row mutations ---------------------------------------------------------
   function update(id, patch) {
     setRows((rs) => rs.map((r) => (r.tempId === id ? { ...r, ...patch } : r)))
+  }
+  function setRowKind(id, k) {
+    update(id, { kind: k, categoryId: '', subId: '' }) // categories are kind-specific
   }
   function addRow() {
     const next = newRow(rows[rows.length - 1])
@@ -202,7 +207,7 @@ export default function NewTransaction() {
     const errs = {}
     for (const r of rows) {
       if (!r.date) { errs[r.tempId] = 'Pick a date.'; continue }
-      if (kind === 'transfer') {
+      if (r.kind === 'transfer') {
         if (!r.accountId || !r.toAccountId) errs[r.tempId] = 'Choose both the From and To accounts.'
         else if (r.accountId === r.toAccountId) errs[r.tempId] = 'From and To must be different accounts.'
         else if (!r.amount || r.amount <= 0) errs[r.tempId] = 'Enter an amount greater than zero.'
@@ -221,7 +226,7 @@ export default function NewTransaction() {
     if (!validate()) return
     setSaving(true)
     const payload = rows.map((r) => {
-      if (kind === 'transfer') {
+      if (r.kind === 'transfer') {
         const cross = isCross(r)
         return {
           kind: 'transfer',
@@ -236,7 +241,7 @@ export default function NewTransaction() {
         }
       }
       return {
-        kind,
+        kind: r.kind,
         date: r.date,
         amount: r.amount,
         account_id: r.accountId,
@@ -256,15 +261,15 @@ export default function NewTransaction() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col h-[100dvh] min-w-0">
-        <header className="shrink-0 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
+        <header className="shrink-0 bg-surface border-b border-border px-4 py-2.5 flex items-center gap-2">
           <button onClick={() => navigate(-1)} aria-label="Back"
-            className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
+            className="w-8 h-8 -ml-1 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
-          <div className="font-bold text-[17px]">New transactions</div>
+          <div className="font-bold text-[15px]">New transactions</div>
         </header>
 
-        <main ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3.5 desk:px-8 desk:py-4 w-full desk:max-w-[1100px] desk:mx-auto">
+        <main ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3.5 desk:px-8 desk:py-5 w-full">
           {loading ? (
             <p className="text-muted text-sm py-8 text-center">Loading…</p>
           ) : noAccounts ? (
@@ -273,116 +278,95 @@ export default function NewTransaction() {
               <Button onClick={() => navigate('/settings/accounts')}>Add an account</Button>
             </div>
           ) : (
-            <>
-              {/* Type toggle */}
-              <div className="flex bg-surface-2 border border-border rounded-xl p-1 gap-1 max-w-[420px]">
-                {KINDS.map((k) => {
-                  const on = kind === k.value
-                  return (
-                    <button key={k.value} onClick={() => switchKind(k.value)}
-                      className={`flex-1 py-2 rounded-[9px] font-bold text-[14px] transition-colors ${
-                        on ? `bg-surface ${KIND_ON_COLOR[k.value]} shadow-sm` : 'text-muted'
-                      }`}>
-                      {k.label}
-                    </button>
-                  )
-                })}
-              </div>
+            <div className="desk:max-w-[640px] desk:mx-auto">
+              {rows.map((row, idx) => {
+                const isTransfer = row.kind === 'transfer'
+                const fromCur = accountById.get(row.accountId)?.currency ?? 'IDR'
+                const toCur = accountById.get(row.toAccountId)?.currency
+                const cross = isTransfer && toCur && fromCur !== toCur
+                const currency = isTransfer ? fromCur : (accountById.get(row.accountId)?.currency ?? 'IDR')
+                const subs = !isTransfer && row.categoryId ? subsFor(row.categoryId) : []
+                const err = rowErrors[row.tempId]
+                return (
+                  <div key={row.tempId}
+                    ref={(el) => { rowRefs.current[row.tempId] = el }}
+                    data-row-card
+                    onFocusCapture={(e) => handleCardFocus(e, row.tempId)}
+                    className={`bg-surface border rounded-[14px] p-3 mt-2.5 first:mt-0 ${err ? 'border-expense' : 'border-border'}`}>
+                    <div className="flex justify-between items-center mb-2.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
+                      <button type="button" onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
+                    </div>
 
-              {/* Desktop column labels (income/expense register only) */}
-              {kind !== 'transfer' && (
-                <div className={`hidden desk:grid ${REG_COLS} gap-2.5 px-1 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-faint`}>
-                  <span>Date</span><span>Amount</span><span>Category</span><span>Sub-category</span><span>Account</span><span>Note</span><span />
-                </div>
-              )}
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <MField label="Type" field="type">
+                        <ResponsiveSelect title="Type" placeholder="Type…" value={row.kind}
+                          onChange={(v) => setRowKind(row.tempId, v)} options={KIND_OPTIONS} />
+                      </MField>
+                      <MField label="Date" field="date">
+                        <DatePicker value={row.date} onChange={(v) => update(row.tempId, { date: v })} className={inputClass} />
+                      </MField>
+                      <MField label={cross ? 'Amount sent' : 'Amount'} field="amount">
+                        <NumberInput value={row.amount} onChange={(v) => update(row.tempId, { amount: v })}
+                          locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
+                      </MField>
 
-              {/* Rows */}
-              <div className="flex flex-col">
-                {rows.map((row, idx) => {
-                  const currency = accountById.get(row.accountId)?.currency ?? 'IDR'
-                  const subs = row.categoryId ? subsFor(row.categoryId) : []
-                  const err = rowErrors[row.tempId]
-                  return (
-                    <div key={row.tempId}
-                      ref={(el) => { rowRefs.current[row.tempId] = el }}
-                      onFocusCapture={(e) => { const el = e.target; requestAnimationFrame(() => liftFieldToTop(el)) }}
-                      className="scroll-mt-[68px] mt-2.5 desk:mt-1.5">
-
-                      {kind === 'transfer' ? (
-                        <TransferCard row={row} idx={idx} err={err} accountOptions={accountOptions}
-                          accountById={accountById} notes={notes} onUpdate={update} onRemove={removeRow} />
+                      {isTransfer ? (
+                        <>
+                          <MField label="From account" field="from" full>
+                            <ResponsiveSelect title="From account" placeholder="From…" value={row.accountId}
+                              onChange={(v) => update(row.tempId, { accountId: v })} options={accountOptions} />
+                          </MField>
+                          <MField label="To account" field="to" full>
+                            <ResponsiveSelect title="To account" placeholder="To…" value={row.toAccountId}
+                              onChange={(v) => update(row.tempId, { toAccountId: v })} options={accountOptions} />
+                          </MField>
+                          {cross && (
+                            <MField label={`Received (${toCur})`} field="received" full>
+                              <NumberInput value={row.toAmount} onChange={(v) => update(row.tempId, { toAmount: v })}
+                                locale={localeFor(toCur)} currency={toCur} decimals={currencyDecimals(toCur)} placeholder="0" />
+                            </MField>
+                          )}
+                        </>
                       ) : (
-                      <>
-                      {/* ===== MOBILE: compact card with native pickers ===== */}
-                      <div className={`desk:hidden bg-surface border rounded-[14px] p-3 ${err ? 'border-expense' : 'border-border'}`}>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
-                          <button onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <MField label="Date">
-                            <DatePicker value={row.date} onChange={(v) => update(row.tempId, { date: v })} className={inputClass} />
-                          </MField>
-                          <MField label="Amount">
-                            <NumberInput value={row.amount} onChange={(v) => update(row.tempId, { amount: v })}
-                              locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
-                          </MField>
-                          <MField label="Category" full={subs.length === 0}>
-                            <MobileSelect title="Category" placeholder="— Category —"
-                              value={row.categoryId} onChange={(v) => onMobileCat(row.tempId, v)} options={catOptions} />
+                        <>
+                          <MField label="Category" field="category" full={subs.length === 0}>
+                            <ResponsiveSelect title="Category" placeholder="— Category —" value={row.categoryId}
+                              onChange={(v) => onPickCat(row.tempId, v)} options={catOptionsFor(row.kind)} />
                           </MField>
                           {subs.length > 0 && (
-                            <MField label="Sub-category">
-                              <MobileSelect ref={(el) => { subRefs.current[row.tempId] = el }}
+                            <MField label="Sub-category" field="subcategory">
+                              <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }}
                                 title="Sub-category" placeholder="— none —" noneLabel="— none —"
                                 value={row.subId} onChange={(v) => update(row.tempId, { subId: v })}
                                 options={subs.map((s) => ({ value: s.id, label: s.name }))} />
                             </MField>
                           )}
-                          <MField label="Account" full>
-                            <MobileSelect title="Account" placeholder="Choose account…"
-                              value={row.accountId} onChange={(v) => update(row.tempId, { accountId: v })} options={accountOptions} />
+                          <MField label="Account" field="account" full>
+                            <ResponsiveSelect title="Account" placeholder="Choose…" value={row.accountId}
+                              onChange={(v) => update(row.tempId, { accountId: v })} options={accountOptions} />
                           </MField>
-                          <MField label="Note" full>
-                            <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
-                              suggestions={notes} placeholder="e.g. Monthly groceries" className={inputClass} />
-                          </MField>
-                        </div>
-                      </div>
-
-                      {/* ===== DESKTOP: register row with searchable selects ===== */}
-                      <div className={`hidden desk:grid ${REG_COLS} gap-2.5 items-start p-1 ${err ? 'ring-1 ring-expense rounded-lg' : ''}`}>
-                        <DatePicker value={row.date} onChange={(v) => update(row.tempId, { date: v })} className={inputClass} />
-                        <NumberInput value={row.amount} onChange={(v) => update(row.tempId, { amount: v })}
-                          locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
-                        <SearchableSelect value={row.categoryId}
-                          onChange={(v) => update(row.tempId, { categoryId: v, subId: '' })}
-                          options={catOptions} className={inputClass} placeholder="—" />
-                        <SearchableSelect value={row.subId}
-                          onChange={(v) => update(row.tempId, { subId: v })}
-                          options={subs.map((s) => ({ value: s.id, label: s.name }))} className={inputClass}
-                          placeholder={subs.length ? '—' : 'none'} />
-                        <SearchableSelect value={row.accountId}
-                          onChange={(v) => update(row.tempId, { accountId: v })}
-                          options={accountOptions} className={inputClass} placeholder="Choose…" />
-                        <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
-                          suggestions={notes} placeholder="e.g. Monthly groceries" className={inputClass} />
-                        <button onClick={() => removeRow(row.tempId)} title="Remove row"
-                          className="grid place-items-center text-faint hover:text-expense self-center">
-                          <CloseIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                      </>
+                        </>
                       )}
 
-                      {err && <p className="text-sm text-expense mt-1.5 px-1">{err}</p>}
+                      <MField label="Note" field="note" full>
+                        <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
+                          suggestions={notes} placeholder="e.g. Monthly groceries" className={inputClass} />
+                      </MField>
                     </div>
-                  )
-                })}
-              </div>
+
+                    {cross && row.amount > 0 && row.toAmount > 0 && (
+                      <div className="text-[11px] text-faint mt-2 px-0.5">
+                        Rate · 1 {toCur} ≈ {formatMoney(row.amount / row.toAmount, fromCur)}
+                      </div>
+                    )}
+                    {err && <p className="text-sm text-expense mt-1.5 px-1">{err}</p>}
+                  </div>
+                )
+              })}
 
               <button onClick={addRow}
-                className="w-full mt-3 py-3 border-[1.5px] border-dashed border-border rounded-[14px] text-muted font-semibold text-sm hover:border-primary hover:text-primary">
+                className="w-full mt-2.5 py-3 border-[1.5px] border-dashed border-border rounded-[14px] text-muted font-semibold text-sm hover:border-primary hover:text-primary">
                 ＋ Add another row
               </button>
 
@@ -392,13 +376,13 @@ export default function NewTransaction() {
                 </div>
               )}
 
-              {/* Lets the last row scroll all the way to the top (above the keyboard). */}
-              <div aria-hidden="true" className="h-[60vh] desk:hidden" />
-            </>
+              {/* Lets the last row scroll all the way to the top. */}
+              <div aria-hidden="true" className="h-[55dvh]" />
+            </div>
           )}
         </main>
 
-        {/* Sticky save bar */}
+        {/* Fixed save bar (below the scroll area — never overlaps fields) */}
         {!loading && !noAccounts && (
           <div className="shrink-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
             <div className="flex-1 text-[13px] text-muted">
@@ -418,76 +402,13 @@ export default function NewTransaction() {
   )
 }
 
-// Mobile field: label + control (label hidden on desktop branch since it never renders there).
-function MField({ label, full, children }) {
+// Card field: label + control. `field` tags it for the scroll-target logic;
+// `full` spans both grid columns.
+function MField({ label, field, full, children }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${full ? 'col-span-2' : ''}`}>
+    <div data-field={field} className={`flex flex-col gap-1.5 ${full ? 'col-span-2' : ''}`}>
       <label className="text-[10.5px] font-semibold text-muted pl-0.5">{label}</label>
       {children}
     </div>
   )
 }
-
-// Account picker that adapts: bottom-sheet on mobile, type-to-search on desktop.
-function AccountField({ title, placeholder, value, onChange, options }) {
-  return (
-    <>
-      <div className="desk:hidden">
-        <MobileSelect title={title} placeholder={placeholder} value={value} onChange={onChange} options={options} />
-      </div>
-      <div className="hidden desk:block">
-        <SearchableSelect value={value} onChange={onChange} options={options} className={inputClass} placeholder={placeholder} />
-      </div>
-    </>
-  )
-}
-
-// Transfer row — one card (same on mobile + desktop): From → To, amount, and a
-// received amount + rate hint when the two accounts use different currencies.
-function TransferCard({ row, idx, accountOptions, accountById, notes, onUpdate, onRemove }) {
-  const fromCur = accountById.get(row.accountId)?.currency ?? 'IDR'
-  const toCur = accountById.get(row.toAccountId)?.currency
-  const cross = toCur && fromCur !== toCur
-  const set = (patch) => onUpdate(row.tempId, patch)
-  return (
-    <div className="bg-surface border border-border rounded-[14px] p-3 desk:max-w-[560px]">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Transfer {idx + 1}</span>
-        <button onClick={() => onRemove(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
-      </div>
-      <div className="grid grid-cols-2 gap-2.5">
-        <MField label="Date">
-          <DatePicker value={row.date} onChange={(v) => set({ date: v })} className={inputClass} />
-        </MField>
-        <MField label={cross ? 'Amount sent' : 'Amount'}>
-          <NumberInput value={row.amount} onChange={(v) => set({ amount: v })}
-            locale={localeFor(fromCur)} currency={fromCur} decimals={currencyDecimals(fromCur)} placeholder="0" />
-        </MField>
-        <MField label="From account" full>
-          <AccountField title="From account" placeholder="From…" value={row.accountId}
-            onChange={(v) => set({ accountId: v })} options={accountOptions} />
-        </MField>
-        <MField label="To account" full>
-          <AccountField title="To account" placeholder="To…" value={row.toAccountId}
-            onChange={(v) => set({ toAccountId: v })} options={accountOptions} />
-        </MField>
-        {cross && (
-          <MField label={`Received (${toCur})`} full>
-            <NumberInput value={row.toAmount} onChange={(v) => set({ toAmount: v })}
-              locale={localeFor(toCur)} currency={toCur} decimals={currencyDecimals(toCur)} placeholder="0" />
-          </MField>
-        )}
-        <MField label="Note" full>
-          <AutocompleteInput value={row.note} onChange={(v) => set({ note: v })}
-            suggestions={notes} placeholder="e.g. Move to savings" className={inputClass} />
-        </MField>
-      </div>
-      {cross && row.amount > 0 && row.toAmount > 0 && (
-        <div className="text-[11px] text-faint mt-2 px-0.5">
-          Rate · 1 {toCur} ≈ {formatMoney(row.amount / row.toAmount, fromCur)}
-        </div>
-      )}
-    </div>
-  )
-}
-
