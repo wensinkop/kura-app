@@ -76,6 +76,12 @@ html, body, #root {
   margin: 0;
 }
 
+/* Disable overscroll rubber-banding / pull-to-refresh so sticky headers don't
+   appear to drift when scrolling past the top or bottom on mobile. */
+html, body {
+  overscroll-behavior: none;
+}
+
 body {
   font-family: 'Inter', system-ui, sans-serif;
   background: var(--bg);
