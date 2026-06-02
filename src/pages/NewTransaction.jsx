@@ -18,9 +18,14 @@ const KINDS = [
   { value: 'transfer', label: 'Transfer' }, // disabled — Chunk 3
 ]
 
-// Shared desktop column template (Date | Amount | Category | Sub | Account | Note | ✕).
+// Desktop register column template (Date | Amount | Category | Sub | Account | Note | ✕).
 const REG_COLS =
-  'desk:grid desk:grid-cols-[110px_140px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_28px] desk:gap-2.5 desk:items-start'
+  'desk:grid-cols-[110px_140px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)_28px]'
+
+// Native <select> styling on mobile — matches the input look and keeps the OS
+// picker (slides up like the keyboard, never covered by it) plus its native
+// dropdown arrow as the affordance.
+const selectClass = inputClass
 
 function todayISO() {
   const d = new Date()
@@ -63,7 +68,6 @@ export default function NewTransaction() {
         setGroups(g.data ?? [])
         setCategories((c.data ?? []).filter((x) => !x.archived))
         setNotes(n ?? [])
-        // Pre-select the only account, if there's exactly one.
         if (active.length === 1) setRows((r) => r.map((row) => ({ ...row, accountId: active[0].id })))
         setLoading(false)
       }
@@ -89,35 +93,53 @@ export default function NewTransaction() {
       }))
   }, [accounts, groups])
 
-  // Top-level categories of the current kind.
-  const topCats = useMemo(
-    () => categories.filter((c) => c.kind === kind && !c.parent_id),
-    [categories, kind]
-  )
+  // Top-level categories of the current kind, and the sub-categories of each.
+  const topCats = useMemo(() => categories.filter((c) => c.kind === kind && !c.parent_id), [categories, kind])
   const catOptions = useMemo(() => topCats.map((c) => ({ value: c.id, label: c.name })), [topCats])
-  const subsFor = (catId) =>
-    categories.filter((c) => c.parent_id === catId).map((c) => ({ value: c.id, label: c.name }))
+  const subsFor = (catId) => categories.filter((c) => c.parent_id === catId)
 
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts])
+  const catById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories])
 
-  // Autofocus the newly added row's date input.
-  const dateRefs = useRef({})
+  // ---- Mobile combined category picker (category OR sub in one tap) ----------
+  // Encodes the selection as "cat:<id>" / "sub:<id>" so one <select> covers both.
+  function comboValue(row) {
+    return row.subId ? `sub:${row.subId}` : row.categoryId ? `cat:${row.categoryId}` : ''
+  }
+  function onCombo(id, val) {
+    if (!val) return update(id, { categoryId: '', subId: '' })
+    if (val.startsWith('cat:')) return update(id, { categoryId: val.slice(4), subId: '' })
+    const subId = val.slice(4)
+    update(id, { subId, categoryId: catById.get(subId)?.parent_id ?? '' })
+  }
+
+  // ---- New-row focus + keep the active card above the keyboard ---------------
+  const rowRefs = useRef({})
   const [focusId, setFocusId] = useState(null)
   useEffect(() => {
     if (!focusId) return
     const t = setTimeout(() => {
-      const el = dateRefs.current[focusId]
-      if (el) { try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus() } catch { /* ignore */ } }
+      const card = rowRefs.current[focusId]
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        const first = [...card.querySelectorAll('input,select')].find((el) => el.offsetParent !== null)
+        try { first?.focus() } catch { /* ignore */ }
+      }
       setFocusId(null)
-    }, 0)
+    }, 60)
     return () => clearTimeout(t)
   }, [focusId])
 
+  // Whenever a field in a row gains focus, lift that card to the top so the
+  // on-screen keyboard never covers it.
+  function liftRow(tempId) {
+    rowRefs.current[tempId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   function switchKind(k) {
-    if (k === 'transfer') return // disabled this chunk
+    if (k === 'transfer') return
     setKind(k)
-    // Categories are kind-specific — clear category/sub selections.
-    setRows((rs) => rs.map((r) => ({ ...r, categoryId: '', subId: '' })))
+    setRows((rs) => rs.map((r) => ({ ...r, categoryId: '', subId: '' }))) // categories are kind-specific
   }
 
   function update(id, patch) {
@@ -132,7 +154,6 @@ export default function NewTransaction() {
     setRows((rs) => (rs.length === 1 ? [newRow()] : rs.filter((r) => r.tempId !== id)))
   }
 
-  // Per-currency totals across rows with a positive amount.
   const totals = useMemo(() => {
     const m = new Map()
     for (const r of rows) {
@@ -168,7 +189,7 @@ export default function NewTransaction() {
     }))
     const { error } = await createTransactions(user.id, payload)
     if (error) { setSaveError(error.message); setSaving(false); return }
-    navigate('/') // back to Home to see the result
+    navigate('/')
   }
 
   const noAccounts = !loading && accounts.length === 0
@@ -178,8 +199,7 @@ export default function NewTransaction() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col min-h-screen">
-        {/* Header */}
-        <header className="sticky top-0 z-20 bg-surface border-b border-border px-4 py-3.5 flex items-center gap-3">
+        <header className="sticky top-0 z-20 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} aria-label="Back"
             className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
             <ChevronLeft />
@@ -187,7 +207,7 @@ export default function NewTransaction() {
           <div className="font-bold text-[17px]">New transactions</div>
         </header>
 
-        <main className="flex-1 px-4 py-4 desk:px-8 w-full desk:max-w-[1100px] desk:mx-auto">
+        <main className="flex-1 px-4 py-3.5 desk:px-8 desk:py-4 w-full desk:max-w-[1100px] desk:mx-auto">
           {loading ? (
             <p className="text-muted text-sm py-8 text-center">Loading…</p>
           ) : noAccounts ? (
@@ -217,71 +237,96 @@ export default function NewTransaction() {
               </div>
 
               {/* Desktop column labels */}
-              <div className={`hidden ${REG_COLS} px-1 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-faint`}>
+              <div className={`hidden desk:grid ${REG_COLS} gap-2.5 px-1 pt-4 pb-1 text-[11px] font-bold uppercase tracking-wide text-faint`}>
                 <span>Date</span><span>Amount</span><span>Category</span><span>Sub-category</span><span>Account</span><span>Note</span><span />
               </div>
 
               {/* Rows */}
               <div className="flex flex-col">
                 {rows.map((row, idx) => {
-                  const acct = accountById.get(row.accountId)
-                  const currency = acct?.currency ?? 'IDR'
+                  const currency = accountById.get(row.accountId)?.currency ?? 'IDR'
                   const subs = row.categoryId ? subsFor(row.categoryId) : []
                   const err = rowErrors[row.tempId]
                   return (
                     <div key={row.tempId}
-                      className={`bg-surface border rounded-[14px] p-3.5 mt-3.5 desk:bg-transparent desk:border-0 desk:rounded-none desk:p-1 desk:mt-1.5 ${REG_COLS} ${
-                        err ? 'border-expense desk:border-0' : 'border-border'
-                      }`}>
-                      {/* Mobile row header */}
-                      <div className="flex justify-between items-center mb-2.5 desk:hidden">
-                        <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
-                        <button onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
+                      ref={(el) => { rowRefs.current[row.tempId] = el }}
+                      onFocusCapture={() => liftRow(row.tempId)}
+                      className="scroll-mt-[68px] mt-2.5 desk:mt-1.5">
+
+                      {/* ===== MOBILE: compact card with native pickers ===== */}
+                      <div className={`desk:hidden bg-surface border rounded-[14px] p-3 ${err ? 'border-expense' : 'border-border'}`}>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
+                          <button onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <MField label="Date">
+                            <DatePicker value={row.date} onChange={(v) => update(row.tempId, { date: v })} className={inputClass} />
+                          </MField>
+                          <MField label="Amount">
+                            <NumberInput value={row.amount} onChange={(v) => update(row.tempId, { amount: v })}
+                              locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
+                          </MField>
+                          <MField label="Category" full>
+                            <select value={comboValue(row)} onChange={(e) => onCombo(row.tempId, e.target.value)} className={selectClass}>
+                              <option value="">— Category —</option>
+                              {topCats.map((c) => {
+                                const cs = subsFor(c.id)
+                                return cs.length === 0 ? (
+                                  <option key={c.id} value={`cat:${c.id}`}>{c.name}</option>
+                                ) : (
+                                  <optgroup key={c.id} label={c.name}>
+                                    <option value={`cat:${c.id}`}>{c.name} — all</option>
+                                    {cs.map((s) => <option key={s.id} value={`sub:${s.id}`}>{s.name}</option>)}
+                                  </optgroup>
+                                )
+                              })}
+                            </select>
+                          </MField>
+                          <MField label="Account" full>
+                            <select value={row.accountId} onChange={(e) => update(row.tempId, { accountId: e.target.value })} className={selectClass}>
+                              <option value="">Choose account…</option>
+                              <NativeGroupedOptions options={accountOptions} />
+                            </select>
+                          </MField>
+                          <MField label="Note" full>
+                            <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
+                              suggestions={notes} placeholder="e.g. Monthly groceries" className={inputClass} />
+                          </MField>
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2.5 desk:contents">
-                        <Cell label="Date">
-                          <DatePicker ref={(el) => { dateRefs.current[row.tempId] = el }}
-                            value={row.date} onChange={(v) => update(row.tempId, { date: v })} className={inputClass} />
-                        </Cell>
-                        <Cell label="Amount">
-                          <NumberInput value={row.amount} onChange={(v) => update(row.tempId, { amount: v })}
-                            locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
-                        </Cell>
-                        <Cell label="Category">
-                          <SearchableSelect value={row.categoryId}
-                            onChange={(v) => update(row.tempId, { categoryId: v, subId: '' })}
-                            options={catOptions} className={inputClass} placeholder="—" />
-                        </Cell>
-                        <Cell label="Sub-category">
-                          <SearchableSelect value={row.subId}
-                            onChange={(v) => update(row.tempId, { subId: v })}
-                            options={subs} className={inputClass}
-                            placeholder={subs.length ? '—' : 'none'} />
-                        </Cell>
-                        <Cell label="Account">
-                          <SearchableSelect value={row.accountId}
-                            onChange={(v) => update(row.tempId, { accountId: v })}
-                            options={accountOptions} className={inputClass} placeholder="Choose…" />
-                        </Cell>
-                        <Cell label="Note" full>
-                          <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
-                            suggestions={notes} placeholder="e.g. Monthly groceries" className={inputClass} />
-                        </Cell>
+                      {/* ===== DESKTOP: register row with searchable selects ===== */}
+                      <div className={`hidden desk:grid ${REG_COLS} gap-2.5 items-start p-1 ${err ? 'ring-1 ring-expense rounded-lg' : ''}`}>
+                        <DatePicker value={row.date} onChange={(v) => update(row.tempId, { date: v })} className={inputClass} />
+                        <NumberInput value={row.amount} onChange={(v) => update(row.tempId, { amount: v })}
+                          locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
+                        <SearchableSelect value={row.categoryId}
+                          onChange={(v) => update(row.tempId, { categoryId: v, subId: '' })}
+                          options={catOptions} className={inputClass} placeholder="—" />
+                        <SearchableSelect value={row.subId}
+                          onChange={(v) => update(row.tempId, { subId: v })}
+                          options={subs.map((s) => ({ value: s.id, label: s.name }))} className={inputClass}
+                          placeholder={subs.length ? '—' : 'none'} />
+                        <SearchableSelect value={row.accountId}
+                          onChange={(v) => update(row.tempId, { accountId: v })}
+                          options={accountOptions} className={inputClass} placeholder="Choose…" />
+                        <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
+                          suggestions={notes} placeholder="e.g. Monthly groceries" className={inputClass} />
                         <button onClick={() => removeRow(row.tempId)} title="Remove row"
-                          className="hidden desk:grid place-items-center text-faint hover:text-expense self-center">
+                          className="grid place-items-center text-faint hover:text-expense self-center">
                           <CloseIcon className="w-4 h-4" />
                         </button>
                       </div>
 
-                      {err && <p className="text-sm text-expense mt-2 desk:col-span-7">{err}</p>}
+                      {err && <p className="text-sm text-expense mt-1.5 px-1">{err}</p>}
                     </div>
                   )
                 })}
               </div>
 
               <button onClick={addRow}
-                className="w-full mt-3.5 py-3 border-[1.5px] border-dashed border-border rounded-[14px] text-muted font-semibold text-sm hover:border-primary hover:text-primary">
+                className="w-full mt-3 py-3 border-[1.5px] border-dashed border-border rounded-[14px] text-muted font-semibold text-sm hover:border-primary hover:text-primary">
                 ＋ Add another row
               </button>
 
@@ -314,12 +359,35 @@ export default function NewTransaction() {
   )
 }
 
-// Field cell: label shows on mobile, hidden on desktop (column header covers it).
-function Cell({ label, full, children }) {
+// Mobile field: label + control (label hidden on desktop branch since it never renders there).
+function MField({ label, full, children }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${full ? 'col-span-2 desk:col-span-1' : ''}`}>
-      <label className="text-[11px] font-semibold text-muted pl-0.5 desk:hidden">{label}</label>
+    <div className={`flex flex-col gap-1.5 ${full ? 'col-span-2' : ''}`}>
+      <label className="text-[10.5px] font-semibold text-muted pl-0.5">{label}</label>
       {children}
     </div>
+  )
+}
+
+// Native <option>/<optgroup> list from grouped options (used in the mobile selects).
+function NativeGroupedOptions({ options }) {
+  const groups = new Map()
+  for (const o of options) {
+    const g = o.group || ''
+    if (!groups.has(g)) groups.set(g, [])
+    groups.get(g).push(o)
+  }
+  return (
+    <>
+      {[...groups.entries()].map(([g, items]) =>
+        g ? (
+          <optgroup key={g} label={g}>
+            {items.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </optgroup>
+        ) : (
+          items.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)
+        )
+      )}
+    </>
   )
 }
