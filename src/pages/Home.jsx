@@ -98,8 +98,10 @@ export default function Home() {
 
   return (
     <div className="flex flex-col desk:grid desk:grid-cols-[1fr_330px] desk:gap-[22px] desk:items-start">
-      {/* Mobile: compact summary bar, pinned below the header while scrolling */}
-      <div className="desk:hidden sticky top-[52px] z-10 bg-bg pt-1 pb-2.5 flex flex-col gap-2">
+      {/* Mobile: compact summary bar, pinned below the header while scrolling.
+          -mt-4 cancels the main's pt-4 so the gap above is the wrapper's own
+          padding only — constant whether scrolled or not. */}
+      <div className="desk:hidden sticky top-[52px] z-10 bg-bg -mt-4 pt-2.5 pb-2.5 flex flex-col gap-2">
         {(summaryCurs.length === 0 ? [null] : summaryCurs).map((cur) => {
           const s = cur ? summary[cur] : { income: 0, expense: 0 }
           const net = s.income - s.expense

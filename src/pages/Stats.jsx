@@ -152,11 +152,13 @@ export default function Stats() {
   return (
     <div className="max-w-[760px] mx-auto">
       {/* Sticky top block: compact period control + Income/Expenses tabs, so
-          both stay visible while the category list scrolls. */}
-      <div className="sticky top-0 z-20 bg-bg pb-2">
+          both stay visible while the category list scrolls. -mt-5 cancels the
+          main's pt-5 so the top gap is this block's own padding only —
+          constant whether scrolled or not. */}
+      <div className="sticky top-0 z-20 bg-bg -mt-5 desk:mt-0 pt-3 pb-2">
       {/* Compact period control: ‹ [label ⌄] › — tap the label to switch
           Week / Month / Year / Custom; arrows page within the current mode. */}
-      <div className="relative flex items-center justify-center gap-1 pt-0.5">
+      <div className="relative flex items-center justify-center gap-1">
         {mode !== 'period' && (
           <button onClick={() => shift(-1)} aria-label="Previous"
             className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
