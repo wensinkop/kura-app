@@ -120,27 +120,21 @@ export default function NewTransaction() {
     return () => clearTimeout(t)
   }, [openSubFor])
 
-  // ---- Keep the focused field in view (above the save bar + keyboard) --------
-  const HEADER_OFFSET = 64 // sticky header height
+  // ---- Keep the focused field in view (above the keyboard) -------------------
   const rowRefs = useRef({})
-  const saveBarRef = useRef(null)
+  const scrollRef = useRef(null) // the internal scroll area (between header + save bar)
   const [focusId, setFocusId] = useState(null)
 
-  // Scroll minimally so a focused field stays in the band between the sticky
-  // header and the sticky save bar — and, on mobile, above the on-screen
-  // keyboard (visualViewport height). This keeps the *focused field* visible
-  // rather than lifting the whole card, so the Note (last field) isn't hidden
-  // behind the save bar/keyboard.
-  const ensureFieldVisible = useCallback((el) => {
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const vh = window.visualViewport?.height ?? window.innerHeight
-    const top = HEADER_OFFSET + 8
-    const bottom = vh - ((saveBarRef.current?.offsetHeight ?? 76) + 12)
-    let dy = 0
-    if (rect.bottom > bottom) dy = rect.bottom - bottom
-    else if (rect.top < top) dy = rect.top - top
-    if (dy) window.scrollBy({ top: dy, behavior: 'auto' }) // instant: snappy + reliable
+  // Lift the focused field to the top of the scroll area (just below the header),
+  // so it's fully visible with the keyboard below it. The middle column scrolls
+  // internally — the header and save bar are fixed — so the save bar never
+  // overlaps fields or the Add-row button. Used for the Note (last field) and
+  // newly added rows; the bottom spacer lets even the last row reach the top.
+  const liftFieldToTop = useCallback((el) => {
+    const sc = scrollRef.current
+    if (!el || !sc) return
+    const y = sc.scrollTop + (el.getBoundingClientRect().top - sc.getBoundingClientRect().top) - 8
+    sc.scrollTo({ top: Math.max(0, y), behavior: 'auto' }) // instant: snappy + reliable
   }, [])
 
   // New rows: focus the first field and bring it into view.
@@ -151,25 +145,25 @@ export default function NewTransaction() {
       if (card) {
         const first = [...card.querySelectorAll('input,select')].find((el) => el.offsetParent !== null)
         try { first?.focus({ preventScroll: true }) } catch { /* ignore */ }
-        ensureFieldVisible(first ?? card)
+        liftFieldToTop(first ?? card)
       }
       setFocusId(null)
     }, 60)
     return () => clearTimeout(t)
-  }, [focusId, ensureFieldVisible])
+  }, [focusId, liftFieldToTop])
 
   // The keyboard opens *after* focus fires (the viewport resizes a beat later),
-  // so re-run for the active field whenever the visual viewport changes.
+  // so re-lift the active field whenever the visual viewport changes.
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
     const onResize = () => {
       const el = document.activeElement
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) ensureFieldVisible(el)
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) liftFieldToTop(el)
     }
     vv.addEventListener('resize', onResize)
     return () => vv.removeEventListener('resize', onResize)
-  }, [ensureFieldVisible])
+  }, [liftFieldToTop])
 
   function switchKind(k) {
     setKind(k)
@@ -258,11 +252,11 @@ export default function NewTransaction() {
   const noAccounts = !loading && accounts.length === 0
 
   return (
-    <div className="flex min-h-screen bg-bg">
+    <div className="flex h-[100dvh] overflow-hidden bg-bg">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-20 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
+      <div className="flex-1 flex flex-col h-[100dvh] min-w-0">
+        <header className="shrink-0 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
           <button onClick={() => navigate(-1)} aria-label="Back"
             className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
             <ChevronLeft />
@@ -270,7 +264,7 @@ export default function NewTransaction() {
           <div className="font-bold text-[17px]">New transactions</div>
         </header>
 
-        <main className="flex-1 px-4 py-3.5 desk:px-8 desk:py-4 w-full desk:max-w-[1100px] desk:mx-auto">
+        <main ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3.5 desk:px-8 desk:py-4 w-full desk:max-w-[1100px] desk:mx-auto">
           {loading ? (
             <p className="text-muted text-sm py-8 text-center">Loading…</p>
           ) : noAccounts ? (
@@ -311,7 +305,7 @@ export default function NewTransaction() {
                   return (
                     <div key={row.tempId}
                       ref={(el) => { rowRefs.current[row.tempId] = el }}
-                      onFocusCapture={(e) => ensureFieldVisible(e.target)}
+                      onFocusCapture={(e) => { const el = e.target; requestAnimationFrame(() => liftFieldToTop(el)) }}
                       className="scroll-mt-[68px] mt-2.5 desk:mt-1.5">
 
                       {kind === 'transfer' ? (
@@ -406,7 +400,7 @@ export default function NewTransaction() {
 
         {/* Sticky save bar */}
         {!loading && !noAccounts && (
-          <div ref={saveBarRef} className="sticky bottom-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
+          <div className="shrink-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
             <div className="flex-1 text-[13px] text-muted">
               Total · {rows.length} row{rows.length === 1 ? '' : 's'}
               <div className="text-[17px] font-extrabold text-text tabular">
