@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
 import { listTransactionsForMonth, listCategories } from '../lib/data'
-import { formatMoney } from '../lib/format'
+import { formatMoney, amountColor } from '../lib/format'
 import { Button } from '../components/ui'
 import { PlusIcon } from '../lib/icons'
 
 const KIND_COLOR = { income: 'text-income', expense: 'text-expense', transfer: 'text-transfer' }
-const KIND_SIGN = { income: '+', expense: '−', transfer: '' }
 
 // "2026-06-25" -> { num: "25", rest: "June 2026 · Wednesday" }, parsed in local
 // time from the date parts (avoids UTC off-by-one).
@@ -102,8 +101,8 @@ export default function Home() {
                     <span className="text-xs font-semibold text-muted truncate">{h.rest}</span>
                   </div>
                   <div className="flex gap-3 text-xs font-bold tabular shrink-0">
-                    {Object.entries(inc).map(([c, v]) => <span key={'i' + c} className="text-income">+{formatMoney(v, c)}</span>)}
-                    {Object.entries(exp).map(([c, v]) => <span key={'e' + c} className="text-expense">−{formatMoney(v, c)}</span>)}
+                    {Object.entries(inc).map(([c, v]) => <span key={'i' + c} className="text-income">{formatMoney(v, c)}</span>)}
+                    {Object.entries(exp).map(([c, v]) => <span key={'e' + c} className="text-expense">{formatMoney(v, c)}</span>)}
                   </div>
                 </div>
                 {list.map((t) => <TxRow key={t.id} t={t} catMap={catMap} />)}
@@ -123,9 +122,9 @@ export default function Home() {
             const net = s.income - s.expense
             return (
               <SummaryCard key={cur} label={summaryCurs.length > 1 ? cur : 'This month'} rows={[
-                ['Income', '+' + formatMoney(s.income, cur), 'text-income'],
-                ['Expenses', '−' + formatMoney(s.expense, cur), 'text-expense'],
-                ['Net', (net >= 0 ? '+' : '−') + formatMoney(Math.abs(net), cur), net >= 0 ? 'text-income' : 'text-expense'],
+                ['Income', formatMoney(s.income, cur), 'text-income'],
+                ['Expenses', formatMoney(s.expense, cur), 'text-expense'],
+                ['Net', formatMoney(Math.abs(net), cur), amountColor(net)],
               ]} />
             )
           })
@@ -159,7 +158,7 @@ function TxRow({ t, catMap }) {
       <div className="flex justify-between gap-3 items-baseline">
         <span className="font-semibold text-[14.5px] leading-tight truncate min-w-0">{t.note || chip}</span>
         <span className={`font-bold text-[14.5px] tabular whitespace-nowrap ${KIND_COLOR[t.kind]}`}>
-          {KIND_SIGN[t.kind]}{formatMoney(t.amount, t.currency)}
+          {formatMoney(t.amount, t.currency)}
         </span>
       </div>
       <div className="flex items-center gap-2 mt-1.5">

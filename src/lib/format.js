@@ -17,6 +17,16 @@ export function formatMoney(amount, currency) {
   }
 }
 
+// Always-positive money string (no leading minus); color conveys the sign.
+export function formatAbs(amount, currency) {
+  return formatMoney(Math.abs(Number(amount) || 0), currency)
+}
+
+// Sign → colour. Positive = green, negative = red, zero = neutral. No +/− text.
+export function amountColor(v) {
+  return v > 0 ? 'text-income' : v < 0 ? 'text-expense' : 'text-muted'
+}
+
 export const TYPE_LABEL = {
   cash: 'Cash',
   debit: 'Debit',

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listGroups, listAccounts, listAllTransactions, listRates } from '../lib/data'
-import { accountSubtitle, formatMoney } from '../lib/format'
+import { accountSubtitle, formatAbs, amountColor } from '../lib/format'
 import { computeBalances, toBase, netWorth, creditCardBilling } from '../lib/balances'
 import { Button } from '../components/ui'
 import { PlusIcon } from '../lib/icons'
@@ -51,8 +51,10 @@ export default function Accounts() {
       {/* Net worth */}
       <div className="bg-surface border border-border rounded-[14px] p-[18px]">
         <div className="text-xs font-semibold text-muted">Net worth · in base currency ({base})</div>
-        <div className="text-[27px] font-extrabold mt-1.5 tracking-[-.5px] text-primary tabular">
-          {active.length === 0 ? '—' : formatMoney(nw.total, base)}
+        <div className={`text-[27px] font-extrabold mt-1.5 tracking-[-.5px] tabular ${
+          active.length === 0 ? 'text-primary' : nw.total < 0 ? 'text-expense' : 'text-primary'
+        }`}>
+          {active.length === 0 ? '—' : formatAbs(nw.total, base)}
         </div>
         {nw.missing.length > 0 && (
           <button onClick={() => navigate('/settings/rates')} className="text-[11px] text-expense mt-1 hover:underline">
@@ -72,13 +74,13 @@ export default function Accounts() {
         <>
           {groups.map((g) =>
             inGroup(g.id).length > 0 ? (
-              <AccountGroup key={g.id} title={g.name} rollup={formatMoney(rollup(inGroup(g.id)), base)}
+              <AccountGroup key={g.id} title={g.name} rollupValue={rollup(inGroup(g.id))}
                 accounts={inGroup(g.id)} balances={balances} txns={txns} rates={rates} base={base} />
             ) : null
           )}
           {ungrouped.length > 0 && (
             <AccountGroup title={groups.length > 0 ? 'Ungrouped' : 'Accounts'}
-              rollup={groups.length > 0 ? formatMoney(rollup(ungrouped), base) : null}
+              rollupValue={groups.length > 0 ? rollup(ungrouped) : null}
               accounts={ungrouped} balances={balances} txns={txns} rates={rates} base={base} />
           )}
 
@@ -93,12 +95,12 @@ export default function Accounts() {
   )
 }
 
-function AccountGroup({ title, rollup, accounts, balances, txns, rates, base }) {
+function AccountGroup({ title, rollupValue, accounts, balances, txns, rates, base }) {
   return (
     <div className="bg-surface border border-border rounded-[14px] overflow-hidden mt-3">
       <div className="flex justify-between gap-3 px-3.5 py-2.5 text-xs font-bold text-faint bg-surface-2">
         <span className="truncate uppercase tracking-wide">{title}</span>
-        {rollup && <span className="tabular shrink-0">{rollup}</span>}
+        {rollupValue != null && <span className={`tabular shrink-0 ${amountColor(rollupValue)}`}>{formatAbs(rollupValue, base)}</span>}
       </div>
       {accounts.map((a) => (
         <AccountRow key={a.id} a={a} balance={balances.get(a.id) ?? 0} txns={txns} rates={rates} base={base} />
@@ -110,7 +112,6 @@ function AccountGroup({ title, rollup, accounts, balances, txns, rates, base }) 
 function AccountRow({ a, balance, txns, rates, base }) {
   const isCC = a.type === 'credit_card'
   const billing = isCC ? creditCardBilling(a, txns, balance) : null
-  const negative = balance < 0
   const approx = a.currency !== base ? toBase(balance, a.currency, rates, base) : null
 
   return (
@@ -120,16 +121,16 @@ function AccountRow({ a, balance, txns, rates, base }) {
         <div className="text-xs text-muted mt-1 truncate">{accountSubtitle(a)}</div>
       </div>
       <div className="text-right shrink-0">
-        <div className={`font-bold text-[14.5px] tabular ${negative ? 'text-expense' : 'text-text'}`}>
-          {formatMoney(balance, a.currency)}
+        <div className={`font-bold text-[14.5px] tabular ${amountColor(balance)}`}>
+          {formatAbs(balance, a.currency)}
         </div>
         {isCC && billing.outstanding > 0 && (
           <div className="text-[11px] text-muted mt-0.5">
-            Payable {formatMoney(billing.payable, a.currency)}{billing.nextDue ? ` · due ${shortDate(billing.nextDue)}` : ''}
+            Payable {formatAbs(billing.payable, a.currency)}{billing.nextDue ? ` · due ${shortDate(billing.nextDue)}` : ''}
           </div>
         )}
         {approx != null && (
-          <div className="text-[11px] text-faint mt-0.5">≈ {formatMoney(approx, base)}</div>
+          <div className="text-[11px] text-faint mt-0.5">≈ {formatAbs(approx, base)}</div>
         )}
       </div>
     </div>
