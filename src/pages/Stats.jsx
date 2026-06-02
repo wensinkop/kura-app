@@ -151,23 +151,26 @@ export default function Stats() {
 
   return (
     <div className="max-w-[760px] mx-auto">
+      {/* Sticky top block: compact period control + Income/Expenses tabs, so
+          both stay visible while the category list scrolls. */}
+      <div className="sticky top-0 z-20 bg-bg pb-2">
       {/* Compact period control: ‹ [label ⌄] › — tap the label to switch
           Week / Month / Year / Custom; arrows page within the current mode. */}
-      <div className="relative flex items-center justify-center gap-1">
+      <div className="relative flex items-center justify-center gap-1 pt-0.5">
         {mode !== 'period' && (
           <button onClick={() => shift(-1)} aria-label="Previous"
-            className="w-9 h-9 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
+            className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
         )}
         <button onClick={() => setMenuOpen((o) => !o)}
-          className="flex items-center gap-1.5 font-bold text-[15px] px-3 py-1.5 rounded-[10px] hover:bg-surface-2 whitespace-nowrap">
+          className="flex items-center gap-1.5 font-bold text-[14px] px-3 py-1 rounded-[10px] hover:bg-surface-2 whitespace-nowrap">
           {mode === 'period' ? 'Custom period' : range?.label}
           <ChevronDown className="w-4 h-4 text-muted" />
         </button>
         {mode !== 'period' && (
           <button onClick={() => shift(1)} aria-label="Next"
-            className="w-9 h-9 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
+            className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
             <ChevronRight />
           </button>
         )}
@@ -190,7 +193,7 @@ export default function Stats() {
       </div>
 
       {mode === 'period' && (
-        <div className="grid grid-cols-2 gap-2.5 mt-3">
+        <div className="grid grid-cols-2 gap-2.5 mt-2.5">
           <Field label="From">
             <DatePicker value={periodStart} onChange={setPeriodStart} max={periodEnd || undefined}
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-[15px] text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft" />
@@ -202,6 +205,25 @@ export default function Stats() {
         </div>
       )}
 
+      {/* Compact Expenses / Income totals double as tabs — tap to switch breakdown */}
+      {!loading && !drill && range && (
+        <div className="bg-surface border border-border rounded-xl mt-2.5 flex overflow-hidden">
+          <button onClick={() => setView('expense')}
+            className={`flex-1 px-3 py-2 text-left border-r border-border relative ${view === 'expense' ? '' : 'opacity-50'}`}>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">Expenses</div>
+            <div className="text-[14px] font-extrabold tabular text-expense leading-tight mt-0.5">{formatMoney(agg.expense, base)}</div>
+            {view === 'expense' && <span className="absolute left-0 right-0 bottom-0 h-[2.5px] bg-expense" />}
+          </button>
+          <button onClick={() => setView('income')}
+            className={`flex-1 px-3 py-2 text-left relative ${view === 'income' ? '' : 'opacity-50'}`}>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">Income</div>
+            <div className="text-[14px] font-extrabold tabular text-income leading-tight mt-0.5">{formatMoney(agg.income, base)}</div>
+            {view === 'income' && <span className="absolute left-0 right-0 bottom-0 h-[2.5px] bg-income" />}
+          </button>
+        </div>
+      )}
+      </div>
+
       {mode === 'period' && !range ? (
         <p className="text-sm text-muted text-center py-10">Pick a start and end date to see your stats.</p>
       ) : loading ? (
@@ -211,22 +233,6 @@ export default function Stats() {
           onBack={() => setDrill(null)} onTx={(id) => navigate(`/tx/${id}`)} />
       ) : (
         <>
-          {/* Expenses / Income totals double as tabs — tap to switch breakdown */}
-          <div className="bg-surface border border-border rounded-[14px] mt-4 flex overflow-hidden">
-            <button onClick={() => setView('expense')}
-              className={`flex-1 px-4 py-3.5 text-left border-r border-border relative ${view === 'expense' ? '' : 'opacity-50'}`}>
-              <div className="text-[11px] font-semibold text-muted">Expenses</div>
-              <div className="text-[17px] font-extrabold tabular text-expense mt-0.5">{formatMoney(agg.expense, base)}</div>
-              {view === 'expense' && <span className="absolute left-0 right-0 bottom-0 h-[3px] bg-expense" />}
-            </button>
-            <button onClick={() => setView('income')}
-              className={`flex-1 px-4 py-3.5 text-left relative ${view === 'income' ? '' : 'opacity-50'}`}>
-              <div className="text-[11px] font-semibold text-muted">Income</div>
-              <div className="text-[17px] font-extrabold tabular text-income mt-0.5">{formatMoney(agg.income, base)}</div>
-              {view === 'income' && <span className="absolute left-0 right-0 bottom-0 h-[3px] bg-income" />}
-            </button>
-          </div>
-
           {agg.missing.length > 0 && (
             <button onClick={() => navigate('/settings/rates')}
               className="w-full text-left text-[12px] text-muted bg-surface-2 border border-border rounded-xl px-3.5 py-2.5 mt-2.5">
