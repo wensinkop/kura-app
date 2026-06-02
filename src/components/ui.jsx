@@ -29,7 +29,7 @@ export function Modal({ title, onClose, children, footer }) {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="bg-surface w-full desk:max-w-[460px] rounded-t-2xl desk:rounded-2xl border border-border shadow-lg max-h-[92vh] flex flex-col">
+      <div className="bg-surface w-full desk:max-w-[460px] rounded-t-2xl desk:rounded-2xl border border-border shadow-lg max-h-[92dvh] flex flex-col">
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
           <div className="font-bold text-[16px] flex-1">{title}</div>
           <button
