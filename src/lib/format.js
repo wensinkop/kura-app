@@ -27,6 +27,15 @@ export function amountColor(v) {
   return v > 0 ? 'text-income' : v < 0 ? 'text-expense' : 'text-muted'
 }
 
+// "2026-06-25" -> "Wed, 25 Jun 2026". Parsed from parts in local time to avoid
+// the UTC off-by-one a bare new Date(iso) would introduce.
+export function dayLabel(iso) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  return `${dt.toLocaleDateString('en-US', { weekday: 'short' })}, ${d} ${dt.toLocaleDateString('en-US', { month: 'short' })} ${y}`
+}
+
 export const TYPE_LABEL = {
   cash: 'Cash',
   debit: 'Debit',

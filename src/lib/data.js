@@ -158,6 +158,34 @@ export function createTransactions(userId, rows) {
     .select()
 }
 
+// Transactions whose date falls in the half-open [startISO, endExclusiveISO)
+// range, richest select (for the Stats page). Newest first.
+export function listTransactionsInRange(startISO, endExclusiveISO) {
+  return supabase
+    .from('transactions')
+    .select(TX_SELECT)
+    .gte('date', startISO)
+    .lt('date', endExclusiveISO)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+}
+
+// All-time note search (case-insensitive substring). Returns rich rows so the
+// search results render with the shared 2-line row and tap → /tx/:id. `%` and
+// `_` in the query are escaped so they match literally, not as SQL wildcards.
+export function searchTransactions(query, limit = 200) {
+  const q = (query ?? '').trim()
+  if (!q) return Promise.resolve({ data: [], error: null })
+  const safe = q.replace(/[\\%_]/g, (c) => '\\' + c)
+  return supabase
+    .from('transactions')
+    .select(TX_SELECT)
+    .ilike('note', `%${safe}%`)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+}
+
 // Single transaction with its account/to_account/category embeds (for editing).
 export function getTransaction(id) {
   return supabase.from('transactions').select(TX_SELECT).eq('id', id).single()

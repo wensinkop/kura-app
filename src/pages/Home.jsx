@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
+import { useAccountFilter, matchesAccountFilter } from '../FilterContext'
 import { listTransactionsForMonth, listCategories, deleteTransactions } from '../lib/data'
 import { formatMoney, amountColor } from '../lib/format'
 import { Button, ConfirmDialog } from '../components/ui'
+import TxRowContent from '../components/TxRowContent'
 import { PlusIcon, TrashIcon, CloseIcon } from '../lib/icons'
-
-const KIND_COLOR = { income: 'text-income', expense: 'text-expense', transfer: 'text-transfer' }
 
 // "2026-06-25" -> { num: "25", rest: "June 2026 · Wednesday" }, parsed in local
 // time from the date parts (avoids UTC off-by-one).
@@ -19,15 +19,9 @@ function dayHeading(dateStr) {
   }
 }
 
-function catLabels(tx, catMap) {
-  const c = tx.category
-  if (!c) return { chip: 'Uncategorised', sub: null }
-  if (c.parent_id) return { chip: catMap.get(c.parent_id)?.name ?? '…', sub: c.name }
-  return { chip: c.name, sub: null }
-}
-
 export default function Home() {
   const { year, monthIndex } = useMonth()
+  const { accountIds } = useAccountFilter()
   const navigate = useNavigate()
   const [txns, setTxns] = useState([])
   const [catMap, setCatMap] = useState(new Map())
@@ -81,15 +75,18 @@ export default function Home() {
     reloadTxns()
   }
 
+  // Apply the persisted account filter (empty filter shows everything).
+  const visible = txns.filter((t) => matchesAccountFilter(t, accountIds))
+
   const days = []
   const byDate = new Map()
-  for (const t of txns) {
+  for (const t of visible) {
     if (!byDate.has(t.date)) { byDate.set(t.date, []); days.push(t.date) }
     byDate.get(t.date).push(t)
   }
 
   const summary = {}
-  for (const t of txns) {
+  for (const t of visible) {
     const cur = t.currency
     if (!summary[cur]) summary[cur] = { income: 0, expense: 0 }
     if (t.kind === 'income') summary[cur].income += Number(t.amount)
@@ -203,11 +200,6 @@ function SummaryCard({ label, rows }) {
 }
 
 function TxRow({ t, catMap, selectMode, selected, onActivate, onLongPress }) {
-  const isTransfer = t.kind === 'transfer'
-  const { chip, sub } = isTransfer
-    ? { chip: 'Transfer', sub: `${t.account?.name ?? '?'} → ${t.to_account?.name ?? '?'}` }
-    : catLabels(t, catMap)
-
   // Long-press (touch hold or right-click) enters multi-select; a tap activates.
   const timer = useRef(null)
   const longFired = useRef(false)
@@ -230,21 +222,7 @@ function TxRow({ t, catMap, selectMode, selected, onActivate, onLongPress }) {
           selected ? 'bg-primary border-primary text-on-primary' : 'border-border text-transparent'
         }`}>✓</span>
       )}
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between gap-3 items-baseline">
-          <span className="font-semibold text-[14.5px] leading-tight truncate min-w-0">{t.note || chip}</span>
-          <span className={`font-bold text-[14.5px] tabular whitespace-nowrap ${KIND_COLOR[t.kind]}`}>
-            {formatMoney(t.amount, t.currency)}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 mt-1.5">
-          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border whitespace-nowrap ${
-            isTransfer ? 'bg-transfer/10 text-transfer border-transfer/30' : 'bg-surface-2 text-muted border-border'
-          }`}>{chip}</span>
-          {sub && <span className="text-xs text-muted truncate">{sub}</span>}
-          {!isTransfer && <span className="text-xs text-faint ml-auto whitespace-nowrap shrink-0">{t.account?.name}</span>}
-        </div>
-      </div>
+      <TxRowContent t={t} catMap={catMap} />
     </div>
   )
 }

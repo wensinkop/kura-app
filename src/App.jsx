@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './AuthContext'
 import { ThemeProvider } from './ThemeContext'
 import { MonthProvider } from './MonthContext'
+import { FilterProvider } from './FilterContext'
 import AppShell from './components/AppShell'
 import SignUp from './pages/SignUp'
 import SignIn from './pages/SignIn'
@@ -17,6 +18,7 @@ import SettingsAccounts from './pages/SettingsAccounts'
 import SettingsRates from './pages/SettingsRates'
 import NewTransaction from './pages/NewTransaction'
 import EditTransaction from './pages/EditTransaction'
+import Search from './pages/Search'
 
 function Loading() {
   return (
@@ -46,6 +48,7 @@ export default function App() {
       <AuthProvider>
         <ThemeProvider>
           <MonthProvider>
+          <FilterProvider>
           <Routes>
             {/* Auth (signed-out only) */}
             <Route path="/signup" element={<PublicOnlyRoute><SignUp /></PublicOnlyRoute>} />
@@ -69,9 +72,11 @@ export default function App() {
             {/* Full-screen entry (signed-in, outside the shell) */}
             <Route path="/new" element={<ProtectedRoute><NewTransaction /></ProtectedRoute>} />
             <Route path="/tx/:id" element={<ProtectedRoute><EditTransaction /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </FilterProvider>
           </MonthProvider>
         </ThemeProvider>
       </AuthProvider>

@@ -1,6 +1,9 @@
+import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
+import { useAccountFilter } from '../FilterContext'
 import Sidebar from './Sidebar'
+import AccountFilterSheet from './AccountFilterSheet'
 import {
   HomeIcon, StatsIcon, AccountsIcon, SettingsIcon,
   PlusIcon, SearchIcon, FilterIcon, ChevronLeft, ChevronRight,
@@ -44,6 +47,8 @@ function MonthNav() {
 export default function AppShell() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const { isFiltered } = useAccountFilter()
+  const [filterOpen, setFilterOpen] = useState(false)
   const isHome = pathname === '/'
   const title = titleFor(pathname)
   const backTarget = backTargetFor(pathname)
@@ -80,13 +85,16 @@ export default function AppShell() {
 
             {isHome && (
               <>
-                <button title="Search (coming in a later chunk)" aria-label="Search"
+                <button onClick={() => navigate('/search')} title="Search" aria-label="Search"
                   className="w-[38px] h-[38px] rounded-[11px] grid place-items-center text-muted hover:bg-surface-2">
                   <SearchIcon />
                 </button>
-                <button title="Filter (coming in a later chunk)" aria-label="Filter"
-                  className="w-[38px] h-[38px] rounded-[11px] grid place-items-center text-muted hover:bg-surface-2">
+                <button onClick={() => setFilterOpen(true)} title="Filter by account" aria-label="Filter"
+                  className={`relative w-[38px] h-[38px] rounded-[11px] grid place-items-center hover:bg-surface-2 ${
+                    isFiltered ? 'text-primary bg-primary-soft' : 'text-muted'
+                  }`}>
                   <FilterIcon />
+                  {isFiltered && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary border-2 border-surface" />}
                 </button>
               </>
             )}
@@ -116,6 +124,8 @@ export default function AppShell() {
             </NavLink>
           </nav>
         </div>
+
+        {filterOpen && <AccountFilterSheet onClose={() => setFilterOpen(false)} />}
       </div>
   )
 }
