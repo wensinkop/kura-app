@@ -20,6 +20,7 @@ import SettingsData from './pages/SettingsData'
 import NewTransaction from './pages/NewTransaction'
 import EditTransaction from './pages/EditTransaction'
 import Search from './pages/Search'
+import BankStatement from './pages/BankStatement'
 
 function Loading() {
   return (
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="/new" element={<ProtectedRoute><NewTransaction /></ProtectedRoute>} />
             <Route path="/tx/:id" element={<ProtectedRoute><EditTransaction /></ProtectedRoute>} />
             <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+            <Route path="/import/statement" element={<ProtectedRoute><BankStatement /></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

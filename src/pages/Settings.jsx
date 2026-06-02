@@ -47,6 +47,9 @@ function Switch({ on, onClick }) {
 
 const Soon = <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Soon</span>
 const Chevron = <span className="text-faint">›</span>
+function Premium() {
+  return <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-1.5 py-0.5">Premium</span>
+}
 
 export default function Settings() {
   const { user, profile, signOut } = useAuth()
@@ -94,7 +97,7 @@ export default function Settings() {
       <SectionTitle>Data</SectionTitle>
       <Group>
         <Row title="Backup & data" sub="Export / import CSV · backup · restore · reset" right={Chevron} onClick={() => navigate('/settings/data')} />
-        <Row title="Bank statement upload" sub="PDF / CSV → pre-filled rows · Premium" right={Soon} disabled />
+        <Row title="Bank statement upload" sub="PDF / CSV → pre-filled rows · Premium" right={<span className="flex items-center gap-1.5"><Premium />{Chevron}</span>} onClick={() => navigate('/import/statement')} />
       </Group>
 
       <div className="mt-5">

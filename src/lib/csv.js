@@ -73,8 +73,9 @@ export function transactionsToCSV(transactions, catById) {
 
 // Parse CSV text into an array of field-arrays. Handles quoted fields with
 // embedded commas, quotes ("") and newlines. Tolerates \n or \r\n line endings
-// and skips a trailing blank line. Returns [] for empty input.
-export function parseCSV(text) {
+// and skips a trailing blank line. Returns [] for empty input. `delimiter`
+// defaults to a comma but can be ';' or a tab for foreign bank exports.
+export function parseCSV(text, delimiter = ',') {
   const rows = []
   let row = []
   let field = ''
@@ -104,7 +105,7 @@ export function parseCSV(text) {
       }
     } else if (c === '"') {
       inQuotes = true
-    } else if (c === ',') {
+    } else if (c === delimiter) {
       endField()
     } else if (c === '\n') {
       endRow()
