@@ -672,3 +672,11 @@ export function reconcilePdf(lines, rows, layout = {}) {
   if (!checks.length) return { status: 'none', checks }
   return { status: checks.every((c) => c.ok) ? 'ok' : 'warn', checks }
 }
+
+// A stable per-bank-format fingerprint from the statement's header text, with
+// digits stripped so account numbers / dates / amounts don't make every
+// statement unique. Lets the app remember a taught layout per bank.
+export function statementFingerprint(lines) {
+  const head = (lines ?? []).slice(0, 8).map((l) => l.items.map((i) => i.s).join(' ')).join(' ')
+  return head.replace(/\d+/g, '').replace(/[^a-z ]/gi, ' ').replace(/\s+/g, ' ').trim().toLowerCase().slice(0, 120)
+}

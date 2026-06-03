@@ -20,7 +20,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listAccounts, listGroups, listCategories, createTransactions } from '../lib/data'
 import {
-  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf,
+  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint,
 } from '../lib/statement'
 import { extractPdfText } from '../lib/pdfStatement'
 import { localeFor, currencyDecimals } from '../lib/currencies'
@@ -61,6 +61,15 @@ function saveMapping(sig, payload) {
   try { localStorage.setItem(MAP_KEY(sig), JSON.stringify(payload)) } catch { /* ignore quota/private mode */ }
 }
 
+// Taught PDF layouts, remembered per bank fingerprint.
+const PDFMAP_KEY = (fp) => `kura.pdfmap.${fp}`
+function loadPdfMap(fp) {
+  try { const raw = fp && localStorage.getItem(PDFMAP_KEY(fp)); return raw ? JSON.parse(raw) : null } catch { return null }
+}
+function savePdfMap(fp, payload) {
+  try { if (fp) localStorage.setItem(PDFMAP_KEY(fp), JSON.stringify(payload)) } catch { /* ignore */ }
+}
+
 export default function BankStatement() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -84,9 +93,16 @@ export default function BankStatement() {
   const [sig, setSig] = useState('')
   const [usedSaved, setUsedSaved] = useState(false)
 
-  // PDF: extracted lines + editable layout ({ year, decimal, defaultKind })
+  // PDF: extracted lines + editable layout (auto: { year, decimal, defaultKind };
+  // taught/remembered also carries { dateX, amountX, mode, balanceX }).
   const [pdfLines, setPdfLines] = useState(null)
   const [pdfLayout, setPdfLayout] = useState(null)
+  const [pdfFp, setPdfFp] = useState('') // bank fingerprint
+  const [usedTaught, setUsedTaught] = useState(false)
+
+  // Teach mode
+  const [teachStep, setTeachStep] = useState(null) // null | 'date' | 'amount' | 'direction'
+  const [taught, setTaught] = useState({})
 
   // PDF password
   const [password, setPassword] = useState('')
@@ -180,13 +196,20 @@ export default function BankStatement() {
       return
     }
     const result = parsePdfStatement(res.lines, { targetCurrency: currency })
+    const fp = statementFingerprint(res.lines)
+    const saved = loadPdfMap(fp)
+    const base = { year: result.layout.year ?? new Date().getFullYear(), decimal: result.layout.decimal ?? '.', defaultKind: 'expense' }
     setSource('pdf')
     setPdfLines(res.lines)
-    setPdfLayout({
-      year: result.layout.year ?? new Date().getFullYear(),
-      decimal: result.layout.decimal ?? '.',
-      defaultKind: 'expense',
-    })
+    setPdfFp(fp)
+    if (saved) {
+      // Re-read this statement with the layout taught for this bank before.
+      setPdfLayout({ ...base, ...saved })
+      setUsedTaught(true)
+    } else {
+      setPdfLayout(base)
+      setUsedTaught(false)
+    }
     setPassword('')
     setWrongPassword(false)
     setStep('map')
@@ -198,6 +221,28 @@ export default function BankStatement() {
     try { await loadPdf(password) }
     catch (err) { setError(err?.message ?? 'Couldn’t open the PDF.') }
     finally { setReading(false) }
+  }
+
+  // ---- Teach mode: user shows Kura where the date & amount are --------------
+  function beginTeach() { setTaught({}); setTeachStep('date'); setStep('teach') }
+
+  function onTeachToken(item) {
+    if (teachStep === 'date') {
+      setTaught((t) => ({ ...t, dateX: item.x }))
+      setTeachStep('amount')
+    } else if (teachStep === 'amount') {
+      setTaught((t) => ({ ...t, amountX: item.x }))
+      setTeachStep('direction')
+    }
+  }
+
+  function finishTeach(defaultKind) {
+    const layout = { dateX: taught.dateX, amountX: taught.amountX, mode: 'single', balanceX: null, defaultKind }
+    savePdfMap(pdfFp, layout)
+    setPdfLayout((l) => ({ ...l, ...layout }))
+    setUsedTaught(true)
+    setTeachStep(null)
+    setStep('map')
   }
 
   // ---- Live preview (map step) ---------------------------------------------
@@ -308,6 +353,8 @@ export default function BankStatement() {
               renderUpload()
             ) : step === 'password' ? (
               renderPassword()
+            ) : step === 'teach' ? (
+              renderTeach()
             ) : step === 'map' ? (
               renderMap()
             ) : (
@@ -333,6 +380,7 @@ export default function BankStatement() {
   // ---- Back navigation between steps ---------------------------------------
   function onBack() {
     if (step === 'review') { setStep('map'); return }
+    if (step === 'teach') { setTeachStep(null); setStep('map'); return }
     if (step === 'map' || step === 'password') {
       setStep('upload'); setAnalysis(null); setPdfLines(null); setPassword(''); setWrongPassword(false); setError('')
       return
@@ -428,7 +476,20 @@ export default function BankStatement() {
           <span className="text-[12px] text-faint shrink-0">{previewRows.length} found</span>
         </div>
 
-        {pdfRecon && (
+        {usedTaught && (
+          <div className="rounded-xl border border-primary/30 bg-primary-soft/40 px-3.5 py-2.5 text-[12.5px] text-muted">
+            Using the settings you taught Kura for this statement’s bank. Re-teach below if anything looks off.
+          </div>
+        )}
+
+        {previewRows.length === 0 && (
+          <div className="rounded-xl border border-transfer/40 bg-transfer/10 px-3.5 py-3 text-[13px] text-transfer">
+            <div className="font-semibold mb-1">Kura couldn’t read this layout on its own.</div>
+            Show it where the data is — tap “Teach Kura to read this” below. It’ll remember this bank for next time.
+          </div>
+        )}
+
+        {pdfRecon && previewRows.length > 0 && (
           pdfRecon.status === 'none' ? (
             <div className="rounded-xl border border-border bg-surface-2 px-3.5 py-2.5 text-[12.5px] text-muted">
               Couldn’t auto-check this against the statement’s totals — please look over the rows below before saving.
@@ -469,6 +530,58 @@ export default function BankStatement() {
         <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
           Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
         </Button>
+        <button onClick={beginTeach} className="w-full text-[12.5px] text-muted hover:text-primary py-1">
+          Rows look wrong? Teach Kura to read this statement →
+        </button>
+      </div>
+    )
+  }
+
+  // Teach mode: the user taps the date, then the amount, in any one transaction.
+  function renderTeach() {
+    const prompts = {
+      date: 'Step 1 of 2 — tap the DATE of any one transaction below.',
+      amount: 'Step 2 of 2 — now tap the AMOUNT of that same transaction.',
+      direction: 'Last step — for that transaction, was the money going OUT or IN?',
+    }
+    const rows = (pdfLines ?? []).filter((l) => l.items.length > 1).slice(0, 80)
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-primary/40 bg-primary-soft/50 px-3.5 py-3 text-[13.5px] text-text font-semibold">
+          {prompts[teachStep] ?? ''}
+        </div>
+
+        {teachStep === 'direction' ? (
+          <div className="flex gap-2.5">
+            <Button variant="ghost" className="flex-1" onClick={() => finishTeach('expense')}>Money out (expense)</Button>
+            <Button variant="ghost" className="flex-1" onClick={() => finishTeach('income')}>Money in (income)</Button>
+          </div>
+        ) : (
+          <p className="text-[12px] text-faint px-1">
+            {taught.dateX != null && <span className="text-income font-semibold">✓ date noted. </span>}
+            Tap the matching value in any row — they’re grouped just like the PDF.
+          </p>
+        )}
+
+        <div className="bg-surface border border-border rounded-[14px] divide-y divide-border/60 max-h-[58dvh] overflow-y-auto">
+          {rows.map((l, i) => (
+            <div key={i} className="flex flex-wrap gap-1.5 px-3 py-2">
+              {l.items.map((it, j) => {
+                const picked = (teachStep !== 'date' && taught.dateX != null && Math.abs(it.x - taught.dateX) < 8) ||
+                  (taught.amountX != null && Math.abs(it.x - taught.amountX) < 8)
+                return (
+                  <button key={j} type="button"
+                    onClick={() => teachStep !== 'direction' && onTeachToken(it)}
+                    disabled={teachStep === 'direction'}
+                    className={`text-[12px] px-1.5 py-0.5 rounded border ${picked ? 'border-primary bg-primary-soft text-primary' : 'border-border text-muted hover:border-primary hover:text-primary'} disabled:opacity-60`}>
+                    {it.s}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+        <Button variant="ghost" onClick={() => { setTeachStep(null); setStep('map') }} className="w-full">Cancel</Button>
       </div>
     )
   }
