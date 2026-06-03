@@ -529,6 +529,19 @@ export function adminSetRole(targetId, role) {
   return supabase.rpc('admin_set_role', { target_id: targetId, new_role: role })
 }
 
+// ---- Editable documents (Chunk 9) ------------------------------------------
+// Published content (Privacy / Terms / Help-FAQ). Public read via RLS (so the
+// pages render signed-out); the admin write goes through a SECURITY DEFINER RPC
+// that re-checks is_admin(). Pages fall back to bundled defaults if no row.
+
+export function getDocument(slug) {
+  return supabase.from('documents').select('*').eq('slug', slug).maybeSingle()
+}
+
+export function adminUpsertDocument(slug, title, body) {
+  return supabase.rpc('admin_upsert_document', { doc_slug: slug, doc_title: title, doc_body: body })
+}
+
 // ---- Account management (Account chunk) ------------------------------------
 // Wipes the caller's data and removes their auth user. SECURITY DEFINER RPC that
 // only ever acts on auth.uid() — irreversible; the UI gates it behind a typed

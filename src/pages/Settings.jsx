@@ -111,6 +111,7 @@ export default function Settings() {
           <SectionTitle>Admin</SectionTitle>
           <Group>
             <Row title="Users" sub="Manage subscriptions & roles" right={Chevron} onClick={() => navigate('/admin')} />
+            <Row title="Legal & help content" sub="Edit Privacy, Terms & FAQ pages" right={Chevron} onClick={() => navigate('/admin/content')} />
           </Group>
         </>
       )}

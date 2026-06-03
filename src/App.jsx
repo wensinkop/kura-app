@@ -24,6 +24,7 @@ import Search from './pages/Search'
 import BankStatement from './pages/BankStatement'
 import AccountDetail from './pages/AccountDetail'
 import Admin from './pages/Admin'
+import AdminContent from './pages/AdminContent'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import Terms from './pages/Terms'
 import Help from './pages/Help'
@@ -117,6 +118,7 @@ export default function App() {
             />
             <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminRoute><Admin /></AdminRoute></ProtectedRoute>} />
+            <Route path="/admin/content" element={<ProtectedRoute><AdminRoute><AdminContent /></AdminRoute></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
