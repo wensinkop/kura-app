@@ -69,6 +69,9 @@ function loadPdfMap(fp) {
 function savePdfMap(fp, payload) {
   try { if (fp) localStorage.setItem(PDFMAP_KEY(fp), JSON.stringify(payload)) } catch { /* ignore */ }
 }
+function removePdfMap(fp) {
+  try { if (fp) localStorage.removeItem(PDFMAP_KEY(fp)) } catch { /* ignore */ }
+}
 
 export default function BankStatement() {
   const navigate = useNavigate()
@@ -243,6 +246,14 @@ export default function BankStatement() {
     setUsedTaught(true)
     setTeachStep(null)
     setStep('map')
+  }
+
+  // Forget a taught layout for this bank and go back to automatic reading.
+  function forgetTaught() {
+    removePdfMap(pdfFp)
+    const result = parsePdfStatement(pdfLines, { targetCurrency: currency })
+    setPdfLayout({ year: result.layout.year ?? new Date().getFullYear(), decimal: result.layout.decimal ?? '.', defaultKind: 'expense' })
+    setUsedTaught(false)
   }
 
   // ---- Live preview (map step) ---------------------------------------------
@@ -477,8 +488,9 @@ export default function BankStatement() {
         </div>
 
         {usedTaught && (
-          <div className="rounded-xl border border-primary/30 bg-primary-soft/40 px-3.5 py-2.5 text-[12.5px] text-muted">
-            Using the settings you taught Kura for this statement’s bank. Re-teach below if anything looks off.
+          <div className="rounded-xl border border-primary/30 bg-primary-soft/40 px-3.5 py-2.5 text-[12.5px] text-muted flex items-center justify-between gap-3">
+            <span>Using the settings you taught Kura for this bank.</span>
+            <button onClick={forgetTaught} className="text-primary font-semibold shrink-0 hover:underline">Use automatic</button>
           </div>
         )}
 
