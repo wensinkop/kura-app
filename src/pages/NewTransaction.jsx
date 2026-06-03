@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { listAccounts, listGroups, listCategories, recentNotes, createTransactions } from '../lib/data'
+import { listAccounts, listGroups, listCategories, recentNotes, createTransactions, createCategory } from '../lib/data'
 import { localeFor, currencyDecimals } from '../lib/currencies'
 import { formatMoney } from '../lib/format'
 import NumberInput from '../components/NumberInput'
@@ -113,6 +113,20 @@ export default function NewTransaction() {
   function onPickCat(id, val) {
     update(id, { categoryId: val, subId: '' })
     if (val && subsFor(val).length) setOpenSubFor(id)
+  }
+
+  // Inline category creation from the entry picker. Creates a top-level category
+  // of the row's kind, adds it to local state, and returns its id so the picker
+  // selects it immediately. Returns null on failure (the picker stays open).
+  async function createCat(kind, name) {
+    const sortOrder = categories.filter((c) => c.kind === kind && !c.parent_id).length
+    const { data, error } = await createCategory(user.id, { kind, name, parent_id: null }, sortOrder)
+    if (error || !data) {
+      setSaveError(error?.message || 'Could not create the category.')
+      return null
+    }
+    setCategories((prev) => [...prev, data])
+    return data.id
   }
   useEffect(() => {
     if (!openSubFor) return
@@ -338,7 +352,8 @@ export default function NewTransaction() {
                         <>
                           <MField label="Category" field="category" full={subs.length === 0}>
                             <ResponsiveSelect title="Category" placeholder="— Category —" value={row.categoryId}
-                              onChange={(v) => onPickCat(row.tempId, v)} options={catOptionsFor(row.kind)} />
+                              onChange={(v) => onPickCat(row.tempId, v)} options={catOptionsFor(row.kind)}
+                              onCreate={(name) => createCat(row.kind, name)} />
                           </MField>
                           {subs.length > 0 && (
                             <MField label="Sub-category" field="subcategory">

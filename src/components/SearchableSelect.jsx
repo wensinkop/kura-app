@@ -15,10 +15,12 @@ export default function SearchableSelect({
   options,
   placeholder = '— select —',
   className,
+  onCreate,
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
+  const [creating, setCreating] = useState(false)
   const wrapperRef = useRef(null)
 
   const selected = useMemo(() => options.find((o) => o.value === value) ?? null, [options, value])
@@ -28,6 +30,22 @@ export default function SearchableSelect({
     if (!q) return options
     return options.filter((o) => o.label.toLowerCase().includes(q))
   }, [options, query])
+
+  // Offer to create when a name is typed that doesn't already exist.
+  const trimmed = query.trim()
+  const canCreate =
+    !!onCreate && trimmed.length > 0 && !options.some((o) => o.label.toLowerCase() === trimmed.toLowerCase())
+
+  async function handleCreate() {
+    if (creating) return
+    setCreating(true)
+    try {
+      const v = await onCreate(trimmed)
+      if (v != null) commit(v)
+    } finally {
+      setCreating(false)
+    }
+  }
 
   useEffect(() => {
     function onDocClick(e) {
@@ -57,8 +75,9 @@ export default function SearchableSelect({
       if (open && filtered[highlight]) {
         if (e.key === 'Enter') e.preventDefault()
         commit(filtered[highlight].value)
-      } else if (e.key === 'Escape') {
-        setOpen(false); setQuery('')
+      } else if (open && canCreate) {
+        if (e.key === 'Enter') e.preventDefault()
+        handleCreate()
       }
     } else if (e.key === 'Escape') {
       setOpen(false); setQuery('')
@@ -91,7 +110,7 @@ export default function SearchableSelect({
       />
       {open && (
         <ul className="absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg max-h-60 overflow-auto">
-          {filtered.length === 0 ? (
+          {filtered.length === 0 && !canCreate ? (
             <li className="px-3 py-2 text-sm text-muted italic">No matches</li>
           ) : (
             groups.map(([groupKey, items]) => (
@@ -119,6 +138,14 @@ export default function SearchableSelect({
                 })}
               </Fragment>
             ))
+          )}
+          {canCreate && (
+            <li
+              onMouseDown={(e) => { e.preventDefault(); handleCreate() }}
+              className="px-3 py-2 text-sm cursor-pointer text-primary hover:bg-surface-2 border-t border-border first:border-t-0"
+            >
+              {creating ? 'Creating…' : `＋ Create “${trimmed}”`}
+            </li>
           )}
         </ul>
       )}

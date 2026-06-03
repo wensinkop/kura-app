@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
 import {
   getTransaction, listAccounts, listGroups, listCategories, recentNotes,
-  updateTransaction, deleteTransaction,
+  updateTransaction, deleteTransaction, createCategory,
 } from '../lib/data'
 import { localeFor, currencyDecimals } from '../lib/currencies'
 import { formatMoney } from '../lib/format'
@@ -23,6 +24,7 @@ const KIND_OPTIONS = [
 export default function EditTransaction() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [tx, setTx] = useState(null)
   const [accounts, setAccounts] = useState([])
@@ -99,6 +101,15 @@ export default function EditTransaction() {
   const toCur = accountById.get(form.toAccountId)?.currency
   const cross = kind === 'transfer' && toCur && fromCur !== toCur
   const subs = form.categoryId ? subsFor(form.categoryId) : []
+
+  // Inline category creation from the picker (mirrors the entry screen).
+  async function createCat(name) {
+    const sortOrder = categories.filter((c) => c.kind === kind && !c.parent_id).length
+    const { data, error } = await createCategory(user.id, { kind, name, parent_id: null }, sortOrder)
+    if (error || !data) { setError(error?.message || 'Could not create the category.'); return null }
+    setCategories((prev) => [...prev, data])
+    return data.id
+  }
 
   function validate() {
     if (!form.date) return 'Pick a date.'
@@ -178,7 +189,8 @@ export default function EditTransaction() {
               <Field label="Category" full={subs.length === 0}>
                 <ResponsiveSelect title="Category" placeholder="— Category —" value={form.categoryId}
                   onChange={(v) => set({ categoryId: v, subId: '' })}
-                  options={topCats.map((c) => ({ value: c.id, label: c.name }))} />
+                  options={topCats.map((c) => ({ value: c.id, label: c.name }))}
+                  onCreate={createCat} />
               </Field>
               {subs.length > 0 && (
                 <Field label="Sub-category">
