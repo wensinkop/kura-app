@@ -200,7 +200,7 @@ export default function AccountDetail() {
                             className="w-full px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
                             <div className="flex"><TxRowContent t={t} catMap={catMap} /></div>
                             <div className="text-[11px] text-faint text-right mt-1 tabular">
-                              Balance <span className={`font-semibold ${amountColor(balance)}`}>{formatAbs(balance, currency)}</span>
+                              Balance <span className="font-semibold text-muted">{formatAbs(balance, currency)}</span>
                             </div>
                           </button>
                         ))}
@@ -219,7 +219,7 @@ export default function AccountDetail() {
                         </div>
                         <div className="text-right shrink-0">
                           <div className="text-[10px] text-faint uppercase tracking-wide">End balance</div>
-                          <div className={`text-[13.5px] font-bold tabular ${amountColor(g.endBalance)}`}>{formatAbs(g.endBalance, currency)}</div>
+                          <div className="text-[13.5px] font-bold tabular text-text">{formatAbs(g.endBalance, currency)}</div>
                         </div>
                       </div>
                     ))}
