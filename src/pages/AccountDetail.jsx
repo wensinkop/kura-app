@@ -1,9 +1,11 @@
-// Account detail / ledger (Chunk 7). Tapped from the Accounts page. Shows one
-// account's whole history at a chosen zoom level:
-//   • Daily  — every transaction, grouped by day, each with the running balance.
-//   • Monthly — one summary row per month (net + end-of-month balance).
-//   • Yearly  — one summary row per year.
-// Credit cards are grouped by billing cycle (from the settlement day) instead.
+// Account detail / ledger (Chunk 7). Tapped from the Accounts page. The view
+// sets the zoom level and is scoped one period coarser, navigable with ‹ ›:
+//   • Daily   — one month at a time; transactions grouped by day, each with the
+//               running balance. Prev/next = month.
+//   • Monthly — one year at a time; a summary row per month. Prev/next = year.
+//   • Yearly  — all years; a summary row per year.
+// Credit cards are scoped to a billing cycle (from the settlement day); prev/next
+// pages through cycles.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -12,36 +14,38 @@ import { formatAbs, amountColor, dayLabel } from '../lib/format'
 import { Segmented } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
 import Sidebar from '../components/Sidebar'
-import { ChevronLeft } from '../lib/icons'
+import { ChevronLeft, ChevronRight } from '../lib/icons'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const isoOfDate = (dt) => iso(dt.getFullYear(), dt.getMonth(), dt.getDate())
-const addDays = (isoStr, n) => { const [y, m, d] = isoStr.split('-').map(Number); return isoOfDate(new Date(y, m - 1, d + n)) }
+const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return isoOfDate(new Date(y, m - 1, d + n)) }
 const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate()
 const settleIso = (y, m, day) => iso(y, m, Math.min(day, daysInMonth(y, m)))
-function shortDate(isoStr) {
-  if (!isoStr) return ''
-  const [y, m, d] = isoStr.split('-').map(Number)
-  return `${d} ${new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short' })}`
-}
+function shortDate(s) { const [, m, d] = s.split('-').map(Number); return `${d} ${MONTHS[m - 1]}` }
 
-// The billing cycle a date falls in = ends at the first settlement on/after it.
+// Billing-cycle helpers (cycle ends on the settlement day).
 function cycleEndFor(dateIso, settleDay) {
-  const [y, m] = dateIso.split('-').map(Number) // m is 1-based
+  const [y, m] = dateIso.split('-').map(Number) // m 1-based
   const thisEnd = settleIso(y, m - 1, settleDay)
   if (dateIso <= thisEnd) return thisEnd
-  let mm = m, yy = y // next month, 0-based index = current 1-based value
+  let mm = m, yy = y // current 1-based value = next month 0-based index
   if (mm > 11) { mm = 0; yy += 1 }
   return settleIso(yy, mm, settleDay)
 }
-function cycleLabelFor(endIso, settleDay) {
-  const [y, m] = endIso.split('-').map(Number) // m is 1-based
-  let pm = m - 2, py = y // previous month, 0-based
+function cycleStartFromEnd(endIso, settleDay) {
+  const [y, m] = endIso.split('-').map(Number)
+  let pm = m - 2, py = y
   if (pm < 0) { pm = 11; py -= 1 }
-  const start = addDays(settleIso(py, pm, settleDay), 1)
-  return `${shortDate(start)} – ${shortDate(endIso)}`
+  return addDays(settleIso(py, pm, settleDay), 1)
+}
+function shiftCycleEnd(endIso, delta, settleDay) {
+  const [y, m] = endIso.split('-').map(Number)
+  let mm = (m - 1) + delta, yy = y
+  while (mm < 0) { mm += 12; yy -= 1 }
+  while (mm > 11) { mm -= 12; yy += 1 }
+  return settleIso(yy, mm, settleDay)
 }
 
 export default function AccountDetail() {
@@ -52,12 +56,16 @@ export default function AccountDetail() {
   const [catMap, setCatMap] = useState(new Map())
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState('day') // day | month | year (non-credit)
+  const [anchor, setAnchor] = useState(new Date())
+  const [cycleEnd, setCycleEnd] = useState(null) // ISO end-settlement for credit cards
 
   useEffect(() => {
     Promise.all([listAccounts(), listAllTransactionsFull(), listCategories()]).then(([a, t, c]) => {
-      setAccount((a.data ?? []).find((x) => x.id === id) ?? null)
+      const acc = (a.data ?? []).find((x) => x.id === id) ?? null
+      setAccount(acc)
       setTxns(t.data ?? [])
       setCatMap(new Map((c.data ?? []).map((x) => [x.id, x])))
+      if (acc?.type === 'credit_card' && acc.settlement_day) setCycleEnd(cycleEndFor(isoOfDate(new Date()), acc.settlement_day))
       setLoading(false)
     })
   }, [id])
@@ -65,7 +73,6 @@ export default function AccountDetail() {
   const isCC = account?.type === 'credit_card' && !!account?.settlement_day
   const currency = account?.currency ?? 'IDR'
 
-  // Signed effect of a transaction on THIS account (handles both transfer legs).
   const delta = (t) => {
     const amt = Number(t.amount) || 0
     if (t.account_id === id) {
@@ -78,7 +85,7 @@ export default function AccountDetail() {
   }
   const accountTxns = useMemo(() => txns.filter((t) => t.account_id === id || t.to_account_id === id), [txns, id])
 
-  // Oldest → newest, with the running balance after each (from opening balance).
+  // Oldest → newest with the running balance after each (from opening balance).
   const ascWithBalance = useMemo(() => {
     const asc = [...accountTxns].sort((a, b) => a.date.localeCompare(b.date) || (a.created_at ?? '').localeCompare(b.created_at ?? ''))
     let run = Number(account?.opening_balance) || 0
@@ -89,40 +96,54 @@ export default function AccountDetail() {
 
   const currentBalance = ascWithBalance.length ? ascWithBalance[ascWithBalance.length - 1].balance : (Number(account?.opening_balance) || 0)
 
-  // Group into periods (newest first). Each: { key, label, rows:[{t,balance}] desc,
-  // net, endBalance }. Daily & credit-card cycles are shown in detail; month/year
-  // collapse to one summary row each.
-  const detailed = isCC || mode === 'day'
-  const groups = useMemo(() => {
-    const keyFn = isCC
-      ? (e) => cycleEndFor(e.t.date, account.settlement_day)
-      : mode === 'year' ? (e) => e.t.date.slice(0, 4)
-        : mode === 'month' ? (e) => e.t.date.slice(0, 7)
-          : (e) => e.t.date
-    const map = new Map()
-    for (const e of ascWithBalance) { // ascWithBalance is oldest→newest
-      const k = keyFn(e)
-      if (!map.has(k)) map.set(k, [])
-      map.get(k).push(e)
+  // Scope (the navigable period) + its label. Yearly has no scope (all years).
+  const scope = useMemo(() => {
+    if (isCC && cycleEnd) {
+      const start = cycleStartFromEnd(cycleEnd, account.settlement_day)
+      return { start, end: addDays(cycleEnd, 1), label: `${shortDate(start)} – ${shortDate(cycleEnd)}`, sub: 'Billing cycle' }
     }
+    const y = anchor.getFullYear(), m = anchor.getMonth()
+    if (mode === 'day') return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label: `${MONTHS[m]} ${y}` }
+    if (mode === 'month') return { start: iso(y, 0, 1), end: iso(y + 1, 0, 1), label: String(y) }
+    return { start: null, end: null, label: 'All years' } // yearly
+  }, [isCC, cycleEnd, mode, anchor, account])
+
+  const canNavigate = isCC || mode !== 'year'
+  function shift(d) {
+    if (isCC && cycleEnd) { setCycleEnd((e) => shiftCycleEnd(e, d, account.settlement_day)); return }
+    setAnchor((a) => {
+      const dt = new Date(a)
+      if (mode === 'day') dt.setMonth(dt.getMonth() + d)
+      else if (mode === 'month') dt.setFullYear(dt.getFullYear() + d)
+      return dt
+    })
+  }
+
+  // Transactions in scope, then grouped. Detailed (daily / credit-card cycle):
+  // grouped by day, each row shown. Monthly/yearly: one summary row per group.
+  const detailed = isCC || mode === 'day'
+  const inScope = useMemo(
+    () => ascWithBalance.filter((e) => !scope.start || (e.t.date >= scope.start && e.t.date < scope.end)),
+    [ascWithBalance, scope]
+  )
+  const groups = useMemo(() => {
+    const keyFn = (isCC || mode === 'day') ? (e) => e.t.date
+      : mode === 'month' ? (e) => e.t.date.slice(0, 7)
+        : (e) => e.t.date.slice(0, 4)
+    const map = new Map()
+    for (const e of inScope) { const k = keyFn(e); if (!map.has(k)) map.set(k, []); map.get(k).push(e) }
     const out = []
     for (const [key, rowsAsc] of map) {
-      out.push({
-        key,
-        rows: [...rowsAsc].reverse(), // newest first for display
-        net: rowsAsc.reduce((s, e) => s + delta(e.t), 0),
-        endBalance: rowsAsc[rowsAsc.length - 1].balance,
-      })
+      out.push({ key, rows: [...rowsAsc].reverse(), net: rowsAsc.reduce((s, e) => s + delta(e.t), 0), endBalance: rowsAsc[rowsAsc.length - 1].balance })
     }
     out.sort((a, b) => b.key.localeCompare(a.key))
     return out
-  }, [ascWithBalance, mode, isCC, account]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [inScope, mode, isCC]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function groupLabel(key) {
-    if (isCC) return cycleLabelFor(key, account.settlement_day)
-    if (mode === 'year') return key
+  const groupLabel = (key) => {
+    if (isCC || mode === 'day') return dayLabel(key)
     if (mode === 'month') { const [y, m] = key.split('-'); return `${MONTHS[Number(m) - 1]} ${y}` }
-    return dayLabel(key)
+    return key
   }
 
   return (
@@ -145,25 +166,34 @@ export default function AccountDetail() {
               <p className="text-muted text-sm py-8 text-center">Account not found.</p>
             ) : (
               <>
-                {isCC ? (
-                  <div className="text-[12px] text-muted text-center mb-3">Grouped by billing cycle</div>
-                ) : (
-                  <div className="mb-3">
+                {!isCC && (
+                  <div className="mb-2.5">
                     <Segmented value={mode} onChange={setMode} options={[
                       { value: 'day', label: 'Daily' }, { value: 'month', label: 'Monthly' }, { value: 'year', label: 'Yearly' },
                     ]} />
                   </div>
                 )}
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <button onClick={() => shift(-1)} aria-label="Previous" disabled={!canNavigate}
+                    className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-0">
+                    <ChevronLeft className="w-[18px] h-[18px]" />
+                  </button>
+                  <div className="text-center min-w-0">
+                    <div className="font-bold text-[14px] truncate">{scope.label}</div>
+                    {scope.sub && <div className="text-[11px] text-faint">{scope.sub}</div>}
+                  </div>
+                  <button onClick={() => shift(1)} aria-label="Next" disabled={!canNavigate}
+                    className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-0">
+                    <ChevronRight className="w-[18px] h-[18px]" />
+                  </button>
+                </div>
 
                 {groups.length === 0 ? (
-                  <p className="text-muted text-sm py-10 text-center">No transactions yet.</p>
+                  <p className="text-muted text-sm py-10 text-center">No transactions in this period.</p>
                 ) : detailed ? (
                   groups.map((g) => (
                     <div key={g.key} className="mb-4">
-                      <div className="flex items-baseline justify-between gap-2 px-1 mb-1.5">
-                        <span className="text-[12px] font-bold text-muted">{groupLabel(g.key)}</span>
-                        {isCC && <span className="text-[11px] text-faint">balance {formatAbs(g.endBalance, currency)}</span>}
-                      </div>
+                      <div className="text-[12px] font-bold text-muted px-1 mb-1.5">{groupLabel(g.key)}</div>
                       <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
                         {g.rows.map(({ t, balance }) => (
                           <button key={t.id} onClick={() => navigate(`/tx/${t.id}`)}
