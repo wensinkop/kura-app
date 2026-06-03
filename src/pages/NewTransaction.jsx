@@ -141,13 +141,16 @@ export default function NewTransaction() {
   const rowRefs = useRef({})
   const scrollRef = useRef(null) // the internal scroll area (between header + save bar)
   const [focusId, setFocusId] = useState(null)
+  const [enteringIds, setEnteringIds] = useState(() => new Set()) // rows currently playing the entrance animation
 
   // Scroll the internal area so `el` sits at the top (just below the header).
-  const liftToTop = useCallback((el) => {
+  // `smooth` animates the scroll (used when adding a row); field-focus lifts stay
+  // instant so they keep pace with the opening keyboard.
+  const liftToTop = useCallback((el, smooth = false) => {
     const sc = scrollRef.current
     if (!el || !sc) return
     const y = sc.scrollTop + (el.getBoundingClientRect().top - sc.getBoundingClientRect().top) - 8
-    sc.scrollTo({ top: Math.max(0, y), behavior: 'auto' })
+    sc.scrollTo({ top: Math.max(0, y), behavior: smooth ? 'smooth' : 'auto' })
   }, [])
 
   // On focus (mobile), bring the field's scroll target to the top. Deferred one
@@ -162,12 +165,12 @@ export default function NewTransaction() {
     requestAnimationFrame(() => liftToTop(target))
   }
 
-  // New row → bring the new card to the top.
+  // New row → smoothly bring the new card to the top so it eases up into view.
   useEffect(() => {
     if (!focusId) return
     const t = setTimeout(() => {
       const card = rowRefs.current[focusId]
-      if (card) liftToTop(card)
+      if (card) liftToTop(card, true)
       setFocusId(null)
     }, 60)
     return () => clearTimeout(t)
@@ -201,6 +204,11 @@ export default function NewTransaction() {
     const next = newRow(rows[rows.length - 1])
     setRows((rs) => [...rs, next])
     setFocusId(next.tempId)
+    // Play the entrance animation, then drop the flag so re-renders don't replay it.
+    setEnteringIds((s) => new Set(s).add(next.tempId))
+    setTimeout(() => setEnteringIds((s) => {
+      const n = new Set(s); n.delete(next.tempId); return n
+    }), 360)
   }
   function removeRow(id) {
     setRows((rs) => (rs.length === 1 ? [newRow()] : rs.filter((r) => r.tempId !== id)))
@@ -311,7 +319,7 @@ export default function NewTransaction() {
                     ref={(el) => { rowRefs.current[row.tempId] = el }}
                     data-row-card
                     onFocusCapture={(e) => handleCardFocus(e, row.tempId)}
-                    className={`bg-surface border rounded-[14px] p-3 mt-2.5 first:mt-0 desk:mt-2 ${err ? 'border-expense' : 'border-border'}`}>
+                    className={`bg-surface border rounded-[14px] p-3 mt-2.5 first:mt-0 desk:mt-2 ${err ? 'border-expense' : 'border-border'} ${enteringIds.has(row.tempId) ? 'animate-row-in' : ''}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
                       <button type="button" onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>

@@ -4,6 +4,7 @@
 // signed in, signed out, or arriving cold from the Play Store listing. On-brand
 // tokens follow the active theme (ThemeProvider wraps all routes).
 
+import { useLayoutEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronLeft } from '../lib/icons'
 
@@ -51,6 +52,12 @@ function DocFooter() {
 
 export default function LegalDoc({ title, updated, children }) {
   const navigate = useNavigate()
+
+  // These are standalone routes (outside AppShell, which handles its own scroll
+  // restoration), so nothing resets the scroll when you arrive — open at the top.
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+  }, [title])
   // React Router records a history index in window.history.state.idx. If we got
   // here by navigation (idx > 0) go back where the visitor came from; if the
   // page was opened cold (a shared/store link, idx 0) fall back to the home.

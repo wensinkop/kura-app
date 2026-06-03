@@ -95,3 +95,16 @@ body {
 .tabular {
   font-variant-numeric: tabular-nums;
 }
+
+/* Entrance for a freshly-added transaction row: it eases in (and the list
+   scrolls to it) instead of snapping, so adding rows feels less rigid. */
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-row-in {
+  animation: row-in 0.3s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-row-in { animation: none; }
+}

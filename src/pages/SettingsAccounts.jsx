@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../AuthContext'
 import {
   listGroups, createGroup, renameGroup, deleteGroup,
@@ -9,8 +9,9 @@ import { currencyOptions, localeFor, currencyDecimals } from '../lib/currencies'
 import { TYPE_OPTIONS, accountSubtitle } from '../lib/format'
 import SearchableSelect from '../components/SearchableSelect'
 import NumberInput from '../components/NumberInput'
+import Sidebar from '../components/Sidebar'
 import { Button, Field, TextInput, Segmented, IconButton, Modal, ConfirmDialog, inputClass } from '../components/ui'
-import { PlusIcon, PencilIcon, TrashIcon, ArchiveIcon, ChevronUp, ChevronDown } from '../lib/icons'
+import { PlusIcon, PencilIcon, TrashIcon, ArchiveIcon, ChevronUp, ChevronDown, ChevronLeft } from '../lib/icons'
 
 const CURRENCY_OPTS = currencyOptions()
 
@@ -259,6 +260,12 @@ function AccountRow({ a, isFirst, isLast, onUp, onDown, onEdit, onArchive, onDel
   )
 }
 
+// Full-screen page (not a modal) for creating/editing an account. The Cancel/Save
+// bar sits in the normal scroll flow — not pinned — so it never overlaps the
+// fields, and on mobile the focused field lifts above the on-screen keyboard
+// (same keyboard-aware pattern as the New-transaction screen).
+const DESK = 768 // --breakpoint-desk
+
 function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
   const isEdit = mode === 'edit'
   const [name, setName] = useState(target?.name ?? '')
@@ -285,63 +292,108 @@ function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
     })
   }
 
+  // ---- Keyboard-aware scrolling (mobile) -------------------------------------
+  const scrollRef = useRef(null)
+
+  // Scroll the page so the focused field sits just below the header, clearing
+  // the keyboard. The trailing spacer gives even the last field room to rise.
+  const liftField = useCallback((el) => {
+    const sc = scrollRef.current
+    if (!el || !sc) return
+    const y = sc.scrollTop + (el.getBoundingClientRect().top - sc.getBoundingClientRect().top) - 12
+    sc.scrollTo({ top: Math.max(0, y), behavior: 'auto' })
+  }, [])
+
+  function handleFocus(e) {
+    if (window.innerWidth >= DESK) return
+    const fieldEl = e.target.closest('label') ?? e.target
+    requestAnimationFrame(() => liftField(fieldEl))
+  }
+
+  // The keyboard opens a beat after focus (the viewport resizes) — re-apply then.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => {
+      if (window.innerWidth >= DESK) return
+      const el = document.activeElement
+      if (!el || (el.tagName !== 'INPUT' && el.tagName !== 'TEXTAREA')) return
+      liftField(el.closest('label') ?? el)
+    }
+    vv.addEventListener('resize', onResize)
+    return () => vv.removeEventListener('resize', onResize)
+  }, [liftField])
+
   return (
-    <Modal
-      title={isEdit ? 'Edit account' : 'New account'}
-      onClose={onClose}
-      footer={
-        <>
-          <Button variant="ghost" className="flex-1" onClick={onClose} disabled={busy}>Cancel</Button>
-          <Button className="flex-1" onClick={submit} disabled={!canSave}>{busy ? 'Saving…' : 'Save'}</Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-3.5">
-        <Field label="Name">
-          <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. BCA — Main Savings" maxLength={60} />
-        </Field>
+    <div className="fixed inset-0 z-50 flex h-[100dvh] overflow-hidden bg-bg">
+      <Sidebar />
+      <div className="flex-1 flex flex-col h-[100dvh] min-w-0">
+        <header className="shrink-0 bg-surface border-b border-border px-4 py-2.5 flex items-center gap-2">
+          <button onClick={onClose} aria-label="Back"
+            className="w-8 h-8 -ml-1 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
+            <ChevronLeft />
+          </button>
+          <div className="font-bold text-[15px]">{isEdit ? 'Edit account' : 'New account'}</div>
+        </header>
 
-        <Field label="Type">
-          <Segmented value={type} onChange={setType} options={TYPE_OPTIONS} />
-        </Field>
-
-        <Field
-          label="Currency"
-          hint={isEdit ? 'Currency is fixed once an account is created and can’t be changed.' : 'Fixed once created — choose carefully.'}
-        >
-          {isEdit ? (
-            <TextInput value={currency} disabled />
-          ) : (
-            <SearchableSelect value={currency} onChange={setCurrency} options={CURRENCY_OPTS} className={inputClass} placeholder="Search currency…" />
-          )}
-        </Field>
-
-        <Field label="Group">
-          <SearchableSelect value={groupId} onChange={setGroupId} options={groupOptions} className={inputClass} placeholder="No group" />
-        </Field>
-
-        <Field
-          label="Opening balance"
-          hint={isCC ? 'What you currently owe — enter as a negative number.' : 'Current amount in this account before logged transactions.'}
-        >
-          <NumberInput value={opening} onChange={setOpening} allowNegative
-            locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
-        </Field>
-
-        {isCC && (
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Settlement day" hint="1–31">
-              <TextInput type="number" min={1} max={31} inputMode="numeric" value={settlement}
-                onChange={(e) => setSettlement(e.target.value)} placeholder="e.g. 18" />
+        <div ref={scrollRef} onFocusCapture={handleFocus} className="flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6">
+          <div className="max-w-[560px] mx-auto flex flex-col gap-3.5">
+            <Field label="Name">
+              <TextInput autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. BCA — Main Savings" maxLength={60} />
             </Field>
-            <Field label="Payment due day" hint="1–31">
-              <TextInput type="number" min={1} max={31} inputMode="numeric" value={payment}
-                onChange={(e) => setPayment(e.target.value)} placeholder="e.g. 5" />
+
+            <Field label="Type">
+              <Segmented value={type} onChange={setType} options={TYPE_OPTIONS} />
             </Field>
+
+            <Field
+              label="Currency"
+              hint={isEdit ? 'Currency is fixed once an account is created and can’t be changed.' : 'Fixed once created — choose carefully.'}
+            >
+              {isEdit ? (
+                <TextInput value={currency} disabled />
+              ) : (
+                <SearchableSelect value={currency} onChange={setCurrency} options={CURRENCY_OPTS} className={inputClass} placeholder="Search currency…" />
+              )}
+            </Field>
+
+            <Field label="Group">
+              <SearchableSelect value={groupId} onChange={setGroupId} options={groupOptions} className={inputClass} placeholder="No group" />
+            </Field>
+
+            <Field
+              label="Opening balance"
+              hint={isCC ? 'What you currently owe — enter as a negative number.' : 'Current amount in this account before logged transactions.'}
+            >
+              <NumberInput value={opening} onChange={setOpening} allowNegative
+                locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
+            </Field>
+
+            {isCC && (
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Settlement day" hint="1–31">
+                  <TextInput type="number" min={1} max={31} inputMode="numeric" value={settlement}
+                    onChange={(e) => setSettlement(e.target.value)} placeholder="e.g. 18" />
+                </Field>
+                <Field label="Payment due day" hint="1–31">
+                  <TextInput type="number" min={1} max={31} inputMode="numeric" value={payment}
+                    onChange={(e) => setPayment(e.target.value)} placeholder="e.g. 5" />
+                </Field>
+              </div>
+            )}
+
+            {/* Cancel/Save in the normal flow (not pinned) so they never cover fields. */}
+            <div className="flex gap-2.5 mt-2">
+              <Button variant="ghost" className="flex-1" onClick={onClose} disabled={busy}>Cancel</Button>
+              <Button className="flex-1" onClick={submit} disabled={!canSave}>{busy ? 'Saving…' : 'Save'}</Button>
+            </div>
+
+            {/* Lets the last field scroll up clear of the keyboard. */}
+            <div aria-hidden="true" className="h-[42dvh]" />
           </div>
-        )}
+        </div>
       </div>
-    </Modal>
+    </div>
   )
 }
 
