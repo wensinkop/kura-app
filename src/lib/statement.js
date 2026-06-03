@@ -599,7 +599,7 @@ export function parsePdfStatement(lines, override = {}) {
     const noteParts = []
     for (let j = start; j < stop; j++) {
       for (const it of lines[j].items) {
-        if (pdfDateParts(it.s) && it === lines[j].items[0]) continue
+        if (pdfDateParts(it.s)) continue // drop every bare date (incl. a 2nd posting-date column)
         if (moneyLike(splitDir(it.s).core)) continue
         if (/^(DB|CR|DR|KR)$/i.test(it.s) || /^TANGGAL\s*:/i.test(it.s) || /^-+$/.test(it.s)) continue
         noteParts.push(it.s)

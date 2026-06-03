@@ -26,7 +26,6 @@ import { extractPdfText } from '../lib/pdfStatement'
 import { localeFor, currencyDecimals } from '../lib/currencies'
 import { formatMoney, dayLabel } from '../lib/format'
 import NumberInput from '../components/NumberInput'
-import AutocompleteInput from '../components/AutocompleteInput'
 import ResponsiveSelect from '../components/ResponsiveSelect'
 import DatePicker from '../components/DatePicker'
 import Sidebar from '../components/Sidebar'
@@ -599,7 +598,9 @@ export default function BankStatement() {
                   </RField>
                 )}
                 <RField label="Note" full deskW="desk:flex-1 desk:min-w-[160px]">
-                  <AutocompleteInput value={row.note} onChange={(v) => updateRow(row.tempId, { note: v })} suggestions={[]} placeholder="Note" className={inputClass} />
+                  <textarea value={row.note} onChange={(e) => updateRow(row.tempId, { note: e.target.value })}
+                    rows={2} placeholder="Note"
+                    className={`${inputClass} resize-y leading-snug min-h-[44px]`} />
                 </RField>
               </div>
             </div>
