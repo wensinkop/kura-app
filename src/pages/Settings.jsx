@@ -45,7 +45,6 @@ function Switch({ on, onClick }) {
   )
 }
 
-const Soon = <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Soon</span>
 const Chevron = <span className="text-faint">›</span>
 function Premium() {
   return <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-1.5 py-0.5">Premium</span>
@@ -61,7 +60,7 @@ export default function Settings() {
       <SectionTitle>Account</SectionTitle>
       <Group>
         <Row title={profile?.full_name || 'Your name'} sub={user?.email} />
-        <Row title="Email & password" sub="Edit your sign-in details" right={Soon} disabled />
+        <Row title="Email & password" sub="Edit your sign-in details" right={Chevron} onClick={() => navigate('/settings/account')} />
       </Group>
 
       <SectionTitle>Appearance</SectionTitle>

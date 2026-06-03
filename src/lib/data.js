@@ -529,6 +529,14 @@ export function adminSetRole(targetId, role) {
   return supabase.rpc('admin_set_role', { target_id: targetId, new_role: role })
 }
 
+// ---- Account management (Account chunk) ------------------------------------
+// Wipes the caller's data and removes their auth user. SECURITY DEFINER RPC that
+// only ever acts on auth.uid() — irreversible; the UI gates it behind a typed
+// confirmation and signs out afterwards.
+export function deleteOwnAccount() {
+  return supabase.rpc('delete_own_account')
+}
+
 // ---- Reordering ------------------------------------------------------------
 
 // Rewrite sort_order = index for the given ids, in order. Returns the first
