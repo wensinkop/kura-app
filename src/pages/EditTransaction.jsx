@@ -14,8 +14,11 @@ import Sidebar from '../components/Sidebar'
 import { Button, ConfirmDialog, inputClass } from '../components/ui'
 import { ChevronLeft, TrashIcon } from '../lib/icons'
 
-const KIND_LABEL = { income: 'Income', expense: 'Expense', transfer: 'Transfer' }
-const KIND_COLOR = { income: 'text-income', expense: 'text-expense', transfer: 'text-transfer' }
+const KIND_OPTIONS = [
+  { value: 'expense', label: 'Expense' },
+  { value: 'income', label: 'Income' },
+  { value: 'transfer', label: 'Transfer' },
+]
 
 export default function EditTransaction() {
   const { id } = useParams()
@@ -49,6 +52,7 @@ export default function EditTransaction() {
           else categoryId = tr.category.id
         }
         setForm({
+          kind: tr.kind,
           date: tr.date,
           amount: Number(tr.amount),
           accountId: tr.account_id,
@@ -76,11 +80,13 @@ export default function EditTransaction() {
   }, [accounts, groups])
 
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts])
-  const kind = tx?.kind
+  const kind = form?.kind
   const topCats = useMemo(() => categories.filter((c) => c.kind === kind && !c.parent_id), [categories, kind])
   const subsFor = (catId) => categories.filter((c) => c.parent_id === catId)
 
   function set(patch) { setForm((f) => ({ ...f, ...patch })) }
+  // Changing the type clears category/sub (they're kind-specific).
+  function setKind(k) { set({ kind: k, categoryId: '', subId: '' }) }
 
   if (loading) return <Shell><p className="text-muted text-sm py-8 text-center">Loading…</p></Shell>
   if (notFound) return (
@@ -111,14 +117,18 @@ export default function EditTransaction() {
     setBusy(true)
     const payload = kind === 'transfer'
       ? {
+          kind: 'transfer',
           date: form.date, amount: form.amount, account_id: form.accountId,
           to_account_id: form.toAccountId, to_amount: cross ? form.toAmount : form.amount,
           exchange_rate: cross && form.toAmount ? form.amount / form.toAmount : null,
           category_id: null, note: form.note.trim() || null,
         }
       : {
+          kind, // income | expense
           date: form.date, amount: form.amount, account_id: form.accountId,
           category_id: form.subId || form.categoryId || null, note: form.note.trim() || null,
+          // clear any transfer fields if this used to be a transfer
+          to_account_id: null, to_amount: null, exchange_rate: null,
         }
     const { error: e } = await updateTransaction(id, payload)
     if (e) { setError(e.message); setBusy(false); return }
@@ -134,9 +144,10 @@ export default function EditTransaction() {
   return (
     <Shell onBack={() => navigate(-1)} title="Edit transaction">
       <div className="max-w-[560px] mx-auto">
-        <div className={`text-[11px] font-bold uppercase tracking-wide mb-3 ${KIND_COLOR[kind]}`}>{KIND_LABEL[kind]}</div>
-
         <div className="grid grid-cols-2 gap-3">
+          <Field label="Type" full>
+            <ResponsiveSelect title="Type" value={kind} onChange={setKind} options={KIND_OPTIONS} />
+          </Field>
           <Field label="Date">
             <DatePicker value={form.date} onChange={(v) => set({ date: v })} className={inputClass} />
           </Field>
