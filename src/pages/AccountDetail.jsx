@@ -197,11 +197,10 @@ export default function AccountDetail() {
                       <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
                         {g.rows.map(({ t, balance }) => (
                           <button key={t.id} onClick={() => navigate(`/tx/${t.id}`)}
-                            className="w-full flex items-stretch gap-3 px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
-                            <TxRowContent t={t} catMap={catMap} />
-                            <div className="text-right shrink-0 self-center pl-2 border-l border-border/60 ml-1">
-                              <div className="text-[10px] text-faint uppercase tracking-wide">Balance</div>
-                              <div className={`text-[12.5px] font-bold tabular ${amountColor(balance)}`}>{formatAbs(balance, currency)}</div>
+                            className="w-full px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
+                            <div className="flex"><TxRowContent t={t} catMap={catMap} /></div>
+                            <div className="text-[11px] text-faint text-right mt-1 tabular">
+                              Balance <span className={`font-semibold ${amountColor(balance)}`}>{formatAbs(balance, currency)}</span>
                             </div>
                           </button>
                         ))}
