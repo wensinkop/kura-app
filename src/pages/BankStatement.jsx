@@ -20,7 +20,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listAccounts, listGroups, listCategories, createTransactions } from '../lib/data'
 import {
-  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement,
+  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf,
 } from '../lib/statement'
 import { extractPdfText } from '../lib/pdfStatement'
 import { localeFor, currencyDecimals } from '../lib/currencies'
@@ -215,6 +215,12 @@ export default function BankStatement() {
   // Unified rows shown in the preview + carried into review.
   const previewRows = source === 'pdf' ? (pdfResult?.rows ?? []) : built.rows
   const previewSkipped = source === 'pdf' ? 0 : built.skipped.length
+
+  // Auto-check the PDF parse against the statement's own totals (when present).
+  const pdfRecon = useMemo(() => {
+    if (source !== 'pdf' || !pdfLines || !pdfResult) return null
+    return reconcilePdf(pdfLines, pdfResult.rows, pdfResult.layout)
+  }, [source, pdfLines, pdfResult])
 
   const firstDateRaw = useMemo(() => {
     if (!analysis || !mapping) return ''
@@ -422,6 +428,25 @@ export default function BankStatement() {
           </div>
           <span className="text-[12px] text-faint shrink-0">{previewRows.length} found</span>
         </div>
+
+        {pdfRecon && (
+          pdfRecon.status === 'none' ? (
+            <div className="rounded-xl border border-border bg-surface-2 px-3.5 py-2.5 text-[12.5px] text-muted">
+              Couldn’t auto-check this against the statement’s totals — please look over the rows below before saving.
+            </div>
+          ) : (
+            <div className={`rounded-xl border px-3.5 py-3 text-[13px] ${pdfRecon.status === 'ok' ? 'border-income/40 bg-income/10 text-income' : 'border-transfer/50 bg-transfer/10 text-transfer'}`}>
+              <div className="font-semibold">
+                {pdfRecon.status === 'ok' ? 'Adds up — matches the statement’s own totals ✓' : 'Doesn’t match the statement’s totals — double-check before saving'}
+              </div>
+              <ul className="mt-1 text-[12px] space-y-0.5">
+                {pdfRecon.checks.map((c, i) => (
+                  <li key={i}>{c.ok ? '✓' : '✗'} {c.label}: {formatMoney(c.got, currency)}{!c.ok && <> vs statement {formatMoney(c.want, currency)}</>}</li>
+                ))}
+              </ul>
+            </div>
+          )
+        )}
 
         <div className="bg-surface border border-border rounded-[14px] p-4 space-y-3.5">
           <div className="text-xs font-bold uppercase tracking-wide text-faint">Statement settings</div>

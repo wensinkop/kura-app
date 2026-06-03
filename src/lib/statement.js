@@ -611,3 +611,64 @@ export function parsePdfStatement(lines, override = {}) {
   }
   return { rows, skipped, layout }
 }
+
+// A statement's own control figure for a label, taken from the money figure to
+// the RIGHT of the label on the SAME line (e.g. "MUTASI CR : 205,077,102.93").
+// Same-line only — next-line/column guessing produced false matches on credit
+// cards, and a wrong control figure is worse than none. Returns a number or null.
+function findControl(lines, labelRe, decimal) {
+  for (const l of lines) {
+    const idx = l.items.findIndex((it) => labelRe.test(it.s))
+    if (idx < 0) continue
+    for (let j = idx + 1; j < l.items.length; j++) {
+      const m = moneyToken(l.items[j].s, decimal)
+      if (m) return m.value
+    }
+  }
+  return null
+}
+
+// The last running-balance figure on a transaction line (the ending balance).
+function endingBalance(lines, layout) {
+  const { dateX, balanceX, decimal } = layout
+  if (dateX == null || balanceX == null) return null
+  let end = null
+  for (const l of lines) {
+    const f = l.items[0]
+    if (!f || Math.abs(f.x - dateX) >= 15 || !pdfDateParts(f.s)) continue
+    const bal = l.items.filter((it) => Math.abs(it.x - balanceX) < 40).map((it) => moneyToken(it.s, decimal)).filter(Boolean).pop()
+    if (bal) end = bal.value
+  }
+  return end
+}
+
+// Compare the parsed totals to the statement's own figures so the UI can show an
+// automatic confidence signal. Two conservative checks: labelled MUTASI CR/DB
+// totals, and balance continuity (beginning balance + net = ending balance).
+// Returns { status:'ok'|'warn'|'none', checks:[{label, got, want, ok}] }.
+export function reconcilePdf(lines, rows, layout = {}) {
+  const decimal = layout.decimal ?? '.'
+  const income = rows.filter((r) => r.kind === 'income').reduce((s, r) => s + r.amount, 0)
+  const expense = rows.filter((r) => r.kind === 'expense').reduce((s, r) => s + r.amount, 0)
+
+  const checks = []
+  const add = (label, got, want) => {
+    if (want == null || !Number.isFinite(want)) return
+    checks.push({ label, got, want, ok: Math.abs(got - want) <= Math.max(1, Math.abs(want) * 0.005) })
+  }
+  add('Total money in', income, findControl(lines, /MUTASI\s*(CR|KREDIT)/i, decimal))
+  add('Total money out', expense, findControl(lines, /MUTASI\s*(DB|DEBET|DEBIT)/i, decimal))
+
+  // Balance continuity: ending − beginning should equal net (in − out). Skip on
+  // multi-currency statements, where the beginning/ending balances span currency
+  // sections and aren't comparable.
+  const sections = lines.filter((l) => /Currency\s*Code\s*:?\s*[A-Za-z]{3}/i.test(l.items.map((i) => i.s).join(' '))).length
+  if (sections <= 1) {
+    const begin = findControl(lines, /(Beginning\s*Balance|SALDO\s*AWAL)/i, decimal)
+    const end = endingBalance(lines, layout)
+    if (begin != null && end != null) add('Change in balance', end - begin, income - expense)
+  }
+
+  if (!checks.length) return { status: 'none', checks }
+  return { status: checks.every((c) => c.ok) ? 'ok' : 'warn', checks }
+}
