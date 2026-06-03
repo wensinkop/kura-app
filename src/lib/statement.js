@@ -332,3 +332,227 @@ export function buildStatementRows({ dataRows }, mapping, formats) {
 export function layoutSignature(headers) {
   return (headers ?? []).map((h) => (h ?? '').trim().toLowerCase()).join('|')
 }
+
+// ---- PDF statement parsing (line/positional) --------------------------------
+// Real bank PDFs aren't clean grids: one transaction spans several physical
+// lines, dates often omit the year (it's in the statement period), money in/out
+// is a KR/DB (kredit/debit) code rather than a sign, and sub-detail lines carry
+// their own unrelated numbers. So instead of reconstructing a table we anchor
+// each transaction on the line that *starts with a date*, attach the lines below
+// it as description, and read the amount from the amount column (not the running
+// balance, not the sub-line fees).
+//
+// `lines` is what pdfStatement.extractPdfText returns: [{ items: [{ s, x, y }] }]
+// already grouped per row and sorted left-to-right.
+
+const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] }
+
+// A token that reads as a date, with or without a year. Returns {d, m, y|null}.
+function pdfDateParts(s) {
+  const m = (s ?? '').trim().match(/^(\d{1,2})[/\-.](\d{1,2})(?:[/\-.](\d{2,4}))?$/)
+  if (!m) return null
+  const d = +m[1], mo = +m[2]
+  if (d < 1 || d > 31 || mo < 1 || mo > 12) return null
+  let y = m[3] ? +m[3] : null
+  if (y != null && y < 100) y += 2000
+  return { d, m: mo, y }
+}
+// A token that LOOKS like a monetary amount: digit groups with a thousands
+// separator and/or a decimal part. Strict on purpose — it must reject reference
+// codes (3004/FTSCY/WS95271), branch/CBG codes (0998) and phone numbers, which
+// otherwise masquerade as numbers and steal the amount column.
+function moneyLike(s) {
+  const t = (s ?? '').trim()
+  return /^\d[\d.,]*\d$/.test(t) && /[.,]/.test(t)
+}
+
+// Lines that are statement chrome, not transactions — repeated page headers and
+// the end summary. Used to bound a transaction's continuation lines.
+const PDF_NOISE = /BERSAMBUNG|SALDO\s*A(WAL|KHIR)|MUTASI\s*(CR|DB)|HALAMAN|PERIODE|TANGGAL\s+KETERANGAN|REKENING|MATA\s*UANG|CATATAN/i
+
+// Decide a transaction's direction from its (Indonesian) description. The KR/CR
+// (kredit) vs DB/DR (debit) code wins; otherwise a few unambiguous keywords —
+// deposits & interest are money in, fees & tax & withdrawals are money out.
+export function pdfKind(text, fallback = 'expense') {
+  const t = ` ${text} `
+  if (/\b(KR|CR)\b/i.test(t)) return 'income'
+  if (/\b(DB|DR)\b/i.test(t)) return 'expense'
+  if (/\b(PAJAK|BIAYA|ADM|ADMIN|TARIK)\b/i.test(t)) return 'expense'
+  if (/\b(SETORAN|SETOR|BUNGA)\b/i.test(t)) return 'income'
+  return fallback
+}
+
+// Cluster x positions into columns (gap-based). Returns [{ x, n }] ascending.
+function clusterX(xs, gap = 25) {
+  const s = [...xs].sort((a, b) => a - b)
+  const out = []
+  let cur = null
+  for (const x of s) {
+    if (cur && x - cur.last <= gap) { cur.sum += x; cur.n++; cur.last = x }
+    else { cur = { sum: x, n: 1, last: x }; out.push(cur) }
+  }
+  return out.map((c) => ({ x: c.sum / c.n, n: c.n }))
+}
+
+// Auto-detect the statement's layout. Returns { year, dateX, decimal,
+// mode:'single'|'debit_credit', amountX, debitX, creditX, balanceX }. The amount
+// column is found from the money tokens on transaction lines; a running-balance
+// column is told apart because it co-occurs with an amount to its left, whereas
+// a separate credit column does not (credit rows carry only the credit). Two
+// leftover money columns ⇒ separate debit/credit; one ⇒ a single amount column.
+export function detectPdfLayout(lines) {
+  const allText = lines.map((l) => l.items.map((i) => i.s).join(' ')).join('\n')
+  const yearM = allText.match(/\b(20\d{2})\b/)
+  const year = yearM ? +yearM[1] : null
+
+  // Date column: the most common x of a leading date token.
+  const dateXs = []
+  for (const l of lines) {
+    const f = l.items[0]
+    if (f && pdfDateParts(f.s)) dateXs.push(f.x)
+  }
+  const dateX = median(dateXs)
+
+  const lineMoney = [] // x positions of money tokens per transaction main line
+  const amountSamples = []
+  if (dateX != null) {
+    for (const l of lines) {
+      const f = l.items[0]
+      if (!f || Math.abs(f.x - dateX) >= 15 || !pdfDateParts(f.s)) continue
+      const money = l.items.filter((it) => it !== f && it.x > dateX + 25 && moneyLike(it.s)).sort((a, b) => a.x - b.x)
+      if (!money.length) continue
+      lineMoney.push(money.map((m) => m.x))
+      money.forEach((m) => amountSamples.push(m.s))
+    }
+  }
+  const decimal = detectNumberFormat(amountSamples).decimal
+
+  const columns = clusterX(lineMoney.flat(), 25)
+
+  // A column is the running balance if, on most lines where it appears, there's
+  // a money token clearly to its left (the amount). Drop those.
+  const isBalance = (cx) => {
+    let total = 0, withLeft = 0
+    for (const xs of lineMoney) {
+      if (!xs.some((x) => Math.abs(x - cx) < 25)) continue
+      total++
+      if (xs.some((x) => x < cx - 60)) withLeft++
+    }
+    return total > 0 && withLeft / total >= 0.6
+  }
+  const balanceCols = columns.filter((c) => isBalance(c.x))
+  const balanceX = balanceCols.length ? balanceCols[balanceCols.length - 1].x : null
+  const amountCols = columns.filter((c) => !balanceCols.includes(c)).sort((a, b) => a.x - b.x)
+
+  // How many lines have exactly one (non-balance) money token, sitting at cx —
+  // the signature of a debit-or-credit column (a single amount column is never
+  // "alone" against a second amount column).
+  const soleCount = (cx) => lineMoney.filter((xs) => {
+    const nb = xs.filter((x) => balanceX == null || Math.abs(x - balanceX) >= 25)
+    return nb.length === 1 && Math.abs(nb[0] - cx) < 25
+  }).length
+
+  let mode = 'single'
+  let amountX = null
+  let debitX = null
+  let creditX = null
+  const left = amountCols[0]
+  const right = amountCols[amountCols.length - 1]
+  if (amountCols.length >= 2 && soleCount(left.x) >= 1 && soleCount(right.x) >= 1) {
+    mode = 'debit_credit'
+    debitX = left.x
+    creditX = right.x
+  } else if (amountCols.length) {
+    amountX = [...amountCols].sort((a, b) => b.n - a.n)[0].x // the busiest column
+  } else {
+    amountX = median(lineMoney.map((xs) => xs[0]))
+  }
+  return { year, dateX, decimal, mode, amountX, debitX, creditX, balanceX }
+}
+
+// Build transactions from PDF lines using a layout (auto-detected, then possibly
+// user-overridden). Returns { rows:[{date, amount, kind, note}], skipped:[...],
+// layout }. `xTol` is how close a number must sit to the amount column.
+export function parsePdfStatement(lines, override = {}) {
+  const auto = detectPdfLayout(lines)
+  const layout = { ...auto, ...override }
+  const { dateX, decimal, mode, balanceX } = layout
+  const year = layout.year ?? new Date().getFullYear()
+  const xTol = 40
+
+  if (dateX == null || (mode === 'single' ? layout.amountX == null : layout.debitX == null)) {
+    return { rows: [], skipped: [], layout }
+  }
+
+  // Index of the lines that start a transaction (a date at the date column).
+  const starts = []
+  for (let i = 0; i < lines.length; i++) {
+    const f = lines[i].items[0]
+    if (f && Math.abs(f.x - dateX) < 15 && pdfDateParts(f.s)) starts.push(i)
+  }
+
+  const near = (it, x) => x != null && Math.abs(it.x - x) < xTol
+  const isBalance = (it) => near(it, balanceX)
+
+  const rows = []
+  const skipped = []
+  for (let k = 0; k < starts.length; k++) {
+    const start = starts[k]
+    const nextStart = k + 1 < starts.length ? starts[k + 1] : lines.length
+    const main = lines[start]
+    const dp = pdfDateParts(main.items[0].s)
+    const y = dp.y ?? year
+    const date = `${y}-${pad(dp.m)}-${pad(dp.d)}`
+
+    // Money tokens on the main line, left to right, excluding the balance.
+    const money = main.items.filter((it) => moneyLike(it.s) && it.x > dateX + 25 && !isBalance(it)).sort((a, b) => a.x - b.x)
+
+    // Amount + column-derived direction. In debit/credit layouts the column the
+    // figure sits in tells the direction; in single-column layouts the amount is
+    // the (left-most) money token and direction comes from the KR/DB code below.
+    let amtItem = null
+    let colKind = null
+    if (mode === 'debit_credit') {
+      const deb = money.find((it) => near(it, layout.debitX))
+      const cre = money.find((it) => near(it, layout.creditX))
+      if (deb) { amtItem = deb; colKind = 'expense' }
+      else if (cre) { amtItem = cre; colKind = 'income' }
+    } else {
+      amtItem = money.find((it) => near(it, layout.amountX)) ?? money[0]
+    }
+    const amount = amtItem ? Math.abs(parseAmount(amtItem.s, decimal)) : null
+    if (!amount) continue // balance-only marker (SALDO AWAL/AKHIR) or noise — skip
+
+    // Continuation lines belong to this transaction until the next one — but
+    // stop at a page break or a header/footer line (statements repeat the
+    // header per page and print a summary at the end).
+    let stop = start + 1
+    while (stop < nextStart) {
+      const l = lines[stop]
+      if (main.page != null && l.page != null && l.page !== main.page) break
+      if (PDF_NOISE.test(l.items.map((i) => i.s).join(' '))) break
+      stop++
+    }
+
+    // Kind: the column wins in a debit/credit layout; otherwise the main line's
+    // KR/CR vs DB/DR code, common Indonesian keywords, then the layout default.
+    const mainText = main.items.map((i) => i.s).join(' ')
+    const kind = colKind ?? pdfKind(mainText, layout.defaultKind ?? 'expense')
+
+    // Description = the readable tokens across main + continuation lines (drop
+    // the date, the amount/balance figures, the in/out codes and dup sub-amounts).
+    const noteParts = []
+    for (let j = start; j < stop; j++) {
+      for (const it of lines[j].items) {
+        if (pdfDateParts(it.s) && it === lines[j].items[0]) continue
+        if (moneyLike(it.s)) continue
+        if (/^(DB|CR|DR|KR)$/i.test(it.s) || /^TANGGAL\s*:/i.test(it.s) || /^-+$/.test(it.s)) continue
+        noteParts.push(it.s)
+      }
+    }
+    const note = noteParts.join(' ').replace(/\s+/g, ' ').trim().slice(0, 140)
+
+    rows.push({ date, amount, kind, note })
+  }
+  return { rows, skipped, layout }
+}

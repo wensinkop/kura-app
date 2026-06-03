@@ -20,9 +20,9 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listAccounts, listGroups, listCategories, createTransactions } from '../lib/data'
 import {
-  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature,
+  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement,
 } from '../lib/statement'
-import { extractPdfGrid } from '../lib/pdfStatement'
+import { extractPdfText } from '../lib/pdfStatement'
 import { localeFor, currencyDecimals } from '../lib/currencies'
 import { formatMoney, dayLabel } from '../lib/format'
 import NumberInput from '../components/NumberInput'
@@ -30,7 +30,7 @@ import AutocompleteInput from '../components/AutocompleteInput'
 import ResponsiveSelect from '../components/ResponsiveSelect'
 import DatePicker from '../components/DatePicker'
 import Sidebar from '../components/Sidebar'
-import { Button, Field, Segmented, inputClass } from '../components/ui'
+import { Button, Field, Segmented, TextInput, inputClass } from '../components/ui'
 import { ChevronLeft, UploadIcon } from '../lib/icons'
 
 const KIND_OPTIONS = [
@@ -71,18 +71,28 @@ export default function BankStatement() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const [step, setStep] = useState('upload') // 'upload' | 'map' | 'review'
+  const [step, setStep] = useState('upload') // 'upload' | 'password' | 'map' | 'review'
+  const [source, setSource] = useState('csv') // 'csv' | 'pdf'
   const [accountId, setAccountId] = useState('')
   const [fileName, setFileName] = useState('')
   const [reading, setReading] = useState(false)
   const [error, setError] = useState('')
 
-  // Parsed statement + editable mapping/formats
+  // CSV: parsed grid + editable mapping/formats
   const [analysis, setAnalysis] = useState(null) // { headers, cols, dataRows, ... }
   const [mapping, setMapping] = useState(null)
   const [formats, setFormats] = useState(null)
   const [sig, setSig] = useState('')
   const [usedSaved, setUsedSaved] = useState(false)
+
+  // PDF: extracted lines + editable layout ({ year, decimal, defaultKind })
+  const [pdfLines, setPdfLines] = useState(null)
+  const [pdfLayout, setPdfLayout] = useState(null)
+
+  // PDF password
+  const [password, setPassword] = useState('')
+  const [wrongPassword, setWrongPassword] = useState(false)
+  const pendingBuffer = useRef(null) // pristine ArrayBuffer (we pass copies to pdf.js)
 
   // Review rows + save
   const [reviewRows, setReviewRows] = useState([])
@@ -125,38 +135,30 @@ export default function BankStatement() {
     setError('')
     setReading(true)
     try {
-      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
-      let grid
-      if (isPdf) {
-        const res = await extractPdfGrid(await file.arrayBuffer())
-        if (!res.grid.length) {
-          setError('Couldn’t read a table from this PDF — it may be scanned (an image). Try downloading the CSV export from your bank instead.')
-          return
-        }
-        grid = res.grid
-      } else {
-        grid = parseStatementText(await file.text()).grid
-        if (!grid.length) { setError('That file looks empty.'); return }
-      }
-      const a = analyzeGrid(grid)
-      setAnalysis(a)
-      const signature = layoutSignature(a.headers)
-      setSig(signature)
-      // Reuse a remembered mapping for this layout if its columns still fit.
-      const saved = loadSavedMapping(signature)
-      const fits = saved && (saved.mapping?.amount ?? -1) < a.cols.length &&
-        (saved.mapping?.date ?? -1) < a.cols.length
-      if (saved && fits && signature) {
-        setMapping(saved.mapping)
-        setFormats(saved.formats)
-        setUsedSaved(true)
-      } else {
-        setMapping(a.mapping)
-        setFormats(a.formats)
-        setUsedSaved(false)
-      }
       setFileName(file.name)
-      setStep('map')
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      if (isPdf) {
+        pendingBuffer.current = await file.arrayBuffer()
+        await loadPdf(undefined)
+      } else {
+        const grid = parseStatementText(await file.text()).grid
+        if (!grid.length) { setError('That file looks empty.'); return }
+        const a = analyzeGrid(grid)
+        setSource('csv')
+        setAnalysis(a)
+        const signature = layoutSignature(a.headers)
+        setSig(signature)
+        // Reuse a remembered mapping for this layout if its columns still fit.
+        const saved = loadSavedMapping(signature)
+        const fits = saved && (saved.mapping?.amount ?? -1) < a.cols.length &&
+          (saved.mapping?.date ?? -1) < a.cols.length
+        if (saved && fits && signature) {
+          setMapping(saved.mapping); setFormats(saved.formats); setUsedSaved(true)
+        } else {
+          setMapping(a.mapping); setFormats(a.formats); setUsedSaved(false)
+        }
+        setStep('map')
+      }
     } catch (err) {
       setError(err?.message ?? 'Couldn’t read that file.')
     } finally {
@@ -164,11 +166,55 @@ export default function BankStatement() {
     }
   }
 
+  // Extract + parse a PDF (pass a copy each time — pdf.js transfers the buffer
+  // to its worker, which would neuter our pristine copy).
+  async function loadPdf(pw) {
+    const res = await extractPdfText(pendingBuffer.current.slice(0), pw)
+    if (res.needsPassword) {
+      setWrongPassword(!!res.wrongPassword)
+      setStep('password')
+      return
+    }
+    if (res.textLength < 10 || !res.lines.length) {
+      setError('Couldn’t read any text from this PDF — it may be a scanned image. Try downloading the CSV export from your bank instead.')
+      setStep('upload')
+      return
+    }
+    const result = parsePdfStatement(res.lines)
+    setSource('pdf')
+    setPdfLines(res.lines)
+    setPdfLayout({
+      year: result.layout.year ?? new Date().getFullYear(),
+      decimal: result.layout.decimal ?? '.',
+      defaultKind: 'expense',
+    })
+    setPassword('')
+    setWrongPassword(false)
+    setStep('map')
+  }
+
+  async function submitPassword() {
+    if (!pendingBuffer.current || !password) return
+    setError(''); setReading(true)
+    try { await loadPdf(password) }
+    catch (err) { setError(err?.message ?? 'Couldn’t open the PDF.') }
+    finally { setReading(false) }
+  }
+
   // ---- Live preview (map step) ---------------------------------------------
   const built = useMemo(() => {
     if (!analysis || !mapping || !formats) return { rows: [], skipped: [] }
     return buildStatementRows(analysis, mapping, formats)
   }, [analysis, mapping, formats])
+
+  const pdfResult = useMemo(() => {
+    if (source !== 'pdf' || !pdfLines || !pdfLayout) return null
+    return parsePdfStatement(pdfLines, pdfLayout)
+  }, [source, pdfLines, pdfLayout])
+
+  // Unified rows shown in the preview + carried into review.
+  const previewRows = source === 'pdf' ? (pdfResult?.rows ?? []) : built.rows
+  const previewSkipped = source === 'pdf' ? 0 : built.skipped.length
 
   const firstDateRaw = useMemo(() => {
     if (!analysis || !mapping) return ''
@@ -189,10 +235,10 @@ export default function BankStatement() {
   const setMap = (patch) => setMapping((m) => ({ ...m, ...patch }))
   const setFmt = (patch) => setFormats((f) => ({ ...f, ...patch }))
 
-  // ---- Step 2 → 3: confirm mapping, build editable rows --------------------
+  // ---- Step 2 → 3: confirm, build editable rows ----------------------------
   function startReview() {
-    if (sig) saveMapping(sig, { mapping, formats })
-    setReviewRows(built.rows.map((r) => ({ tempId: uuid(), kind: r.kind, date: r.date, amount: r.amount, categoryId: '', subId: '', note: r.note })))
+    if (source === 'csv' && sig) saveMapping(sig, { mapping, formats })
+    setReviewRows(previewRows.map((r) => ({ tempId: uuid(), kind: r.kind, date: r.date, amount: r.amount, categoryId: '', subId: '', note: r.note })))
     setStep('review')
   }
 
@@ -255,6 +301,8 @@ export default function BankStatement() {
               </div>
             ) : step === 'upload' ? (
               renderUpload()
+            ) : step === 'password' ? (
+              renderPassword()
             ) : step === 'map' ? (
               renderMap()
             ) : (
@@ -280,7 +328,10 @@ export default function BankStatement() {
   // ---- Back navigation between steps ---------------------------------------
   function onBack() {
     if (step === 'review') { setStep('map'); return }
-    if (step === 'map') { setStep('upload'); setAnalysis(null); setError(''); return }
+    if (step === 'map' || step === 'password') {
+      setStep('upload'); setAnalysis(null); setPdfLines(null); setPassword(''); setWrongPassword(false); setError('')
+      return
+    }
     navigate('/settings')
   }
 
@@ -307,14 +358,106 @@ export default function BankStatement() {
     )
   }
 
-  function renderMap() {
+  // Shared preview of the first few parsed rows.
+  function previewTable() {
+    return (
+      <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+        <div className="text-xs font-bold uppercase tracking-wide text-faint px-4 pt-3.5 pb-2">Preview</div>
+        {previewRows.length === 0 ? (
+          <p className="text-[13px] text-muted px-4 pb-4">
+            {source === 'pdf'
+              ? 'Couldn’t pick out transactions from this PDF. It may use an unusual layout — try the CSV export from your bank instead.'
+              : 'No rows could be read with these settings — check the column choices above.'}
+          </p>
+        ) : (
+          <table className="w-full text-[12.5px]">
+            <thead>
+              <tr className="text-faint text-left border-b border-border">
+                <th className="font-semibold px-4 py-1.5">Date</th>
+                <th className="font-semibold px-2 py-1.5 text-right">Amount</th>
+                <th className="font-semibold px-4 py-1.5">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {previewRows.slice(0, 8).map((r, i) => (
+                <tr key={i} className="border-b border-border/60 last:border-0">
+                  <td className="px-4 py-1.5 tabular whitespace-nowrap">{r.date}</td>
+                  <td className={`px-2 py-1.5 text-right tabular whitespace-nowrap ${r.kind === 'expense' ? 'text-expense' : 'text-income'}`}>{formatMoney(r.amount, currency)}</td>
+                  <td className="px-4 py-1.5 text-muted truncate max-w-[1px]">{r.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {previewRows.length > 8 && <p className="text-[11.5px] text-faint px-4 py-2">…and {previewRows.length - 8} more.</p>}
+      </div>
+    )
+  }
+
+  function renderPassword() {
+    return (
+      <div className="space-y-4 max-w-md mx-auto">
+        <div className="text-[13.5px] text-muted leading-relaxed">
+          <span className="font-semibold text-text">{fileName}</span> is password-protected. Enter the password your bank uses to open it — often your date of birth, account number or customer ID (check the email the statement came with). It’s used only on your device to unlock the file.
+        </div>
+        {wrongPassword && <div className="text-[13px] text-expense">That password didn’t work — try again.</div>}
+        <Field label="PDF password">
+          <TextInput type="password" value={password} autoFocus
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') submitPassword() }} />
+        </Field>
+        <Button onClick={submitPassword} disabled={!password || reading} className="w-full">
+          {reading ? 'Opening…' : 'Open statement'}
+        </Button>
+      </div>
+    )
+  }
+
+  function renderPdfConfirm() {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div className="text-[13px] text-muted min-w-0 truncate">
             <span className="font-semibold text-text">{fileName}</span> → {account?.name}
           </div>
-          <span className="text-[12px] text-faint shrink-0">{built.rows.length} ready · {built.skipped.length} skipped</span>
+          <span className="text-[12px] text-faint shrink-0">{previewRows.length} found</span>
+        </div>
+
+        <div className="bg-surface border border-border rounded-[14px] p-4 space-y-3.5">
+          <div className="text-xs font-bold uppercase tracking-wide text-faint">Statement settings</div>
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label="Statement year" hint="Used when dates omit the year">
+              <TextInput type="number" inputMode="numeric" value={pdfLayout?.year ?? ''}
+                onChange={(e) => setPdfLayout((l) => ({ ...l, year: Number(e.target.value) || l.year }))} />
+            </Field>
+            <Field label="Amount style">
+              <ResponsiveSelect title="Decimal separator" value={pdfLayout?.decimal ?? '.'}
+                onChange={(v) => setPdfLayout((l) => ({ ...l, decimal: v }))} options={DECIMAL_OPTIONS} />
+            </Field>
+          </div>
+          <p className="text-[11.5px] text-faint leading-relaxed">
+            Kura read each transaction’s date, amount and whether it’s money in or out. Check a few below — you can fix anything, including the type, on the next screen.
+          </p>
+        </div>
+
+        {previewTable()}
+
+        <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
+          Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
+        </Button>
+      </div>
+    )
+  }
+
+  function renderMap() {
+    if (source === 'pdf') return renderPdfConfirm()
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[13px] text-muted min-w-0 truncate">
+            <span className="font-semibold text-text">{fileName}</span> → {account?.name}
+          </div>
+          <span className="text-[12px] text-faint shrink-0">{previewRows.length} ready · {previewSkipped} skipped</span>
         </div>
 
         {usedSaved && (
@@ -381,36 +524,10 @@ export default function BankStatement() {
           </Field>
         </div>
 
-        {/* Live preview */}
-        <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
-          <div className="text-xs font-bold uppercase tracking-wide text-faint px-4 pt-3.5 pb-2">Preview</div>
-          {built.rows.length === 0 ? (
-            <p className="text-[13px] text-muted px-4 pb-4">No rows could be read with these settings — check the column choices above.</p>
-          ) : (
-            <table className="w-full text-[12.5px]">
-              <thead>
-                <tr className="text-faint text-left border-b border-border">
-                  <th className="font-semibold px-4 py-1.5">Date</th>
-                  <th className="font-semibold px-2 py-1.5 text-right">Amount</th>
-                  <th className="font-semibold px-4 py-1.5">Note</th>
-                </tr>
-              </thead>
-              <tbody>
-                {built.rows.slice(0, 6).map((r, i) => (
-                  <tr key={i} className="border-b border-border/60 last:border-0">
-                    <td className="px-4 py-1.5 tabular whitespace-nowrap">{r.date}</td>
-                    <td className={`px-2 py-1.5 text-right tabular whitespace-nowrap ${r.kind === 'expense' ? 'text-expense' : 'text-income'}`}>{formatMoney(r.amount, currency)}</td>
-                    <td className="px-4 py-1.5 text-muted truncate max-w-[1px]">{r.note}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {built.rows.length > 6 && <p className="text-[11.5px] text-faint px-4 py-2">…and {built.rows.length - 6} more.</p>}
-        </div>
+        {previewTable()}
 
-        <Button onClick={startReview} disabled={built.rows.length === 0} className="w-full">
-          Review {built.rows.length} transaction{built.rows.length === 1 ? '' : 's'} →
+        <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
+          Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
         </Button>
       </div>
     )
