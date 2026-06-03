@@ -110,12 +110,13 @@ function AccountGroup({ title, rollupValue, accounts, balances, txns, rates, bas
 }
 
 function AccountRow({ a, balance, txns, rates, base }) {
+  const navigate = useNavigate()
   const isCC = a.type === 'credit_card'
   const billing = isCC ? creditCardBilling(a, txns, balance) : null
   const approx = a.currency !== base ? toBase(balance, a.currency, rates, base) : null
 
   return (
-    <div className="px-3.5 py-3 border-t border-border">
+    <button onClick={() => navigate(`/accounts/${a.id}`)} className="w-full text-left px-3.5 py-3 border-t border-border hover:bg-surface-2">
       <div className="flex gap-3 items-start">
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-[14.5px] leading-tight truncate">{a.name}</div>
@@ -137,6 +138,6 @@ function AccountRow({ a, balance, txns, rates, base }) {
           {billing.nextDue && <span className="text-faint">due {shortDate(billing.nextDue)}</span>}
         </div>
       )}
-    </div>
+    </button>
   )
 }
