@@ -1,7 +1,9 @@
 // Account detail / ledger (Chunk 7). Tapped from the Accounts page. Shows one
-// account's transactions for a selected period, each row with the running
-// balance after it (passbook style). Normal accounts page by Day / Month / Year;
-// credit cards page by billing cycle (derived from the settlement day).
+// account's whole history at a chosen zoom level:
+//   • Daily  — every transaction, grouped by day, each with the running balance.
+//   • Monthly — one summary row per month (net + end-of-month balance).
+//   • Yearly  — one summary row per year.
+// Credit cards are grouped by billing cycle (from the settlement day) instead.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -10,7 +12,7 @@ import { formatAbs, amountColor, dayLabel } from '../lib/format'
 import { Segmented } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
 import Sidebar from '../components/Sidebar'
-import { ChevronLeft, ChevronRight } from '../lib/icons'
+import { ChevronLeft } from '../lib/icons'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const pad = (n) => String(n).padStart(2, '0')
@@ -25,20 +27,21 @@ function shortDate(isoStr) {
   return `${d} ${new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short' })}`
 }
 
-// Period date ranges (half-open [start, end)).
-const dayRange = (a) => { const s = isoOfDate(a); return { start: s, end: addDays(s, 1), label: dayLabel(s) } }
-const yearRange = (a) => { const y = a.getFullYear(); return { start: iso(y, 0, 1), end: iso(y + 1, 0, 1), label: String(y) } }
-function monthRange(a) {
-  const y = a.getFullYear(), m = a.getMonth()
-  return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label: `${MONTHS[m]} ${y}` }
+// The billing cycle a date falls in = ends at the first settlement on/after it.
+function cycleEndFor(dateIso, settleDay) {
+  const [y, m] = dateIso.split('-').map(Number) // m is 1-based
+  const thisEnd = settleIso(y, m - 1, settleDay)
+  if (dateIso <= thisEnd) return thisEnd
+  let mm = m, yy = y // next month, 0-based index = current 1-based value
+  if (mm > 11) { mm = 0; yy += 1 }
+  return settleIso(yy, mm, settleDay)
 }
-// Credit-card billing cycle ending at the settlement day of month (y, m):
-// the day after the previous settlement, through this settlement (inclusive).
-function cycleRange(y, m, settleDay) {
-  const endSettle = settleIso(y, m, settleDay)
-  const pm = m === 0 ? 11 : m - 1, py = m === 0 ? y - 1 : y
+function cycleLabelFor(endIso, settleDay) {
+  const [y, m] = endIso.split('-').map(Number) // m is 1-based
+  let pm = m - 2, py = y // previous month, 0-based
+  if (pm < 0) { pm = 11; py -= 1 }
   const start = addDays(settleIso(py, pm, settleDay), 1)
-  return { start, end: addDays(endSettle, 1), label: `${shortDate(start)} – ${shortDate(endSettle)}` }
+  return `${shortDate(start)} – ${shortDate(endIso)}`
 }
 
 export default function AccountDetail() {
@@ -48,24 +51,13 @@ export default function AccountDetail() {
   const [txns, setTxns] = useState([])
   const [catMap, setCatMap] = useState(new Map())
   const [loading, setLoading] = useState(true)
-
-  const [mode, setMode] = useState('month') // day | month | year (non-credit)
-  const [anchor, setAnchor] = useState(new Date())
-  const [cycle, setCycle] = useState(null) // { y, m } for credit cards
+  const [mode, setMode] = useState('day') // day | month | year (non-credit)
 
   useEffect(() => {
     Promise.all([listAccounts(), listAllTransactionsFull(), listCategories()]).then(([a, t, c]) => {
-      const acc = (a.data ?? []).find((x) => x.id === id) ?? null
-      setAccount(acc)
+      setAccount((a.data ?? []).find((x) => x.id === id) ?? null)
       setTxns(t.data ?? [])
       setCatMap(new Map((c.data ?? []).map((x) => [x.id, x])))
-      // Seed the billing cycle that contains today for credit cards.
-      if (acc?.type === 'credit_card' && acc.settlement_day) {
-        const now = new Date()
-        let y = now.getFullYear(), m = now.getMonth()
-        if (isoOfDate(now) > settleIso(y, m, acc.settlement_day)) { m += 1; if (m > 11) { m = 0; y += 1 } }
-        setCycle({ y, m })
-      }
       setLoading(false)
     })
   }, [id])
@@ -73,7 +65,7 @@ export default function AccountDetail() {
   const isCC = account?.type === 'credit_card' && !!account?.settlement_day
   const currency = account?.currency ?? 'IDR'
 
-  // This account's transactions (either transfer leg), with its signed effect.
+  // Signed effect of a transaction on THIS account (handles both transfer legs).
   const delta = (t) => {
     const amt = Number(t.amount) || 0
     if (t.account_id === id) {
@@ -86,52 +78,52 @@ export default function AccountDetail() {
   }
   const accountTxns = useMemo(() => txns.filter((t) => t.account_id === id || t.to_account_id === id), [txns, id])
 
-  // Running balance after each transaction, oldest → newest from opening balance.
-  const balAfter = useMemo(() => {
+  // Oldest → newest, with the running balance after each (from opening balance).
+  const ascWithBalance = useMemo(() => {
     const asc = [...accountTxns].sort((a, b) => a.date.localeCompare(b.date) || (a.created_at ?? '').localeCompare(b.created_at ?? ''))
     let run = Number(account?.opening_balance) || 0
-    const m = new Map()
-    for (const t of asc) { run += delta(t); m.set(t.id, run) }
-    return m
+    const out = []
+    for (const t of asc) { run += delta(t); out.push({ t, balance: run }) }
+    return out
   }, [accountTxns, account]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const currentBalance = useMemo(() => {
-    let run = Number(account?.opening_balance) || 0
-    for (const t of accountTxns) run += delta(t)
-    return run
-  }, [accountTxns, account]) // eslint-disable-line react-hooks/exhaustive-deps
+  const currentBalance = ascWithBalance.length ? ascWithBalance[ascWithBalance.length - 1].balance : (Number(account?.opening_balance) || 0)
 
-  const range = useMemo(() => {
-    if (isCC && cycle) return cycleRange(cycle.y, cycle.m, account.settlement_day)
-    if (mode === 'day') return dayRange(anchor)
-    if (mode === 'year') return yearRange(anchor)
-    return monthRange(anchor)
-  }, [isCC, cycle, mode, anchor, account])
-
-  function shift(d) {
-    if (isCC && cycle) {
-      let { y, m } = cycle; m += d
-      while (m < 0) { m += 12; y -= 1 }
-      while (m > 11) { m -= 12; y += 1 }
-      setCycle({ y, m }); return
+  // Group into periods (newest first). Each: { key, label, rows:[{t,balance}] desc,
+  // net, endBalance }. Daily & credit-card cycles are shown in detail; month/year
+  // collapse to one summary row each.
+  const detailed = isCC || mode === 'day'
+  const groups = useMemo(() => {
+    const keyFn = isCC
+      ? (e) => cycleEndFor(e.t.date, account.settlement_day)
+      : mode === 'year' ? (e) => e.t.date.slice(0, 4)
+        : mode === 'month' ? (e) => e.t.date.slice(0, 7)
+          : (e) => e.t.date
+    const map = new Map()
+    for (const e of ascWithBalance) { // ascWithBalance is oldest→newest
+      const k = keyFn(e)
+      if (!map.has(k)) map.set(k, [])
+      map.get(k).push(e)
     }
-    setAnchor((a) => {
-      const dt = new Date(a)
-      if (mode === 'day') dt.setDate(dt.getDate() + d)
-      else if (mode === 'year') dt.setFullYear(dt.getFullYear() + d)
-      else dt.setMonth(dt.getMonth() + d)
-      return dt
-    })
+    const out = []
+    for (const [key, rowsAsc] of map) {
+      out.push({
+        key,
+        rows: [...rowsAsc].reverse(), // newest first for display
+        net: rowsAsc.reduce((s, e) => s + delta(e.t), 0),
+        endBalance: rowsAsc[rowsAsc.length - 1].balance,
+      })
+    }
+    out.sort((a, b) => b.key.localeCompare(a.key))
+    return out
+  }, [ascWithBalance, mode, isCC, account]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function groupLabel(key) {
+    if (isCC) return cycleLabelFor(key, account.settlement_day)
+    if (mode === 'year') return key
+    if (mode === 'month') { const [y, m] = key.split('-'); return `${MONTHS[Number(m) - 1]} ${y}` }
+    return dayLabel(key)
   }
-
-  // Transactions in the period, newest first.
-  const periodTxns = useMemo(() => {
-    return accountTxns
-      .filter((t) => t.date >= range.start && t.date < range.end)
-      .sort((a, b) => b.date.localeCompare(a.date) || (b.created_at ?? '').localeCompare(a.created_at ?? ''))
-  }, [accountTxns, range])
-
-  const periodNet = periodTxns.reduce((s, t) => s + delta(t), 0)
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-bg">
@@ -141,12 +133,8 @@ export default function AccountDetail() {
           <button onClick={() => navigate('/accounts')} aria-label="Back" className="w-8 h-8 -ml-1 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
-          <div className="min-w-0 flex-1">
-            <div className="font-bold text-[15px] truncate">{account?.name ?? 'Account'}</div>
-          </div>
-          {account && (
-            <div className={`font-extrabold text-[15px] tabular shrink-0 ${amountColor(currentBalance)}`}>{formatAbs(currentBalance, currency)}</div>
-          )}
+          <div className="min-w-0 flex-1"><div className="font-bold text-[15px] truncate">{account?.name ?? 'Account'}</div></div>
+          {account && <div className={`font-extrabold text-[15px] tabular shrink-0 ${amountColor(currentBalance)}`}>{formatAbs(currentBalance, currency)}</div>}
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-3.5 desk:px-8 w-full">
@@ -157,52 +145,58 @@ export default function AccountDetail() {
               <p className="text-muted text-sm py-8 text-center">Account not found.</p>
             ) : (
               <>
-                {/* Period control */}
-                {!isCC && (
-                  <div className="mb-2.5">
+                {isCC ? (
+                  <div className="text-[12px] text-muted text-center mb-3">Grouped by billing cycle</div>
+                ) : (
+                  <div className="mb-3">
                     <Segmented value={mode} onChange={setMode} options={[
-                      { value: 'day', label: 'Day' }, { value: 'month', label: 'Month' }, { value: 'year', label: 'Year' },
+                      { value: 'day', label: 'Daily' }, { value: 'month', label: 'Monthly' }, { value: 'year', label: 'Yearly' },
                     ]} />
                   </div>
                 )}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <button onClick={() => shift(-1)} aria-label="Previous" className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
-                    <ChevronLeft className="w-[18px] h-[18px]" />
-                  </button>
-                  <div className="text-center min-w-0">
-                    <div className="font-bold text-[14px] truncate">{range.label}</div>
-                    {isCC && <div className="text-[11px] text-faint">Billing cycle</div>}
-                  </div>
-                  <button onClick={() => shift(1)} aria-label="Next" className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
-                    <ChevronRight className="w-[18px] h-[18px]" />
-                  </button>
-                </div>
 
-                {periodTxns.length === 0 ? (
-                  <p className="text-muted text-sm py-10 text-center">No transactions in this period.</p>
-                ) : (
-                  <>
-                    <div className="text-[12px] text-muted text-center mb-2">
-                      {periodTxns.length} transaction{periodTxns.length === 1 ? '' : 's'} · net{' '}
-                      <span className={amountColor(periodNet)}>{formatAbs(periodNet, currency)}</span>
-                    </div>
-                    <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
-                      {periodTxns.map((t) => (
-                        <button key={t.id} onClick={() => navigate(`/tx/${t.id}`)}
-                          className="w-full flex items-stretch gap-3 px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
-                          <TxRowContent t={t} catMap={catMap} />
-                          <div className="text-right shrink-0 self-center pl-1 border-l border-border/60 ml-1">
-                            <div className="text-[10px] text-faint uppercase tracking-wide">Balance</div>
-                            <div className={`text-[12.5px] font-bold tabular ${amountColor(balAfter.get(t.id) ?? 0)}`}>
-                              {formatAbs(balAfter.get(t.id) ?? 0, currency)}
+                {groups.length === 0 ? (
+                  <p className="text-muted text-sm py-10 text-center">No transactions yet.</p>
+                ) : detailed ? (
+                  groups.map((g) => (
+                    <div key={g.key} className="mb-4">
+                      <div className="flex items-baseline justify-between gap-2 px-1 mb-1.5">
+                        <span className="text-[12px] font-bold text-muted">{groupLabel(g.key)}</span>
+                        {isCC && <span className="text-[11px] text-faint">balance {formatAbs(g.endBalance, currency)}</span>}
+                      </div>
+                      <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+                        {g.rows.map(({ t, balance }) => (
+                          <button key={t.id} onClick={() => navigate(`/tx/${t.id}`)}
+                            className="w-full flex items-stretch gap-3 px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
+                            <TxRowContent t={t} catMap={catMap} />
+                            <div className="text-right shrink-0 self-center pl-2 border-l border-border/60 ml-1">
+                              <div className="text-[10px] text-faint uppercase tracking-wide">Balance</div>
+                              <div className={`text-[12.5px] font-bold tabular ${amountColor(balance)}`}>{formatAbs(balance, currency)}</div>
                             </div>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </>
+                  ))
+                ) : (
+                  <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+                    {groups.map((g) => (
+                      <div key={g.key} className="flex items-center gap-3 px-3.5 py-3 border-t border-border first:border-t-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-[14.5px]">{groupLabel(g.key)}</div>
+                          <div className="text-[12px] text-muted mt-0.5">
+                            {g.rows.length} transaction{g.rows.length === 1 ? '' : 's'} · net <span className={amountColor(g.net)}>{formatAbs(g.net, currency)}</span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-[10px] text-faint uppercase tracking-wide">End balance</div>
+                          <div className={`text-[13.5px] font-bold tabular ${amountColor(g.endBalance)}`}>{formatAbs(g.endBalance, currency)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                <p className="text-[11px] text-faint text-center mt-4 mb-8">Tap a transaction to edit it.</p>
+                {detailed && groups.length > 0 && <p className="text-[11px] text-faint text-center mt-2 mb-8">Tap a transaction to edit it.</p>}
               </>
             )}
           </div>
