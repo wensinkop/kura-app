@@ -513,6 +513,22 @@ export async function fullReset(userId) {
   return { error: null }
 }
 
+// ---- Admin (Chunk 8) -------------------------------------------------------
+// All three go through SECURITY DEFINER RPCs that re-check the caller is an
+// admin server-side; the client `role` check only decides what UI to show.
+
+export function adminListUsers() {
+  return supabase.rpc('admin_list_users')
+}
+
+export function adminSetTier(targetId, tier) {
+  return supabase.rpc('admin_set_tier', { target_id: targetId, new_tier: tier })
+}
+
+export function adminSetRole(targetId, role) {
+  return supabase.rpc('admin_set_role', { target_id: targetId, new_role: role })
+}
+
 // ---- Reordering ------------------------------------------------------------
 
 // Rewrite sort_order = index for the given ids, in order. Returns the first

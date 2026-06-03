@@ -22,6 +22,8 @@ import EditTransaction from './pages/EditTransaction'
 import Search from './pages/Search'
 import BankStatement from './pages/BankStatement'
 import AccountDetail from './pages/AccountDetail'
+import Admin from './pages/Admin'
+import PremiumGate from './components/PremiumGate'
 
 function Loading() {
   return (
@@ -35,6 +37,13 @@ function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <Loading />
   if (!user) return <Navigate to="/signin" replace />
+  return children
+}
+
+function AdminRoute({ children }) {
+  const { role, loading } = useAuth()
+  if (loading) return <Loading />
+  if (role !== 'admin') return <Navigate to="/" replace />
   return children
 }
 
@@ -77,8 +86,27 @@ export default function App() {
             <Route path="/new" element={<ProtectedRoute><NewTransaction /></ProtectedRoute>} />
             <Route path="/tx/:id" element={<ProtectedRoute><EditTransaction /></ProtectedRoute>} />
             <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-            <Route path="/import/statement" element={<ProtectedRoute><BankStatement /></ProtectedRoute>} />
+            <Route
+              path="/import/statement"
+              element={
+                <ProtectedRoute>
+                  <PremiumGate
+                    feature="Bank statement upload"
+                    tagline="A Premium feature"
+                    perks={[
+                      'Turn a PDF or CSV statement into ready-to-review Kura rows',
+                      'Password-protected and multi-currency statements',
+                      'Auto totals check so nothing is missed',
+                      'Kura learns each bank’s layout and remembers it',
+                    ]}
+                  >
+                    <BankStatement />
+                  </PremiumGate>
+                </ProtectedRoute>
+              }
+            />
             <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminRoute><Admin /></AdminRoute></ProtectedRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

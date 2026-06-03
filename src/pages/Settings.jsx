@@ -52,7 +52,7 @@ function Premium() {
 }
 
 export default function Settings() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, role, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
@@ -99,6 +99,15 @@ export default function Settings() {
         <Row title="Backup & data" sub="Export / import CSV · backup · restore · reset" right={Chevron} onClick={() => navigate('/settings/data')} />
         <Row title="Bank statement upload" sub="PDF / CSV → pre-filled rows · Premium" right={<span className="flex items-center gap-1.5"><Premium />{Chevron}</span>} onClick={() => navigate('/import/statement')} />
       </Group>
+
+      {role === 'admin' && (
+        <>
+          <SectionTitle>Admin</SectionTitle>
+          <Group>
+            <Row title="Users" sub="Manage subscriptions & roles" right={Chevron} onClick={() => navigate('/admin')} />
+          </Group>
+        </>
+      )}
 
       <div className="mt-5">
         <Group>

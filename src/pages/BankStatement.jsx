@@ -11,9 +11,9 @@
 // createTransactions path as the entry screen — the currency comes from the
 // chosen account (the DB trigger enforces it), kind is inferred from the sign.
 //
-// Premium: this is the first premium feature. There's no billing yet, so it's
-// open for now; the upgrade gate drops in with monetization in Chunk 7 (look
-// for PREMIUM_GATE below).
+// Premium: gated at the route in App.jsx via <PremiumGate> (Chunk 8). Free users
+// never reach this component — they see the upgrade screen instead. Billing is
+// manual/admin-granted for now (an admin flips subscription_tier).
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'

@@ -73,3 +73,12 @@ export const DownloadIcon = (p) => (
 export const UploadIcon = (p) => (
   <Svg {...p}><path d="M12 17V5" /><path d="M7 9l5-5 5 5" /><path d="M4 21h16" /></Svg>
 )
+export const SparkleIcon = (p) => (
+  <Svg {...p}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" /></Svg>
+)
+export const ShieldIcon = (p) => (
+  <Svg {...p}><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" /></Svg>
+)
+export const UsersIcon = (p) => (
+  <Svg {...p}><circle cx="9" cy="8" r="3.2" /><path d="M3.5 20a5.5 5.5 0 0111 0" /><path d="M16 5.2a3.2 3.2 0 010 5.6" /><path d="M17 14.5a5.5 5.5 0 013.5 5.5" /></Svg>
+)
