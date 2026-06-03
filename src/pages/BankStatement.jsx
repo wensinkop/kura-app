@@ -180,7 +180,7 @@ export default function BankStatement() {
       setStep('upload')
       return
     }
-    const result = parsePdfStatement(res.lines)
+    const result = parsePdfStatement(res.lines, { targetCurrency: currency })
     setSource('pdf')
     setPdfLines(res.lines)
     setPdfLayout({
@@ -209,8 +209,8 @@ export default function BankStatement() {
 
   const pdfResult = useMemo(() => {
     if (source !== 'pdf' || !pdfLines || !pdfLayout) return null
-    return parsePdfStatement(pdfLines, pdfLayout)
-  }, [source, pdfLines, pdfLayout])
+    return parsePdfStatement(pdfLines, { ...pdfLayout, targetCurrency: currency })
+  }, [source, pdfLines, pdfLayout, currency])
 
   // Unified rows shown in the preview + carried into review.
   const previewRows = source === 'pdf' ? (pdfResult?.rows ?? []) : built.rows

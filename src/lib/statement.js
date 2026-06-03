@@ -347,15 +347,28 @@ export function layoutSignature(headers) {
 
 const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] }
 
-// A token that reads as a date, with or without a year. Returns {d, m, y|null}.
+// A token that reads as a date, with or without a year — numeric (01/05,
+// 24/03/2026) or with a month name (01-APR, 13 Apr 2026). Returns {d, m, y|null}.
 function pdfDateParts(s) {
-  const m = (s ?? '').trim().match(/^(\d{1,2})[/\-.](\d{1,2})(?:[/\-.](\d{2,4}))?$/)
-  if (!m) return null
-  const d = +m[1], mo = +m[2]
-  if (d < 1 || d > 31 || mo < 1 || mo > 12) return null
-  let y = m[3] ? +m[3] : null
-  if (y != null && y < 100) y += 2000
-  return { d, m: mo, y }
+  const t = (s ?? '').trim()
+  const num = t.match(/^(\d{1,2})[/\-.](\d{1,2})(?:[/\-.](\d{2,4}))?$/)
+  if (num) {
+    const d = +num[1], mo = +num[2]
+    if (d < 1 || d > 31 || mo < 1 || mo > 12) return null
+    let y = num[3] ? +num[3] : null
+    if (y != null && y < 100) y += 2000
+    return { d, m: mo, y }
+  }
+  const nm = t.match(/^(\d{1,2})[-\s]([A-Za-z]{3,})(?:[-\s](\d{2,4}))?$/)
+  if (nm) {
+    const mo = MONTHS[nm[2].slice(0, 3).toLowerCase()]
+    const d = +nm[1]
+    if (!mo || d < 1 || d > 31) return null
+    let y = nm[3] ? +nm[3] : null
+    if (y != null && y < 100) y += 2000
+    return { d, m: mo, y }
+  }
+  return null
 }
 // A token that LOOKS like a monetary amount: digit groups with a thousands
 // separator and/or a decimal part. Strict on purpose — it must reject reference
@@ -364,6 +377,30 @@ function pdfDateParts(s) {
 function moneyLike(s) {
   const t = (s ?? '').trim()
   return /^\d[\d.,]*\d$/.test(t) && /[.,]/.test(t)
+}
+
+// Strip a trailing direction code (CR/KR = credit/in, DB/DR = debit/out) from an
+// amount token like "28,658,672 CR". Returns { core, dir:'in'|'out'|null }.
+function splitDir(s) {
+  const m = (s ?? '').trim().match(/^(.*?)\s*\b(CR|KR|DB|DR)\b\.?$/i)
+  if (m) return { core: m[1].trim(), dir: /^(CR|KR)$/i.test(m[2]) ? 'in' : 'out' }
+  return { core: (s ?? '').trim(), dir: null }
+}
+
+// True when a token is a NON-ZERO money amount (ignoring a trailing CR/DR code).
+// Zero placeholders ("0.00" in an empty debit/credit column) read as absent.
+function nonZeroMoney(s) {
+  const { core } = splitDir(s)
+  return moneyLike(core) && /[1-9]/.test(core)
+}
+
+// Parse a money token to { value>0, dir } (or null), tolerating a CR/DR suffix.
+function moneyToken(s, decimal) {
+  const { core, dir } = splitDir(s)
+  if (!moneyLike(core)) return null
+  const v = parseAmount(core, decimal)
+  if (v == null || v === 0) return null
+  return { value: Math.abs(v), dir }
 }
 
 // Lines that are statement chrome, not transactions — repeated page headers and
@@ -419,10 +456,10 @@ export function detectPdfLayout(lines) {
     for (const l of lines) {
       const f = l.items[0]
       if (!f || Math.abs(f.x - dateX) >= 15 || !pdfDateParts(f.s)) continue
-      const money = l.items.filter((it) => it !== f && it.x > dateX + 25 && moneyLike(it.s)).sort((a, b) => a.x - b.x)
+      const money = l.items.filter((it) => it !== f && it.x > dateX + 25 && nonZeroMoney(it.s)).sort((a, b) => a.x - b.x)
       if (!money.length) continue
       lineMoney.push(money.map((m) => m.x))
-      money.forEach((m) => amountSamples.push(m.s))
+      money.forEach((m) => amountSamples.push(splitDir(m.s).core))
     }
   }
   const decimal = detectNumberFormat(amountSamples).decimal
@@ -491,6 +528,19 @@ export function parsePdfStatement(lines, override = {}) {
     if (f && Math.abs(f.x - dateX) < 15 && pdfDateParts(f.s)) starts.push(i)
   }
 
+  // Currency sections: multi-currency statements (e.g. OCBC current accounts) list
+  // transactions under "Currency Code : IDR / SGD / USD" headers. When importing
+  // into an account of a known currency, keep only that section's transactions.
+  const target = (override.targetCurrency ?? layout.targetCurrency ?? '').toUpperCase()
+  const sectionCur = new Array(lines.length)
+  let curSec = null
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].items.map((it) => it.s).join(' ').match(/Currency\s*Code\s*:?\s*([A-Za-z]{3})/i)
+    if (m) curSec = m[1].toUpperCase()
+    sectionCur[i] = curSec
+  }
+  const hasSections = sectionCur.some((c) => c != null)
+
   const near = (it, x) => x != null && Math.abs(it.x - x) < xTol
   const isBalance = (it) => near(it, balanceX)
 
@@ -498,18 +548,21 @@ export function parsePdfStatement(lines, override = {}) {
   const skipped = []
   for (let k = 0; k < starts.length; k++) {
     const start = starts[k]
+    if (hasSections && target && sectionCur[start] && sectionCur[start] !== target) continue
     const nextStart = k + 1 < starts.length ? starts[k + 1] : lines.length
     const main = lines[start]
     const dp = pdfDateParts(main.items[0].s)
     const y = dp.y ?? year
     const date = `${y}-${pad(dp.m)}-${pad(dp.d)}`
 
-    // Money tokens on the main line, left to right, excluding the balance.
-    const money = main.items.filter((it) => moneyLike(it.s) && it.x > dateX + 25 && !isBalance(it)).sort((a, b) => a.x - b.x)
+    // Non-zero money tokens on the main line, left to right, excluding the
+    // balance; each may carry a trailing CR/DR direction code.
+    const money = main.items.filter((it) => nonZeroMoney(it.s) && it.x > dateX + 25 && !isBalance(it)).sort((a, b) => a.x - b.x)
 
     // Amount + column-derived direction. In debit/credit layouts the column the
     // figure sits in tells the direction; in single-column layouts the amount is
-    // the (left-most) money token and direction comes from the KR/DB code below.
+    // the (left-most) money token and direction comes from a CR/DR code or the
+    // description below.
     let amtItem = null
     let colKind = null
     if (mode === 'debit_credit') {
@@ -520,8 +573,9 @@ export function parsePdfStatement(lines, override = {}) {
     } else {
       amtItem = money.find((it) => near(it, layout.amountX)) ?? money[0]
     }
-    const amount = amtItem ? Math.abs(parseAmount(amtItem.s, decimal)) : null
-    if (!amount) continue // balance-only marker (SALDO AWAL/AKHIR) or noise — skip
+    const tok = amtItem ? moneyToken(amtItem.s, decimal) : null
+    if (!tok) continue // balance-only marker (SALDO AWAL/AKHIR) or noise — skip
+    const amount = tok.value
 
     // Continuation lines belong to this transaction until the next one — but
     // stop at a page break or a header/footer line (statements repeat the
@@ -534,10 +588,11 @@ export function parsePdfStatement(lines, override = {}) {
       stop++
     }
 
-    // Kind: the column wins in a debit/credit layout; otherwise the main line's
-    // KR/CR vs DB/DR code, common Indonesian keywords, then the layout default.
+    // Kind: the debit/credit column wins; else a CR/DR code on the amount token;
+    // else the main line's KR/CR vs DB/DR code, keywords, then the layout default.
     const mainText = main.items.map((i) => i.s).join(' ')
-    const kind = colKind ?? pdfKind(mainText, layout.defaultKind ?? 'expense')
+    const kind = colKind
+      ?? (tok.dir === 'in' ? 'income' : tok.dir === 'out' ? 'expense' : pdfKind(mainText, layout.defaultKind ?? 'expense'))
 
     // Description = the readable tokens across main + continuation lines (drop
     // the date, the amount/balance figures, the in/out codes and dup sub-amounts).
@@ -545,7 +600,7 @@ export function parsePdfStatement(lines, override = {}) {
     for (let j = start; j < stop; j++) {
       for (const it of lines[j].items) {
         if (pdfDateParts(it.s) && it === lines[j].items[0]) continue
-        if (moneyLike(it.s)) continue
+        if (moneyLike(splitDir(it.s).core)) continue
         if (/^(DB|CR|DR|KR)$/i.test(it.s) || /^TANGGAL\s*:/i.test(it.s) || /^-+$/.test(it.s)) continue
         noteParts.push(it.s)
       }
