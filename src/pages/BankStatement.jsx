@@ -20,7 +20,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listAccounts, listGroups, listCategories, createTransactions } from '../lib/data'
 import {
-  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint,
+  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint, detectNumberFormat,
 } from '../lib/statement'
 import { extractPdfText } from '../lib/pdfStatement'
 import { localeFor, currencyDecimals } from '../lib/currencies'
@@ -61,8 +61,9 @@ function saveMapping(sig, payload) {
   try { localStorage.setItem(MAP_KEY(sig), JSON.stringify(payload)) } catch { /* ignore quota/private mode */ }
 }
 
-// Taught PDF layouts, remembered per bank fingerprint.
-const PDFMAP_KEY = (fp) => `kura.pdfmap.${fp}`
+// Taught PDF layouts, remembered per bank fingerprint. (v2: earlier single-only
+// taught layouts are intentionally ignored — they predate debit/credit teaching.)
+const PDFMAP_KEY = (fp) => `kura.pdfmap.v2.${fp}`
 function loadPdfMap(fp) {
   try { const raw = fp && localStorage.getItem(PDFMAP_KEY(fp)); return raw ? JSON.parse(raw) : null } catch { return null }
 }
@@ -226,21 +227,40 @@ export default function BankStatement() {
     finally { setReading(false) }
   }
 
-  // ---- Teach mode: user shows Kura where the date & amount are --------------
+  // ---- Teach mode: user shows Kura where the date & amount(s) are ----------
   function beginTeach() { setTaught({}); setTeachStep('date'); setStep('teach') }
 
   function onTeachToken(item) {
-    if (teachStep === 'date') {
-      setTaught((t) => ({ ...t, dateX: item.x }))
-      setTeachStep('amount')
-    } else if (teachStep === 'amount') {
-      setTaught((t) => ({ ...t, amountX: item.x }))
-      setTeachStep('direction')
+    if (teachStep === 'date') { setTaught((t) => ({ ...t, dateX: item.x })); setTeachStep('mode') }
+    else if (teachStep === 'amount') { setTaught((t) => ({ ...t, amountX: item.x })); setTeachStep('direction') }
+    else if (teachStep === 'debit') { setTaught((t) => ({ ...t, debitX: item.x })); setTeachStep('credit') }
+    else if (teachStep === 'credit') {
+      const decimal = decimalForColumns([taught.debitX, item.x])
+      applyTaught({ dateX: taught.dateX, debitX: taught.debitX, creditX: item.x, mode: 'debit_credit', balanceX: null, decimal })
     }
   }
 
+  function chooseTeachMode(m) { setTeachStep(m === 'single' ? 'amount' : 'debit') }
+
   function finishTeach(defaultKind) {
-    const layout = { dateX: taught.dateX, amountX: taught.amountX, mode: 'single', balanceX: null, defaultKind }
+    const decimal = decimalForColumns([taught.amountX])
+    applyTaught({ dateX: taught.dateX, amountX: taught.amountX, mode: 'single', balanceX: null, defaultKind, decimal })
+  }
+
+  // Detect the decimal style (1,234.56 vs 1.234,56) from the money values sitting
+  // in the taught amount column(s) — auto-detection had nothing to go on if the
+  // statement didn't parse, so we sample the column the user just pointed at.
+  function decimalForColumns(xs) {
+    const samples = []
+    for (const l of pdfLines ?? []) {
+      for (const it of l.items) {
+        if (xs.some((x) => x != null && Math.abs(it.x - x) < 12) && /^\d[\d.,]*\d$/.test(it.s) && /[.,]/.test(it.s)) samples.push(it.s)
+      }
+    }
+    return detectNumberFormat(samples).decimal
+  }
+
+  function applyTaught(layout) {
     savePdfMap(pdfFp, layout)
     setPdfLayout((l) => ({ ...l, ...layout }))
     setUsedTaught(true)
@@ -495,9 +515,12 @@ export default function BankStatement() {
         )}
 
         {previewRows.length === 0 && (
-          <div className="rounded-xl border border-transfer/40 bg-transfer/10 px-3.5 py-3 text-[13px] text-transfer">
-            <div className="font-semibold mb-1">Kura couldn’t read this layout on its own.</div>
-            Show it where the data is — tap “Teach Kura to read this” below. It’ll remember this bank for next time.
+          <div className="rounded-xl border border-transfer/40 bg-transfer/10 px-3.5 py-3 text-[13px] text-transfer space-y-2.5">
+            <div>
+              <div className="font-semibold mb-1">Kura couldn’t read this layout on its own.</div>
+              Show it where the data is — Kura will remember this bank for next time.
+            </div>
+            <Button onClick={beginTeach} className="w-full">Teach Kura to read this statement</Button>
           </div>
         )}
 
@@ -542,57 +565,66 @@ export default function BankStatement() {
         <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
           Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
         </Button>
-        <button onClick={beginTeach} className="w-full text-[12.5px] text-muted hover:text-primary py-1">
-          Rows look wrong? Teach Kura to read this statement →
-        </button>
       </div>
     )
   }
 
-  // Teach mode: the user taps the date, then the amount, in any one transaction.
+  // Teach mode: the user shows Kura where the date and amount(s) are. Handles a
+  // single amount column or separate money-out / money-in columns.
   function renderTeach() {
     const prompts = {
-      date: 'Step 1 of 2 — tap the DATE of any one transaction below.',
-      amount: 'Step 2 of 2 — now tap the AMOUNT of that same transaction.',
-      direction: 'Last step — for that transaction, was the money going OUT or IN?',
+      date: 'Tap the DATE of any one transaction below.',
+      amount: 'Tap the AMOUNT of any transaction.',
+      direction: 'For most rows, is the money going OUT or IN?',
+      debit: 'Tap a MONEY-OUT amount (a payment, purchase or withdrawal row).',
+      credit: 'Tap a MONEY-IN amount (a deposit, salary or refund row).',
     }
-    const rows = (pdfLines ?? []).filter((l) => l.items.length > 1).slice(0, 80)
+    const rows = (pdfLines ?? []).filter((l) => l.items.length > 1).slice(0, 90)
+    const tappable = teachStep === 'date' || teachStep === 'amount' || teachStep === 'debit' || teachStep === 'credit'
     return (
       <div className="space-y-3">
         <div className="rounded-xl border border-primary/40 bg-primary-soft/50 px-3.5 py-3 text-[13.5px] text-text font-semibold">
-          {prompts[teachStep] ?? ''}
+          {teachStep === 'mode' ? 'How are the amounts shown on this statement?' : (prompts[teachStep] ?? '')}
         </div>
 
-        {teachStep === 'direction' ? (
+        {teachStep === 'mode' && (
+          <div className="space-y-2">
+            <Button variant="ghost" className="w-full" onClick={() => chooseTeachMode('single')}>One amount column</Button>
+            <Button variant="ghost" className="w-full" onClick={() => chooseTeachMode('debit_credit')}>Separate money-out & money-in columns</Button>
+          </div>
+        )}
+        {teachStep === 'direction' && (
           <div className="flex gap-2.5">
             <Button variant="ghost" className="flex-1" onClick={() => finishTeach('expense')}>Money out (expense)</Button>
             <Button variant="ghost" className="flex-1" onClick={() => finishTeach('income')}>Money in (income)</Button>
           </div>
-        ) : (
+        )}
+        {tappable && (
           <p className="text-[12px] text-faint px-1">
-            {taught.dateX != null && <span className="text-income font-semibold">✓ date noted. </span>}
-            Tap the matching value in any row — they’re grouped just like the PDF.
+            {taught.dateX != null && <span className="text-income font-semibold">✓ date</span>}
+            {taught.debitX != null && <span className="text-income font-semibold"> · ✓ money-out</span>}
+            {' '}Tap the matching value in any row — tokens are grouped just like the PDF.
           </p>
         )}
 
-        <div className="bg-surface border border-border rounded-[14px] divide-y divide-border/60 max-h-[58dvh] overflow-y-auto">
-          {rows.map((l, i) => (
-            <div key={i} className="flex flex-wrap gap-1.5 px-3 py-2">
-              {l.items.map((it, j) => {
-                const picked = (teachStep !== 'date' && taught.dateX != null && Math.abs(it.x - taught.dateX) < 8) ||
-                  (taught.amountX != null && Math.abs(it.x - taught.amountX) < 8)
-                return (
-                  <button key={j} type="button"
-                    onClick={() => teachStep !== 'direction' && onTeachToken(it)}
-                    disabled={teachStep === 'direction'}
-                    className={`text-[12px] px-1.5 py-0.5 rounded border ${picked ? 'border-primary bg-primary-soft text-primary' : 'border-border text-muted hover:border-primary hover:text-primary'} disabled:opacity-60`}>
-                    {it.s}
-                  </button>
-                )
-              })}
-            </div>
-          ))}
-        </div>
+        {teachStep !== 'mode' && teachStep !== 'direction' && (
+          <div className="bg-surface border border-border rounded-[14px] divide-y divide-border/60 max-h-[56dvh] overflow-y-auto">
+            {rows.map((l, i) => (
+              <div key={i} className="flex flex-wrap gap-1.5 px-3 py-2">
+                {l.items.map((it, j) => {
+                  const picked = (teachStep !== 'date' && taught.dateX != null && Math.abs(it.x - taught.dateX) < 8) ||
+                    (taught.debitX != null && Math.abs(it.x - taught.debitX) < 8)
+                  return (
+                    <button key={j} type="button" onClick={() => onTeachToken(it)}
+                      className={`text-[12px] px-1.5 py-0.5 rounded border ${picked ? 'border-primary bg-primary-soft text-primary' : 'border-border text-muted hover:border-primary hover:text-primary'}`}>
+                      {it.s}
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        )}
         <Button variant="ghost" onClick={() => { setTeachStep(null); setStep('map') }} className="w-full">Cancel</Button>
       </div>
     )

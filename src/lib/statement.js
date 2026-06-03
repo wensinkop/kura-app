@@ -521,11 +521,15 @@ export function parsePdfStatement(lines, override = {}) {
     return { rows: [], skipped: [], layout }
   }
 
-  // Index of the lines that start a transaction (a date at the date column).
+  // A transaction line has a date token at the date column (usually the leftmost
+  // token, but with a taught layout it can be any column). Returns its parts.
+  const dateAt = (l) => {
+    const it = l.items.find((x) => Math.abs(x.x - dateX) < 15 && pdfDateParts(x.s))
+    return it ? pdfDateParts(it.s) : null
+  }
   const starts = []
   for (let i = 0; i < lines.length; i++) {
-    const f = lines[i].items[0]
-    if (f && Math.abs(f.x - dateX) < 15 && pdfDateParts(f.s)) starts.push(i)
+    if (dateAt(lines[i])) starts.push(i)
   }
 
   // Currency sections: multi-currency statements (e.g. OCBC current accounts) list
@@ -551,7 +555,7 @@ export function parsePdfStatement(lines, override = {}) {
     if (hasSections && target && sectionCur[start] && sectionCur[start] !== target) continue
     const nextStart = k + 1 < starts.length ? starts[k + 1] : lines.length
     const main = lines[start]
-    const dp = pdfDateParts(main.items[0].s)
+    const dp = dateAt(main)
     const y = dp.y ?? year
     const date = `${y}-${pad(dp.m)}-${pad(dp.d)}`
 
