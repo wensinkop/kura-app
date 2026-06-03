@@ -99,6 +99,13 @@ export default function Settings() {
         <Row title="Bank statement upload" sub="PDF / CSV → pre-filled rows · Premium" right={<span className="flex items-center gap-1.5"><Premium />{Chevron}</span>} onClick={() => navigate('/import/statement')} />
       </Group>
 
+      <SectionTitle>About & legal</SectionTitle>
+      <Group>
+        <Row title="Help & FAQ" sub="Answers to common questions" right={Chevron} onClick={() => navigate('/help')} />
+        <Row title="Privacy Policy" sub="How your data is handled" right={Chevron} onClick={() => navigate('/legal/privacy')} />
+        <Row title="Terms & Conditions" sub="The terms of using Kura" right={Chevron} onClick={() => navigate('/legal/terms')} />
+      </Group>
+
       {role === 'admin' && (
         <>
           <SectionTitle>Admin</SectionTitle>

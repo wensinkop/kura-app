@@ -24,6 +24,9 @@ import Search from './pages/Search'
 import BankStatement from './pages/BankStatement'
 import AccountDetail from './pages/AccountDetail'
 import Admin from './pages/Admin'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import Terms from './pages/Terms'
+import Help from './pages/Help'
 import PremiumGate from './components/PremiumGate'
 
 function Loading() {
@@ -70,6 +73,11 @@ export default function App() {
             <Route path="/forgot-email" element={<PublicOnlyRoute><ForgotEmail /></PublicOnlyRoute>} />
             {/* Reachable via email recovery link — no guard (recovery creates a session) */}
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Legal & support — public, reachable signed-in or signed-out (also linkable for the Play Store listing) */}
+            <Route path="/legal/privacy" element={<PrivacyPolicy />} />
+            <Route path="/legal/terms" element={<Terms />} />
+            <Route path="/help" element={<Help />} />
 
             {/* App (signed-in) — shared responsive shell */}
             <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>

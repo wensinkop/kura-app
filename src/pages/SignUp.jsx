@@ -137,6 +137,11 @@ export default function SignUp() {
         <button type="submit" disabled={loading} className={authBtn}>
           {loading ? 'Creating account…' : 'Create account'}
         </button>
+        <p className="text-xs text-muted text-center leading-relaxed">
+          By creating an account, you agree to our{' '}
+          <Link to="/legal/terms" className="text-primary hover:underline">Terms</Link> and{' '}
+          <Link to="/legal/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+        </p>
       </form>
     </AuthLayout>
   )
