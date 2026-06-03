@@ -35,6 +35,7 @@ import { ChevronLeft, UploadIcon } from '../lib/icons'
 const KIND_OPTIONS = [
   { value: 'expense', label: 'Expense' },
   { value: 'income', label: 'Income' },
+  { value: 'transfer', label: 'Transfer' },
 ]
 const DATE_FORMAT_OPTIONS = [
   { value: 'dmy', label: 'Day / Month / Year — 31/12/2026' },
@@ -319,7 +320,11 @@ export default function BankStatement() {
   // ---- Step 2 → 3: confirm, build editable rows ----------------------------
   function startReview() {
     if (source === 'csv' && sig) saveMapping(sig, { mapping, formats })
-    setReviewRows(previewRows.map((r) => ({ tempId: uuid(), kind: r.kind, date: r.date, amount: r.amount, categoryId: '', subId: '', note: r.note })))
+    setReviewRows(previewRows.map((r) => ({
+      tempId: uuid(), kind: r.kind, date: r.date, amount: r.amount, categoryId: '', subId: '', note: r.note,
+      // transfer fields (used when the user switches a row to Transfer):
+      otherAccountId: '', transferDir: r.kind === 'income' ? 'in' : 'out',
+    })))
     setStep('review')
   }
 
@@ -330,21 +335,36 @@ export default function BankStatement() {
   function setRowKind(id, k) { updateRow(id, { kind: k, categoryId: '', subId: '' }) }
   function removeRow(id) { setReviewRows((rs) => rs.filter((r) => r.tempId !== id)) }
 
-  const validReview = reviewRows.length > 0 && reviewRows.every((r) => r.date && r.amount > 0)
+  const validReview = reviewRows.length > 0 && reviewRows.every((r) =>
+    r.date && r.amount > 0 && (r.kind !== 'transfer' || (r.otherAccountId && r.otherAccountId !== accountId)))
   const reviewTotal = useMemo(() => reviewRows.reduce((s, r) => s + (Number(r.amount) || 0), 0), [reviewRows])
 
   async function saveAll() {
     setError('')
-    if (!validReview) { setError('Every row needs a date and an amount greater than zero.'); return }
+    if (!validReview) { setError('Every row needs a date and an amount; transfers need a second account.'); return }
     setSaving(true)
-    const payload = reviewRows.map((r) => ({
-      kind: r.kind,
-      date: r.date,
-      amount: r.amount,
-      account_id: accountId,
-      category_id: r.subId || r.categoryId || null,
-      note: (r.note ?? '').trim() || null,
-    }))
+    const payload = reviewRows.map((r) => {
+      if (r.kind === 'transfer') {
+        const out = r.transferDir !== 'in' // money leaving the statement account
+        return {
+          kind: 'transfer',
+          date: r.date,
+          amount: r.amount,
+          to_amount: r.amount, // same-currency assumed on import; fix in edit if cross-currency
+          account_id: out ? accountId : r.otherAccountId,
+          to_account_id: out ? r.otherAccountId : accountId,
+          note: (r.note ?? '').trim() || null,
+        }
+      }
+      return {
+        kind: r.kind,
+        date: r.date,
+        amount: r.amount,
+        account_id: accountId,
+        category_id: r.subId || r.categoryId || null,
+        note: (r.note ?? '').trim() || null,
+      }
+    })
     const { error: err } = await createTransactions(user.id, payload)
     if (err) { setError(err.message); setSaving(false); return }
     navigate('/')
@@ -746,13 +766,28 @@ export default function BankStatement() {
                 <RField label="Amount" deskW="desk:w-[140px] desk:flex-none">
                   <NumberInput value={row.amount} onChange={(v) => updateRow(row.tempId, { amount: v })} locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
                 </RField>
-                <RField label="Category" full={subs.length === 0}>
-                  <ResponsiveSelect title="Category" placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => updateRow(row.tempId, { categoryId: v, subId: '' })} options={catOptionsFor(row.kind)} />
-                </RField>
-                {subs.length > 0 && (
-                  <RField label="Sub-category">
-                    <ResponsiveSelect title="Sub-category" placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => updateRow(row.tempId, { subId: v })} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
-                  </RField>
+                {row.kind === 'transfer' ? (
+                  <>
+                    <RField label={row.transferDir === 'in' ? `Into ${account?.name} — from` : `Out of ${account?.name} — to`} full>
+                      <ResponsiveSelect title="Other account" placeholder="Choose the other account…" value={row.otherAccountId}
+                        onChange={(v) => updateRow(row.tempId, { otherAccountId: v })} options={accountOptions.filter((o) => o.value !== accountId)} />
+                    </RField>
+                    <RField label="Direction" deskW="desk:w-[150px] desk:flex-none">
+                      <Segmented value={row.transferDir} onChange={(v) => updateRow(row.tempId, { transferDir: v })}
+                        options={[{ value: 'out', label: 'Out' }, { value: 'in', label: 'In' }]} />
+                    </RField>
+                  </>
+                ) : (
+                  <>
+                    <RField label="Category" full={subs.length === 0}>
+                      <ResponsiveSelect title="Category" placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => updateRow(row.tempId, { categoryId: v, subId: '' })} options={catOptionsFor(row.kind)} />
+                    </RField>
+                    {subs.length > 0 && (
+                      <RField label="Sub-category">
+                        <ResponsiveSelect title="Sub-category" placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => updateRow(row.tempId, { subId: v })} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
+                      </RField>
+                    )}
+                  </>
                 )}
                 <RField label="Note" full deskW="desk:flex-1 desk:min-w-[160px]">
                   <textarea value={row.note} onChange={(e) => updateRow(row.tempId, { note: e.target.value })}
