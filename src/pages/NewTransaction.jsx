@@ -131,12 +131,10 @@ export default function NewTransaction() {
   useEffect(() => {
     if (!openSubFor) return
     const t = setTimeout(() => {
-      if (window.innerWidth >= DESK) {
-        // Desktop: focus the sub-category type-to-search (no modal sheet).
-        rowRefs.current[openSubFor]?.querySelector('[data-field="subcategory"] input')?.focus()
-      } else {
-        subRefs.current[openSubFor]?.open?.() // Mobile: pop the bottom sheet.
-      }
+      // Mobile only: pop the sub-category sheet. On desktop we leave focus alone
+      // so Tab / Shift-Tab keep their natural order (auto-focusing the sub-
+      // category was hijacking Shift-Tab back from Category).
+      if (window.innerWidth < DESK) subRefs.current[openSubFor]?.open?.()
       setOpenSubFor(null)
     }, 0)
     return () => clearTimeout(t)
@@ -388,6 +386,10 @@ export default function NewTransaction() {
                               <div className={`${inputClass} flex items-center text-faint`} aria-hidden="true">—</div>
                             )}
                           </MField>
+                          {/* Desktop: break so Account + Note sit on their own line,
+                              leaving the first line (type/date/amount/category/sub)
+                              roomier. */}
+                          <div aria-hidden="true" className="hidden desk:block desk:basis-full" />
                           <MField label="Account" field="account" full>
                             <ResponsiveSelect title="Account" placeholder="Choose…" value={row.accountId}
                               onChange={(v) => update(row.tempId, { accountId: v })} options={accountOptions} />

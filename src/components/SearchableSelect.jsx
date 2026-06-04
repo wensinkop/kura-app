@@ -72,7 +72,12 @@ export default function SearchableSelect({
       e.preventDefault()
       setHighlight((i) => Math.max(i - 1, 0))
     } else if (e.key === 'Enter' || e.key === 'Tab') {
-      if (open && filtered[highlight]) {
+      // Tab without typing anything keeps the current value (so tabbing through a
+      // pre-filled field — e.g. an inherited account — doesn't replace it with
+      // the top option). Enter, or Tab after typing, commits the match.
+      if (e.key === 'Tab' && !query.trim()) {
+        setOpen(false)
+      } else if (open && filtered[highlight]) {
         if (e.key === 'Enter') e.preventDefault()
         commit(filtered[highlight].value)
       } else if (open && canCreate) {

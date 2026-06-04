@@ -807,7 +807,7 @@ export default function BankStatement() {
                     </RField>
                   </>
                 )}
-                <RField label="Note" full deskW="desk:flex-1 desk:min-w-[160px]">
+                <RField label="Note" full deskW="desk:basis-full">
                   <div className="relative">
                     <AutocompleteInput
                       value={row.note ?? ''}
