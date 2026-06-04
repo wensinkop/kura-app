@@ -283,6 +283,37 @@ export function listAllTransactionsFull() {
     .order('id', { ascending: false }))
 }
 
+// Per-account balances computed in the DB (so the Accounts page / net worth
+// doesn't fetch every transaction once a user has thousands). [{ account_id,
+// balance }] in each account's own currency; the client converts to base.
+export function getAccountBalances() {
+  return supabase.rpc('account_balances')
+}
+
+// One account's full history (rich embeds) for its ledger — server-side filtered
+// to the rows that touch this account, instead of the whole history.
+export function listAccountTransactionsFull(accountId) {
+  return fetchAllPages(() => supabase
+    .from('transactions')
+    .select(TX_SELECT)
+    .or(`account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false }))
+}
+
+// Minimal transactions touching any of the given accounts — for the credit-card
+// billing detail on the Accounts page (only the CC accounts, so it's small).
+export function listTransactionsForAccounts(accountIds) {
+  if (!accountIds.length) return Promise.resolve({ data: [], error: null })
+  const ids = accountIds.join(',')
+  return fetchAllPages(() => supabase
+    .from('transactions')
+    .select('id, kind, amount, account_id, to_account_id, to_amount, date')
+    .or(`account_id.in.(${ids}),to_account_id.in.(${ids})`)
+    .order('id', { ascending: true }))
+}
+
 // ---- Exchange rates (manual, value of 1 unit of currency in base currency) --
 
 export function listRates() {

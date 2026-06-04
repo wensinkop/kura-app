@@ -9,7 +9,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { listAccounts, listAllTransactionsFull, listCategories } from '../lib/data'
+import { listAccounts, listAccountTransactionsFull, listCategories } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
 import { formatAbs, amountColor, dayLabel } from '../lib/format'
 import { Segmented } from '../components/ui'
@@ -52,29 +52,31 @@ function shiftCycleEnd(endIso, delta, settleDay) {
 export default function AccountDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  // Seed from the session cache so opening an account is instant (the ledger's
-  // full-history fetch is the slow one for a heavy user).
+  // Seed from the session cache so opening an account is instant. The ledger now
+  // fetches only THIS account's transactions (keyed per account), not the whole
+  // history.
+  const txKey = `accFull:${id}`
   const seedAcc = (cacheGet('accounts') ?? []).find((x) => x.id === id) ?? null
   const [account, setAccount] = useState(seedAcc)
-  const [txns, setTxns] = useState(() => cacheGet('allFull') ?? [])
+  const [txns, setTxns] = useState(() => cacheGet(txKey) ?? [])
   const [catMap, setCatMap] = useState(() => new Map((cacheGet('categories') ?? []).map((x) => [x.id, x])))
-  const [loading, setLoading] = useState(() => !(cacheGet('accounts') !== undefined && cacheGet('allFull') !== undefined && cacheGet('categories') !== undefined))
+  const [loading, setLoading] = useState(() => !(cacheGet('accounts') !== undefined && cacheGet(txKey) !== undefined && cacheGet('categories') !== undefined))
   const [mode, setMode] = useState('day') // day | month | year (non-credit)
   const [anchor, setAnchor] = useState(new Date())
   const [cycleEnd, setCycleEnd] = useState(() =>
     (seedAcc?.type === 'credit_card' && seedAcc.settlement_day) ? cycleEndFor(isoOfDate(new Date()), seedAcc.settlement_day) : null)
 
   useEffect(() => {
-    Promise.all([listAccounts(), listAllTransactionsFull(), listCategories()]).then(([a, t, c]) => {
+    Promise.all([listAccounts(), listAccountTransactionsFull(id), listCategories()]).then(([a, t, c]) => {
       const acc = (a.data ?? []).find((x) => x.id === id) ?? null
       setAccount(acc)
       if (!a.error) cacheSet('accounts', a.data ?? [])
-      if (!t.error) { setTxns(t.data ?? []); cacheSet('allFull', t.data ?? []) }
+      if (!t.error) { setTxns(t.data ?? []); cacheSet(txKey, t.data ?? []) }
       if (!c.error) { setCatMap(new Map((c.data ?? []).map((x) => [x.id, x]))); cacheSet('categories', c.data ?? []) }
       if (acc?.type === 'credit_card' && acc.settlement_day) setCycleEnd(cycleEndFor(isoOfDate(new Date()), acc.settlement_day))
       setLoading(false)
     })
-  }, [id])
+  }, [id, txKey])
 
   const isCC = account?.type === 'credit_card' && !!account?.settlement_day
   const currency = account?.currency ?? 'IDR'

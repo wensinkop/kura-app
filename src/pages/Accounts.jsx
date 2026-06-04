@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { listGroups, listAccounts, listAllTransactions, listRates } from '../lib/data'
+import { listGroups, listAccounts, getAccountBalances, listTransactionsForAccounts, listRates } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
 import { accountSubtitle, formatAbs, amountColor } from '../lib/format'
-import { computeBalances, toBase, netWorth, creditCardBilling } from '../lib/balances'
+import { toBase, netWorth, creditCardBilling } from '../lib/balances'
 import { Button } from '../components/ui'
 import { PlusIcon } from '../lib/icons'
 
@@ -19,28 +19,37 @@ export default function Accounts() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   // Seed from the session cache so revisiting Accounts is instant; the effect
-  // still refetches in the background.
+  // still refetches in the background. Balances come from a DB aggregate (not
+  // every transaction); only the credit-card accounts' transactions are fetched
+  // (for the billing line).
+  const balMap = (rows) => new Map((rows ?? []).map((x) => [x.account_id, Number(x.balance)]))
   const allCached = cacheGet('groups') !== undefined && cacheGet('accounts') !== undefined &&
-    cacheGet('all') !== undefined && cacheGet('rates') !== undefined
+    cacheGet('balances') !== undefined && cacheGet('rates') !== undefined
   const [groups, setGroups] = useState(() => cacheGet('groups') ?? [])
   const [accounts, setAccounts] = useState(() => cacheGet('accounts') ?? [])
-  const [txns, setTxns] = useState(() => cacheGet('all') ?? [])
+  const [balances, setBalances] = useState(() => balMap(cacheGet('balances')))
+  const [ccTxns, setCcTxns] = useState(() => cacheGet('ccTxns') ?? [])
   const [rates, setRates] = useState(() => Object.fromEntries((cacheGet('rates') ?? []).map((x) => [x.currency, Number(x.rate)])))
   const [loading, setLoading] = useState(() => !allCached)
 
   useEffect(() => {
-    Promise.all([listGroups(), listAccounts(), listAllTransactions(), listRates()]).then(([g, a, t, r]) => {
+    Promise.all([listGroups(), listAccounts(), getAccountBalances(), listRates()]).then(([g, a, bal, r]) => {
       if (!g.error) { setGroups(g.data ?? []); cacheSet('groups', g.data ?? []) }
       if (!a.error) { setAccounts(a.data ?? []); cacheSet('accounts', a.data ?? []) }
-      if (!t.error) { setTxns(t.data ?? []); cacheSet('all', t.data ?? []) }
+      if (!bal.error) { setBalances(balMap(bal.data)); cacheSet('balances', bal.data ?? []) }
       if (!r.error) { setRates(Object.fromEntries((r.data ?? []).map((x) => [x.currency, Number(x.rate)]))); cacheSet('rates', r.data ?? []) }
+      const ccIds = (a.data ?? []).filter((x) => x.type === 'credit_card' && !x.archived).map((x) => x.id)
+      if (ccIds.length) {
+        listTransactionsForAccounts(ccIds).then(({ data, error }) => {
+          if (!error) { setCcTxns(data ?? []); cacheSet('ccTxns', data ?? []) }
+        })
+      } else { setCcTxns([]); cacheSet('ccTxns', []) }
       setLoading(false)
     })
   }, [])
 
   const base = profile?.base_currency ?? 'IDR'
   const active = accounts.filter((a) => !a.archived)
-  const balances = computeBalances(txns, accounts)
   const inGroup = (gid) => active.filter((a) => (a.group_id ?? null) === gid)
   const ungrouped = inGroup(null)
   const nw = netWorth(active, balances, rates, base)
@@ -80,13 +89,13 @@ export default function Accounts() {
           {groups.map((g) =>
             inGroup(g.id).length > 0 ? (
               <AccountGroup key={g.id} title={g.name} rollupValue={rollup(inGroup(g.id))}
-                accounts={inGroup(g.id)} balances={balances} txns={txns} rates={rates} base={base} />
+                accounts={inGroup(g.id)} balances={balances} txns={ccTxns} rates={rates} base={base} />
             ) : null
           )}
           {ungrouped.length > 0 && (
             <AccountGroup title={groups.length > 0 ? 'Ungrouped' : 'Accounts'}
               rollupValue={groups.length > 0 ? rollup(ungrouped) : null}
-              accounts={ungrouped} balances={balances} txns={txns} rates={rates} base={base} />
+              accounts={ungrouped} balances={balances} txns={ccTxns} rates={rates} base={base} />
           )}
 
           <div className="text-center mt-5">
