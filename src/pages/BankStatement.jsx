@@ -625,6 +625,15 @@ export default function BankStatement() {
 
         {previewTable()}
 
+        {/* Always offer teaching when some rows were read — the auto-parse may be
+            wrong (missed rows, wrong column) even when the count isn't zero. */}
+        {previewRows.length > 0 && (
+          <button type="button" onClick={beginTeach}
+            className="w-full text-center text-[12.5px] font-semibold text-primary hover:underline">
+            Not reading this right? Teach Kura where the data is →
+          </button>
+        )}
+
         <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
           Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
         </Button>

@@ -170,7 +170,13 @@ function bestIndex(cols, score, eligible) {
 }
 
 // ---- Date parsing -----------------------------------------------------------
-const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 }
+// English + Indonesian month abbreviations (keyed by the first 3 letters,
+// lowercased) — Indonesian bank statements use MEI, AGU/AGS, OKT, NOP, DES.
+const MONTHS = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, mei: 5, jun: 6, jul: 7,
+  aug: 8, agu: 8, ags: 8, agt: 8, sep: 9, oct: 10, okt: 10,
+  nov: 11, nop: 11, dec: 12, des: 12,
+}
 
 function splitNumericDate(s) {
   const m = s.trim().match(/^(\d{1,4})[/\-.](\d{1,2})[/\-.](\d{1,4})$/)
