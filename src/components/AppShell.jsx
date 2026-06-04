@@ -37,16 +37,29 @@ const restoresScroll = (pathname) => !pathname.startsWith('/settings/')
 
 // Selected-month control in the Home top bar; reads/writes the shared MonthContext.
 function MonthNav() {
-  const { label, prev, next } = useMonth()
+  const { label, prev, next, today, isCurrent } = useMonth()
   return (
     <div className="flex items-center gap-1 flex-1 justify-center desk:flex-initial">
       <button onClick={prev} aria-label="Previous month"
-        className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
+        className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
         <ChevronLeft />
       </button>
-      <span className="font-bold text-base px-3 py-1.5 rounded-[10px]">{label}</span>
+      {/* When viewing another month the label turns into a tappable chip that
+          jumps back to today — keeps the affordance without widening the row on
+          narrow phones (a long month + the search/filter icons already fill it). */}
+      <button
+        onClick={isCurrent ? undefined : today}
+        disabled={isCurrent}
+        aria-label={isCurrent ? undefined : 'Back to this month'}
+        title={isCurrent ? undefined : 'Back to this month'}
+        className={`font-bold text-base px-2.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${
+          isCurrent ? 'cursor-default' : 'text-primary bg-primary-soft hover:brightness-95'
+        }`}
+      >
+        {label}
+      </button>
       <button onClick={next} aria-label="Next month"
-        className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
+        className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
         <ChevronRight />
       </button>
     </div>

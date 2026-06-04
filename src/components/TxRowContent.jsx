@@ -29,7 +29,7 @@ function Highlighted({ text, q }) {
   )
 }
 
-export default function TxRowContent({ t, catMap, highlight }) {
+export default function TxRowContent({ t, catMap, highlight, hideAccount }) {
   const isTransfer = t.kind === 'transfer'
   const { chip, sub } = isTransfer
     ? { chip: 'Transfer', sub: `${t.account?.name ?? '?'} → ${t.to_account?.name ?? '?'}` }
@@ -50,7 +50,7 @@ export default function TxRowContent({ t, catMap, highlight }) {
           isTransfer ? 'bg-transfer/10 text-transfer border-transfer/30' : 'bg-surface-2 text-muted border-border'
         }`}>{chip}</span>
         {sub && <span className="text-xs text-muted truncate">{sub}</span>}
-        {!isTransfer && <span className="text-xs text-faint ml-auto whitespace-nowrap shrink-0">{t.account?.name}</span>}
+        {!isTransfer && !hideAccount && <span className="text-xs text-faint ml-auto whitespace-nowrap shrink-0">{t.account?.name}</span>}
       </div>
     </div>
   )

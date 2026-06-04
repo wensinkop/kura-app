@@ -26,8 +26,23 @@ export function MonthProvider({ children }) {
     })
   }
 
+  // Jump straight back to the month that contains today.
+  function goToday() {
+    const t = new Date()
+    setYear(t.getFullYear())
+    setMonthIndex(t.getMonth())
+  }
+
   const value = useMemo(
-    () => ({ year, monthIndex, label: `${MONTHS[monthIndex]} ${year}`, prev: () => shift(-1), next: () => shift(1) }),
+    () => {
+      const t = new Date()
+      return {
+        year, monthIndex, label: `${MONTHS[monthIndex]} ${year}`,
+        prev: () => shift(-1), next: () => shift(1),
+        today: goToday,
+        isCurrent: year === t.getFullYear() && monthIndex === t.getMonth(),
+      }
+    },
     // shift closes over `year`; recreate when month/year change.
     [year, monthIndex] // eslint-disable-line react-hooks/exhaustive-deps
   )

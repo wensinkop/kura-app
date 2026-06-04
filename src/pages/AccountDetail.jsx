@@ -119,6 +119,19 @@ export default function AccountDetail() {
     })
   }
 
+  // Is the view already showing the period that contains today? (Used to offer a
+  // "jump back to today" shortcut after the user pages away.)
+  const now = new Date()
+  const atCurrent = isCC
+    ? cycleEnd === cycleEndFor(isoOfDate(now), account?.settlement_day)
+    : mode === 'day' ? (anchor.getFullYear() === now.getFullYear() && anchor.getMonth() === now.getMonth())
+      : mode === 'month' ? anchor.getFullYear() === now.getFullYear()
+        : true // yearly already spans all years
+  function goCurrent() {
+    if (isCC) { setCycleEnd(cycleEndFor(isoOfDate(new Date()), account.settlement_day)); return }
+    setAnchor(new Date())
+  }
+
   // Transactions in scope, then grouped. Detailed (daily / credit-card cycle):
   // grouped by day, each row shown. Monthly/yearly: one summary row per group.
   const detailed = isCC || mode === 'day'
@@ -181,6 +194,11 @@ export default function AccountDetail() {
                   <div className="text-center min-w-0">
                     <div className="font-bold text-[14px] truncate">{scope.label}</div>
                     {scope.sub && <div className="text-[11px] text-faint">{scope.sub}</div>}
+                    {canNavigate && !atCurrent && (
+                      <button onClick={goCurrent} className="text-[11px] font-semibold text-primary hover:underline mt-0.5">
+                        Jump to today
+                      </button>
+                    )}
                   </div>
                   <button onClick={() => shift(1)} aria-label="Next" disabled={!canNavigate}
                     className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-0">
@@ -198,7 +216,7 @@ export default function AccountDetail() {
                         {g.rows.map(({ t, balance }) => (
                           <button key={t.id} onClick={() => navigate(`/tx/${t.id}`)}
                             className="w-full px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
-                            <div className="flex"><TxRowContent t={t} catMap={catMap} /></div>
+                            <div className="flex"><TxRowContent t={t} catMap={catMap} hideAccount /></div>
                             <div className="text-[11px] text-faint text-right mt-1 tabular">
                               Balance <span className="font-semibold text-muted">{formatAbs(balance, currency)}</span>
                             </div>

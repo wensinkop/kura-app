@@ -132,6 +132,25 @@ const TX_SELECT =
   'to_account:accounts!transactions_to_account_id_fkey ( id, name, currency ), ' +
   'category:categories!transactions_category_id_fkey ( id, name, parent_id )'
 
+// Supabase's API caps a single response at 1000 rows, which would silently
+// truncate balances, ledgers, exports and backups for a heavy user (thousands
+// of transactions). So any query that can exceed that pages through with
+// .range() and concatenates. `buildQuery` must return a FRESH builder each call
+// (select + filters + order applied) so the range can be re-applied per page.
+// Every paged query MUST end on a unique tiebreaker (`id`): bulk CSV imports
+// give many rows the same created_at, and without a unique final sort key rows
+// could be skipped or duplicated across a page boundary. Returns { data, error }.
+async function fetchAllPages(buildQuery, pageSize = 1000) {
+  const all = []
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await buildQuery().range(from, from + pageSize - 1)
+    if (error) return { data: null, error }
+    all.push(...(data ?? []))
+    if (!data || data.length < pageSize) break
+  }
+  return { data: all, error: null }
+}
+
 // Transactions whose date falls in the given month (monthIndex is 0-based).
 // Uses a half-open [first, nextMonth) date range on the `date` column.
 export function listTransactionsForMonth(year, monthIndex) {
@@ -140,13 +159,14 @@ export function listTransactionsForMonth(year, monthIndex) {
   const ny = monthIndex === 11 ? year + 1 : year
   const nm = monthIndex === 11 ? 0 : monthIndex + 1
   const next = `${ny}-${pad(nm + 1)}-01`
-  return supabase
+  return fetchAllPages(() => supabase
     .from('transactions')
     .select(TX_SELECT)
     .gte('date', first)
     .lt('date', next)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false }))
 }
 
 // Bulk insert. `rows` are payloads without user_id (added here). currency is set
@@ -161,13 +181,14 @@ export function createTransactions(userId, rows) {
 // Transactions whose date falls in the half-open [startISO, endExclusiveISO)
 // range, richest select (for the Stats page). Newest first.
 export function listTransactionsInRange(startISO, endExclusiveISO) {
-  return supabase
+  return fetchAllPages(() => supabase
     .from('transactions')
     .select(TX_SELECT)
     .gte('date', startISO)
     .lt('date', endExclusiveISO)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false }))
 }
 
 // All-time note search (case-insensitive substring). Returns rich rows so the
@@ -226,20 +247,24 @@ export async function recentNotes(limit = 300) {
 }
 
 // All transactions (minimal fields) for client-side balance + credit-card math.
+// Ordered by the unique id so pagination is stable (the values themselves are
+// summed, so the order is otherwise irrelevant).
 export function listAllTransactions() {
-  return supabase
+  return fetchAllPages(() => supabase
     .from('transactions')
     .select('id, kind, amount, account_id, to_account_id, to_amount, date')
+    .order('id', { ascending: true }))
 }
 
 // Every transaction with the rich embeds, newest first (for CSV export + JSON
 // backup — both want the whole history regardless of month).
 export function listAllTransactionsFull() {
-  return supabase
+  return fetchAllPages(() => supabase
     .from('transactions')
     .select(TX_SELECT)
     .order('date', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false }))
 }
 
 // ---- Exchange rates (manual, value of 1 unit of currency in base currency) --
