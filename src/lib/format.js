@@ -27,6 +27,23 @@ export function amountColor(v) {
   return v > 0 ? 'text-income' : v < 0 ? 'text-expense' : 'text-muted'
 }
 
+// ISO 'YYYY-MM-DD' -> a numeric date string in the user's chosen order. Parsed
+// from the string parts (no Date object) so there's no timezone shifting.
+//   'dmy' (default) -> 31-12-2026 · 'mdy' -> 12-31-2026 · 'ymd' -> 2026-12-31
+export const DATE_FORMAT_LABELS = {
+  dmy: 'Day-Month-Year',
+  mdy: 'Month-Day-Year',
+  ymd: 'Year-Month-Day',
+}
+export function formatDate(iso, format = 'dmy') {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  if (format === 'mdy') return `${m}-${d}-${y}`
+  if (format === 'ymd') return `${y}-${m}-${d}`
+  return `${d}-${m}-${y}`
+}
+
 // "2026-06-25" -> "Wed, 25 Jun 2026". Parsed from parts in local time to avoid
 // the UTC off-by-one a bare new Date(iso) would introduce.
 export function dayLabel(iso) {

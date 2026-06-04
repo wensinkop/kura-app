@@ -1,6 +1,12 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useTheme } from '../ThemeContext'
+import { Modal } from '../components/ui'
+import { formatDate, DATE_FORMAT_LABELS } from '../lib/format'
+
+const DATE_FORMAT_KEYS = ['dmy', 'mdy', 'ymd']
+const DATE_SAMPLE = '2026-12-31' // day > 12 so the order is unambiguous
 
 function SectionTitle({ children }) {
   return (
@@ -51,9 +57,16 @@ function Premium() {
 }
 
 export default function Settings() {
-  const { user, profile, role, signOut } = useAuth()
+  const { user, profile, role, signOut, updateProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
+  const [dateOpen, setDateOpen] = useState(false)
+  const dateFmt = profile?.date_format ?? 'dmy'
+
+  async function pickDateFormat(f) {
+    setDateOpen(false)
+    if (f !== dateFmt) await updateProfile({ date_format: f })
+  }
 
   return (
     <div className="max-w-[640px] mx-auto">
@@ -78,6 +91,12 @@ export default function Settings() {
           title="Base currency"
           sub="Used for combined totals across currencies"
           right={<span className="text-faint font-semibold">{profile?.base_currency ?? 'IDR'}</span>}
+        />
+        <Row
+          title="Date format"
+          sub="How dates show in entry, editing & filters"
+          right={<span className="flex items-center gap-1.5"><span className="text-faint font-semibold tabular">{formatDate(DATE_SAMPLE, dateFmt)}</span>{Chevron}</span>}
+          onClick={() => setDateOpen(true)}
         />
         <Row
           title="Exchange rates"
@@ -123,6 +142,31 @@ export default function Settings() {
       </div>
 
       <p className="text-center text-xs text-faint py-6">Kura · steady, patient, protected 🐢</p>
+
+      {dateOpen && (
+        <Modal title="Date format" onClose={() => setDateOpen(false)}>
+          <div className="space-y-2">
+            {DATE_FORMAT_KEYS.map((k) => {
+              const active = k === dateFmt
+              return (
+                <button
+                  key={k}
+                  onClick={() => pickDateFormat(k)}
+                  className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left ${
+                    active ? 'border-primary bg-primary-soft' : 'border-border hover:bg-surface-2'
+                  }`}
+                >
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-[14.5px] text-text">{DATE_FORMAT_LABELS[k]}</span>
+                    <span className="block text-xs text-muted tabular mt-0.5">{formatDate(DATE_SAMPLE, k)}</span>
+                  </span>
+                  {active && <span className="text-primary font-bold shrink-0">✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

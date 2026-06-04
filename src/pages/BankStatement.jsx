@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { listAccounts, listGroups, listCategories, createTransactions } from '../lib/data'
+import { listAccounts, listGroups, listCategories, createTransactions, recentNotes } from '../lib/data'
 import {
   parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint, detectNumberFormat,
 } from '../lib/statement'
@@ -27,6 +27,7 @@ import { localeFor, currencyDecimals } from '../lib/currencies'
 import { formatMoney, dayLabel } from '../lib/format'
 import NumberInput from '../components/NumberInput'
 import ResponsiveSelect from '../components/ResponsiveSelect'
+import AutocompleteInput from '../components/AutocompleteInput'
 import DatePicker from '../components/DatePicker'
 import Sidebar from '../components/Sidebar'
 import { Button, Field, Segmented, TextInput, inputClass } from '../components/ui'
@@ -82,6 +83,7 @@ export default function BankStatement() {
   const [accounts, setAccounts] = useState([])
   const [groups, setGroups] = useState([])
   const [categories, setCategories] = useState([])
+  const [notes, setNotes] = useState([]) // recent notes for the review-step typeahead
   const [loading, setLoading] = useState(true)
 
   const [step, setStep] = useState('upload') // 'upload' | 'password' | 'map' | 'review'
@@ -121,11 +123,12 @@ export default function BankStatement() {
   const fileInput = useRef(null)
 
   useEffect(() => {
-    Promise.all([listAccounts(), listGroups(), listCategories()]).then(([a, g, c]) => {
+    Promise.all([listAccounts(), listGroups(), listCategories(), recentNotes()]).then(([a, g, c, n]) => {
       const active = (a.data ?? []).filter((x) => !x.archived)
       setAccounts(active)
       setGroups(g.data ?? [])
       setCategories((c.data ?? []).filter((x) => !x.archived))
+      setNotes(n ?? [])
       if (active.length === 1) setAccountId(active[0].id)
       setLoading(false)
     })
@@ -334,6 +337,7 @@ export default function BankStatement() {
   function updateRow(id, patch) { setReviewRows((rs) => rs.map((r) => (r.tempId === id ? { ...r, ...patch } : r))) }
   function setRowKind(id, k) { updateRow(id, { kind: k, categoryId: '', subId: '' }) }
   function removeRow(id) { setReviewRows((rs) => rs.filter((r) => r.tempId !== id)) }
+  function clearAllNotes() { setReviewRows((rs) => rs.map((r) => ({ ...r, note: '' }))) }
 
   const validReview = reviewRows.length > 0 && reviewRows.every((r) =>
     r.date && r.amount > 0 && (r.kind !== 'transfer' || (r.otherAccountId && r.otherAccountId !== accountId)))
@@ -743,11 +747,20 @@ export default function BankStatement() {
         </div>
       )
     }
+    const anyNotes = reviewRows.some((r) => (r.note ?? '').trim())
     return (
       <div>
         <p className="text-[13px] text-muted mb-3">
           Check each row, set a category if you like, and fix anything that looks off. Spending is an <span className="text-expense font-semibold">expense</span>, money in is <span className="text-income font-semibold">income</span> — change the type on any row.
         </p>
+        {anyNotes && (
+          <div className="flex justify-end mb-1">
+            <button type="button" onClick={clearAllNotes}
+              className="text-[12px] font-semibold text-muted hover:text-expense">
+              ✕ Clear all notes
+            </button>
+          </div>
+        )}
         {reviewRows.map((row, idx) => {
           const subs = row.categoryId ? subsFor(row.categoryId) : []
           return (
@@ -790,9 +803,22 @@ export default function BankStatement() {
                   </>
                 )}
                 <RField label="Note" full deskW="desk:flex-1 desk:min-w-[160px]">
-                  <textarea value={row.note} onChange={(e) => updateRow(row.tempId, { note: e.target.value })}
-                    rows={2} placeholder="Note"
-                    className={`${inputClass} resize-y leading-snug min-h-[44px]`} />
+                  <div className="relative">
+                    <AutocompleteInput
+                      value={row.note ?? ''}
+                      onChange={(v) => updateRow(row.tempId, { note: v })}
+                      suggestions={notes}
+                      placeholder="Note"
+                      className={`${inputClass} ${row.note ? 'pr-9' : ''}`}
+                    />
+                    {row.note && (
+                      <button type="button" onClick={() => updateRow(row.tempId, { note: '' })}
+                        aria-label="Clear note"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 grid place-items-center rounded-full text-faint hover:text-expense hover:bg-surface-2">
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </RField>
               </div>
             </div>
