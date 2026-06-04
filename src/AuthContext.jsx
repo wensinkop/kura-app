@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { cacheClear } from './lib/cache'
 
 const AuthContext = createContext({})
 
@@ -63,6 +64,7 @@ export function AuthProvider({ children }) {
   }
 
   async function signOut() {
+    cacheClear() // don't leak one user's cached lists into the next session
     await supabase.auth.signOut()
   }
 

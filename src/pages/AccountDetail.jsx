@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { listAccounts, listAllTransactionsFull, listCategories } from '../lib/data'
+import { cacheGet, cacheSet } from '../lib/cache'
 import { formatAbs, amountColor, dayLabel } from '../lib/format'
 import { Segmented } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
@@ -51,20 +52,25 @@ function shiftCycleEnd(endIso, delta, settleDay) {
 export default function AccountDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [account, setAccount] = useState(null)
-  const [txns, setTxns] = useState([])
-  const [catMap, setCatMap] = useState(new Map())
-  const [loading, setLoading] = useState(true)
+  // Seed from the session cache so opening an account is instant (the ledger's
+  // full-history fetch is the slow one for a heavy user).
+  const seedAcc = (cacheGet('accounts') ?? []).find((x) => x.id === id) ?? null
+  const [account, setAccount] = useState(seedAcc)
+  const [txns, setTxns] = useState(() => cacheGet('allFull') ?? [])
+  const [catMap, setCatMap] = useState(() => new Map((cacheGet('categories') ?? []).map((x) => [x.id, x])))
+  const [loading, setLoading] = useState(() => !(cacheGet('accounts') !== undefined && cacheGet('allFull') !== undefined && cacheGet('categories') !== undefined))
   const [mode, setMode] = useState('day') // day | month | year (non-credit)
   const [anchor, setAnchor] = useState(new Date())
-  const [cycleEnd, setCycleEnd] = useState(null) // ISO end-settlement for credit cards
+  const [cycleEnd, setCycleEnd] = useState(() =>
+    (seedAcc?.type === 'credit_card' && seedAcc.settlement_day) ? cycleEndFor(isoOfDate(new Date()), seedAcc.settlement_day) : null)
 
   useEffect(() => {
     Promise.all([listAccounts(), listAllTransactionsFull(), listCategories()]).then(([a, t, c]) => {
       const acc = (a.data ?? []).find((x) => x.id === id) ?? null
       setAccount(acc)
-      setTxns(t.data ?? [])
-      setCatMap(new Map((c.data ?? []).map((x) => [x.id, x])))
+      if (!a.error) cacheSet('accounts', a.data ?? [])
+      if (!t.error) { setTxns(t.data ?? []); cacheSet('allFull', t.data ?? []) }
+      if (!c.error) { setCatMap(new Map((c.data ?? []).map((x) => [x.id, x]))); cacheSet('categories', c.data ?? []) }
       if (acc?.type === 'credit_card' && acc.settlement_day) setCycleEnd(cycleEndFor(isoOfDate(new Date()), acc.settlement_day))
       setLoading(false)
     })

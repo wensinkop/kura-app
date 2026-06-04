@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useMonth } from '../MonthContext'
 import { listTransactionsInRange, listCategories, listRates } from '../lib/data'
+import { cacheGet, cacheSet } from '../lib/cache'
 import { formatMoney, dayLabel } from '../lib/format'
 import { toBase } from '../lib/balances'
 import { Field } from '../components/ui'
@@ -81,13 +82,15 @@ export default function Stats() {
   const drillKind = sp.get('kind') === 'income' ? 'income' : 'expense'
   const drillSub = sp.get('sub') || null
 
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [txns, setTxns] = useState([])
-  const [catMap, setCatMap] = useState(new Map())
-  const [rates, setRates] = useState({})
-  const [loading, setLoading] = useState(true)
-
   const range = rangeFor(mode, anchor, periodStart, periodEnd)
+  const rangeKey = range ? `range:${range.start}:${range.end}` : null
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  // Seed from the session cache so revisiting a period is instant.
+  const [txns, setTxns] = useState(() => (rangeKey && cacheGet(rangeKey)) || [])
+  const [catMap, setCatMap] = useState(() => new Map((cacheGet('categories') ?? []).map((c) => [c.id, c])))
+  const [rates, setRates] = useState(() => Object.fromEntries((cacheGet('rates') ?? []).map((x) => [x.currency, Number(x.rate)])))
+  const [loading, setLoading] = useState(() => !(rangeKey && cacheGet(rangeKey) !== undefined))
 
   // Merge a patch into the URL params (deleting empty values). `push` adds a new
   // history entry (used when opening a category); everything else replaces.
@@ -104,10 +107,10 @@ export default function Stats() {
 
   useEffect(() => {
     listCategories().then(({ data, error }) => {
-      if (!error) setCatMap(new Map((data ?? []).map((c) => [c.id, c])))
+      if (!error) { setCatMap(new Map((data ?? []).map((c) => [c.id, c]))); cacheSet('categories', data ?? []) }
     })
     listRates().then(({ data, error }) => {
-      if (!error) setRates(Object.fromEntries((data ?? []).map((x) => [x.currency, Number(x.rate)])))
+      if (!error) { setRates(Object.fromEntries((data ?? []).map((x) => [x.currency, Number(x.rate)]))); cacheSet('rates', data ?? []) }
     })
   }, [])
 
@@ -118,10 +121,12 @@ export default function Stats() {
       const id = setTimeout(() => { setTxns([]); setLoading(false) }, 0)
       return () => clearTimeout(id)
     }
+    const key = `range:${range.start}:${range.end}`
     const id = setTimeout(() => {
-      setLoading(true)
+      const cached = cacheGet(key)
+      if (cached !== undefined) { setTxns(cached); setLoading(false) } else { setLoading(true) }
       listTransactionsInRange(range.start, range.end).then(({ data, error }) => {
-        if (!error) setTxns(data ?? [])
+        if (!error) { setTxns(data ?? []); cacheSet(key, data ?? []) }
         setLoading(false)
       })
     }, 0)

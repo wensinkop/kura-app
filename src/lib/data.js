@@ -8,6 +8,7 @@
 // default 0 values colliding. Small lists, so writing every row is fine.
 
 import { supabase } from '../supabaseClient'
+import { cacheClear } from './cache'
 
 // ---- Account groups --------------------------------------------------------
 
@@ -16,6 +17,7 @@ export function listGroups() {
 }
 
 export function createGroup(userId, name, sortOrder) {
+  cacheClear()
   return supabase
     .from('account_groups')
     .insert({ user_id: userId, name: name.trim(), sort_order: sortOrder })
@@ -24,12 +26,14 @@ export function createGroup(userId, name, sortOrder) {
 }
 
 export function renameGroup(id, name) {
+  cacheClear()
   return supabase.from('account_groups').update({ name: name.trim() }).eq('id', id)
 }
 
 // Deleting a group must not orphan its accounts against the FK: detach them
 // (group_id -> null) first, then remove the group.
 export async function deleteGroup(id) {
+  cacheClear()
   const detach = await supabase.from('accounts').update({ group_id: null }).eq('group_id', id)
   if (detach.error) return detach
   return supabase.from('account_groups').delete().eq('id', id)
@@ -43,6 +47,7 @@ export function listAccounts() {
 
 // payload: { name, type, currency, group_id, settlement_day, payment_day }
 export function createAccount(userId, payload, sortOrder) {
+  cacheClear()
   return supabase
     .from('accounts')
     .insert({ user_id: userId, sort_order: sortOrder, ...normalizeAccount(payload) })
@@ -52,15 +57,18 @@ export function createAccount(userId, payload, sortOrder) {
 
 // Currency is fixed at creation, so it is intentionally not updatable here.
 export function updateAccount(id, payload) {
+  cacheClear()
   const { currency, ...rest } = normalizeAccount(payload) // eslint-disable-line no-unused-vars
   return supabase.from('accounts').update(rest).eq('id', id)
 }
 
 export function deleteAccount(id) {
+  cacheClear()
   return supabase.from('accounts').delete().eq('id', id)
 }
 
 export function setAccountArchived(id, archived) {
+  cacheClear()
   return supabase.from('accounts').update({ archived }).eq('id', id)
 }
 
@@ -93,6 +101,7 @@ export function listCategories() {
 
 // payload: { kind, name, parent_id }
 export function createCategory(userId, payload, sortOrder) {
+  cacheClear()
   return supabase
     .from('categories')
     .insert({
@@ -109,14 +118,17 @@ export function createCategory(userId, payload, sortOrder) {
 // Only the name is editable post-create (kind/parent moves would complicate the
 // depth rules; users delete + recreate to move a category).
 export function renameCategory(id, name) {
+  cacheClear()
   return supabase.from('categories').update({ name: name.trim() }).eq('id', id)
 }
 
 export function deleteCategory(id) {
+  cacheClear()
   return supabase.from('categories').delete().eq('id', id)
 }
 
 export function setCategoryArchived(id, archived) {
+  cacheClear()
   return supabase.from('categories').update({ archived }).eq('id', id)
 }
 
@@ -172,6 +184,7 @@ export function listTransactionsForMonth(year, monthIndex) {
 // Bulk insert. `rows` are payloads without user_id (added here). currency is set
 // authoritatively by the DB trigger from the account, so callers may omit it.
 export function createTransactions(userId, rows) {
+  cacheClear()
   return supabase
     .from('transactions')
     .insert(rows.map((r) => ({ user_id: userId, ...r })))
@@ -213,14 +226,17 @@ export function getTransaction(id) {
 }
 
 export function updateTransaction(id, fields) {
+  cacheClear()
   return supabase.from('transactions').update(fields).eq('id', id)
 }
 
 export function deleteTransaction(id) {
+  cacheClear()
   return supabase.from('transactions').delete().eq('id', id)
 }
 
 export function deleteTransactions(ids) {
+  cacheClear()
   return supabase.from('transactions').delete().in('id', ids)
 }
 
@@ -274,12 +290,14 @@ export function listRates() {
 }
 
 export function upsertRate(userId, currency, rate) {
+  cacheClear()
   return supabase
     .from('exchange_rates')
     .upsert({ user_id: userId, currency, rate }, { onConflict: 'user_id,currency' })
 }
 
 export function deleteRate(userId, currency) {
+  cacheClear()
   return supabase.from('exchange_rates').delete().eq('user_id', userId).eq('currency', currency)
 }
 
@@ -321,6 +339,7 @@ async function ensureCategory(userId, kind, name, parentId, existing) {
 // accounts/categories), so re-running a restore adds them again by design.
 // Inserts run structure-first to satisfy the DB integrity trigger + FKs.
 export async function restoreFromBackup(userId, backup) {
+  cacheClear()
   const d = backup.data ?? {}
   const summary = { groupsCreated: 0, accountsCreated: 0, categoriesCreated: 0, ratesSet: 0, transactionsAdded: 0 }
 
@@ -420,6 +439,7 @@ export async function restoreFromBackup(userId, backup) {
 // categories are auto-created. Returns { inserted, skipped:[{line,reason}],
 // categoriesCreated }.
 export async function importKuraTransactions(userId, parsedRows) {
+  cacheClear()
   const [accountsR, catsR] = await Promise.all([listAccounts(), listCategories()])
   if (accountsR.error) throw accountsR.error
   if (catsR.error) throw catsR.error
@@ -507,12 +527,14 @@ export async function importKuraTransactions(userId, parsedRows) {
 
 // Delete every transaction (keeps accounts/categories/groups/rates).
 export function deleteAllTransactions(userId) {
+  cacheClear()
   return supabase.from('transactions').delete().eq('user_id', userId)
 }
 
 // Delete one account's transactions, including transfers where it's the
 // destination leg.
 export function deleteAccountTransactions(userId, accountId) {
+  cacheClear()
   return supabase
     .from('transactions')
     .delete()
@@ -523,6 +545,7 @@ export function deleteAccountTransactions(userId, accountId) {
 // Wipe everything: transactions, rates, categories (children before parents to
 // respect the self-FK), accounts, then groups. Stops at the first error.
 export async function fullReset(userId) {
+  cacheClear()
   const steps = [
     () => supabase.from('transactions').delete().eq('user_id', userId),
     () => supabase.from('exchange_rates').delete().eq('user_id', userId),
@@ -572,6 +595,7 @@ export function adminUpsertDocument(slug, title, body) {
 // only ever acts on auth.uid() — irreversible; the UI gates it behind a typed
 // confirmation and signs out afterwards.
 export function deleteOwnAccount() {
+  cacheClear()
   return supabase.rpc('delete_own_account')
 }
 
@@ -580,6 +604,7 @@ export function deleteOwnAccount() {
 // Rewrite sort_order = index for the given ids, in order. Returns the first
 // error encountered (if any).
 export async function persistOrder(table, orderedIds) {
+  cacheClear()
   const results = await Promise.all(
     orderedIds.map((id, i) => supabase.from(table).update({ sort_order: i }).eq('id', id))
   )

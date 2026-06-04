@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listGroups, listAccounts, listAllTransactions, listRates } from '../lib/data'
+import { cacheGet, cacheSet } from '../lib/cache'
 import { accountSubtitle, formatAbs, amountColor } from '../lib/format'
 import { computeBalances, toBase, netWorth, creditCardBilling } from '../lib/balances'
 import { Button } from '../components/ui'
@@ -17,18 +18,22 @@ function shortDate(iso) {
 export default function Accounts() {
   const { profile } = useAuth()
   const navigate = useNavigate()
-  const [groups, setGroups] = useState([])
-  const [accounts, setAccounts] = useState([])
-  const [txns, setTxns] = useState([])
-  const [rates, setRates] = useState({})
-  const [loading, setLoading] = useState(true)
+  // Seed from the session cache so revisiting Accounts is instant; the effect
+  // still refetches in the background.
+  const allCached = cacheGet('groups') !== undefined && cacheGet('accounts') !== undefined &&
+    cacheGet('all') !== undefined && cacheGet('rates') !== undefined
+  const [groups, setGroups] = useState(() => cacheGet('groups') ?? [])
+  const [accounts, setAccounts] = useState(() => cacheGet('accounts') ?? [])
+  const [txns, setTxns] = useState(() => cacheGet('all') ?? [])
+  const [rates, setRates] = useState(() => Object.fromEntries((cacheGet('rates') ?? []).map((x) => [x.currency, Number(x.rate)])))
+  const [loading, setLoading] = useState(() => !allCached)
 
   useEffect(() => {
     Promise.all([listGroups(), listAccounts(), listAllTransactions(), listRates()]).then(([g, a, t, r]) => {
-      if (!g.error) setGroups(g.data ?? [])
-      if (!a.error) setAccounts(a.data ?? [])
-      if (!t.error) setTxns(t.data ?? [])
-      if (!r.error) setRates(Object.fromEntries((r.data ?? []).map((x) => [x.currency, Number(x.rate)])))
+      if (!g.error) { setGroups(g.data ?? []); cacheSet('groups', g.data ?? []) }
+      if (!a.error) { setAccounts(a.data ?? []); cacheSet('accounts', a.data ?? []) }
+      if (!t.error) { setTxns(t.data ?? []); cacheSet('all', t.data ?? []) }
+      if (!r.error) { setRates(Object.fromEntries((r.data ?? []).map((x) => [x.currency, Number(x.rate)]))); cacheSet('rates', r.data ?? []) }
       setLoading(false)
     })
   }, [])

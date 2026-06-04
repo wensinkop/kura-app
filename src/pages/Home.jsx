@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
 import { useAccountFilter, matchesAccountFilter } from '../FilterContext'
 import { listTransactionsForMonth, listCategories, deleteTransactions } from '../lib/data'
+import { cacheGet, cacheSet } from '../lib/cache'
 import { formatMoney, amountColor } from '../lib/format'
 import { Button, ConfirmDialog } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
@@ -23,9 +24,12 @@ export default function Home() {
   const { year, monthIndex } = useMonth()
   const { accountIds } = useAccountFilter()
   const navigate = useNavigate()
-  const [txns, setTxns] = useState([])
-  const [catMap, setCatMap] = useState(new Map())
-  const [loading, setLoading] = useState(true)
+  const monthKey = `month:${year}-${monthIndex}`
+  // Seed from the session cache so revisiting a month is instant (no spinner);
+  // the effect below still refetches in the background to pick up changes.
+  const [txns, setTxns] = useState(() => cacheGet(monthKey) ?? [])
+  const [catMap, setCatMap] = useState(() => new Map((cacheGet('categories') ?? []).map((c) => [c.id, c])))
+  const [loading, setLoading] = useState(() => cacheGet(monthKey) === undefined)
 
   // Selection (long-press to multi-select + bulk delete).
   const [selectMode, setSelectMode] = useState(false)
@@ -35,20 +39,27 @@ export default function Home() {
 
   useEffect(() => {
     listCategories().then(({ data, error }) => {
-      if (!error) setCatMap(new Map((data ?? []).map((c) => [c.id, c])))
+      if (!error) { setCatMap(new Map((data ?? []).map((c) => [c.id, c]))); cacheSet('categories', data ?? []) }
     })
   }, [])
 
   useEffect(() => {
-    listTransactionsForMonth(year, monthIndex).then(({ data, error }) => {
-      if (!error) setTxns(data ?? [])
-      setLoading(false)
-    })
-  }, [year, monthIndex])
+    // Deferred (setTimeout) so the seed setState isn't called synchronously in
+    // the effect body — same pattern as Stats.
+    const tid = setTimeout(() => {
+      const cached = cacheGet(monthKey)
+      if (cached !== undefined) { setTxns(cached); setLoading(false) } else { setLoading(true) }
+      listTransactionsForMonth(year, monthIndex).then(({ data, error }) => {
+        if (!error) { setTxns(data ?? []); cacheSet(monthKey, data ?? []) }
+        setLoading(false)
+      })
+    }, 0)
+    return () => clearTimeout(tid)
+  }, [year, monthIndex, monthKey])
 
   function reloadTxns() {
     listTransactionsForMonth(year, monthIndex).then(({ data, error }) => {
-      if (!error) setTxns(data ?? [])
+      if (!error) { setTxns(data ?? []); cacheSet(monthKey, data ?? []) }
     })
   }
 
