@@ -240,26 +240,14 @@ export function deleteTransactions(ids) {
   return supabase.from('transactions').delete().in('id', ids)
 }
 
-// Distinct recent notes for the entry-screen typeahead (most-recent first).
-export async function recentNotes(limit = 300) {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('note')
-    .not('note', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(800)
+// Distinct transaction notes for the entry-screen typeahead, most-recently-used
+// first. Uses a DB DISTINCT aggregate over the WHOLE history (via distinct_notes
+// RPC) — the old approach only scanned the 800 newest rows, so older notes
+// weren't suggested once a user had thousands of transactions.
+export async function recentNotes() {
+  const { data, error } = await supabase.rpc('distinct_notes')
   if (error) return []
-  const seen = new Set()
-  const out = []
-  for (const r of data ?? []) {
-    const n = (r.note ?? '').trim()
-    if (n && !seen.has(n.toLowerCase())) {
-      seen.add(n.toLowerCase())
-      out.push(n)
-      if (out.length >= limit) break
-    }
-  }
-  return out
+  return (data ?? []).map((r) => r.note).filter(Boolean)
 }
 
 // All transactions (minimal fields) for client-side balance + credit-card math.
