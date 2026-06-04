@@ -363,14 +363,19 @@ export default function NewTransaction() {
                               onChange={(v) => onPickCat(row.tempId, v)} options={catOptionsFor(row.kind)}
                               onCreate={(name) => createCat(row.kind, name)} />
                           </MField>
-                          {subs.length > 0 && (
-                            <MField label="Sub-category" field="subcategory">
+                          {/* Sub-category is a stable column on desktop (kept even when the
+                              chosen category has none, so rows don't reflow); on mobile it
+                              only appears when there's something to pick. */}
+                          <MField label="Sub-category" field="subcategory" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
+                            {subs.length > 0 ? (
                               <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }}
                                 title="Sub-category" placeholder="— none —" noneLabel="— none —"
                                 value={row.subId} onChange={(v) => update(row.tempId, { subId: v })}
                                 options={subs.map((s) => ({ value: s.id, label: s.name }))} />
-                            </MField>
-                          )}
+                            ) : (
+                              <div className={`${inputClass} flex items-center text-faint`} aria-hidden="true">—</div>
+                            )}
+                          </MField>
                           <MField label="Account" field="account" full>
                             <ResponsiveSelect title="Account" placeholder="Choose…" value={row.accountId}
                               onChange={(v) => update(row.tempId, { accountId: v })} options={accountOptions} />
@@ -434,9 +439,9 @@ export default function NewTransaction() {
 // Card field: label + control. `field` tags it for the mobile scroll-target
 // logic; `full` spans both grid columns on mobile; `deskW` sets its width in the
 // horizontal desktop row.
-function MField({ label, field, full, deskW = 'desk:flex-1 desk:min-w-[140px]', children }) {
+function MField({ label, field, full, deskW = 'desk:flex-1 desk:min-w-[140px]', className = '', children }) {
   return (
-    <div data-field={field} className={`flex flex-col gap-1.5 ${full ? 'col-span-2' : ''} ${deskW}`}>
+    <div data-field={field} className={`flex flex-col gap-1.5 ${full ? 'col-span-2' : ''} ${deskW} ${className}`}>
       <label className="text-[10.5px] font-semibold text-muted pl-0.5">{label}</label>
       {children}
     </div>

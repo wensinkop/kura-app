@@ -390,7 +390,9 @@ export default function BankStatement() {
         </header>
 
         <main className="flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full">
-          <div className="max-w-[760px] mx-auto">
+          {/* The review step lays each row out as a wide table like New Transaction;
+              the upload/map/teach steps stay a narrower single-column form. */}
+          <div className={`mx-auto ${step === 'review' ? 'desk:max-w-[1100px]' : 'max-w-[760px]'}`}>
             {error && (
               <div className="mb-4 rounded-xl border border-expense/40 bg-expense/10 px-3.5 py-3 text-[13.5px] text-expense">
                 {error}
@@ -795,11 +797,14 @@ export default function BankStatement() {
                     <RField label="Category" full={subs.length === 0}>
                       <ResponsiveSelect title="Category" placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => updateRow(row.tempId, { categoryId: v, subId: '' })} options={catOptionsFor(row.kind)} />
                     </RField>
-                    {subs.length > 0 && (
-                      <RField label="Sub-category">
+                    {/* Stable sub-category column on desktop; hidden on mobile when empty. */}
+                    <RField label="Sub-category" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
+                      {subs.length > 0 ? (
                         <ResponsiveSelect title="Sub-category" placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => updateRow(row.tempId, { subId: v })} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
-                      </RField>
-                    )}
+                      ) : (
+                        <div className={`${inputClass} flex items-center text-faint`} aria-hidden="true">—</div>
+                      )}
+                    </RField>
                   </>
                 )}
                 <RField label="Note" full deskW="desk:flex-1 desk:min-w-[160px]">
@@ -832,9 +837,9 @@ export default function BankStatement() {
 
 // Review card field: label + control. `full` spans both mobile columns; `deskW`
 // sizes it in the horizontal desktop row.
-function RField({ label, full, deskW = 'desk:flex-1 desk:min-w-[150px]', children }) {
+function RField({ label, full, deskW = 'desk:flex-1 desk:min-w-[150px]', className = '', children }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${full ? 'col-span-2' : ''} ${deskW}`}>
+    <div className={`flex flex-col gap-1.5 ${full ? 'col-span-2' : ''} ${deskW} ${className}`}>
       <label className="text-[10.5px] font-semibold text-muted pl-0.5">{label}</label>
       {children}
     </div>
