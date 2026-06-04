@@ -118,6 +118,7 @@ export default function BankStatement() {
 
   // Review rows + save
   const [reviewRows, setReviewRows] = useState([])
+  const [selected, setSelected] = useState(() => new Set()) // tempIds ticked for bulk save/remove
   const [saving, setSaving] = useState(false)
 
   const fileInput = useRef(null)
@@ -336,42 +337,66 @@ export default function BankStatement() {
   const subsFor = (catId) => categories.filter((c) => c.parent_id === catId)
   function updateRow(id, patch) { setReviewRows((rs) => rs.map((r) => (r.tempId === id ? { ...r, ...patch } : r))) }
   function setRowKind(id, k) { updateRow(id, { kind: k, categoryId: '', subId: '' }) }
-  function removeRow(id) { setReviewRows((rs) => rs.filter((r) => r.tempId !== id)) }
+  function removeRow(id) {
+    setReviewRows((rs) => rs.filter((r) => r.tempId !== id))
+    setSelected((s) => { const n = new Set(s); n.delete(id); return n })
+  }
   function clearAllNotes() { setReviewRows((rs) => rs.map((r) => ({ ...r, note: '' }))) }
 
-  const validReview = reviewRows.length > 0 && reviewRows.every((r) =>
-    r.date && r.amount > 0 && (r.kind !== 'transfer' || (r.otherAccountId && r.otherAccountId !== accountId)))
+  // ---- Selection (tick rows to bulk save / remove) -------------------------
+  function toggleSelect(id) {
+    setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  const allSelected = reviewRows.length > 0 && selected.size === reviewRows.length
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set(reviewRows.map((r) => r.tempId)))
+  }
+
+  const rowValid = (r) => r.date && r.amount > 0 && (r.kind !== 'transfer' || (r.otherAccountId && r.otherAccountId !== accountId))
+  const validReview = reviewRows.length > 0 && reviewRows.every(rowValid)
+  const selectedRows = reviewRows.filter((r) => selected.has(r.tempId))
+  const selectedValid = selectedRows.length > 0 && selectedRows.every(rowValid)
   const reviewTotal = useMemo(() => reviewRows.reduce((s, r) => s + (Number(r.amount) || 0), 0), [reviewRows])
 
-  async function saveAll() {
-    setError('')
-    if (!validReview) { setError('Every row needs a date and an amount; transfers need a second account.'); return }
-    setSaving(true)
-    const payload = reviewRows.map((r) => {
-      if (r.kind === 'transfer') {
-        const out = r.transferDir !== 'in' // money leaving the statement account
-        return {
-          kind: 'transfer',
-          date: r.date,
-          amount: r.amount,
-          to_amount: r.amount, // same-currency assumed on import; fix in edit if cross-currency
-          account_id: out ? accountId : r.otherAccountId,
-          to_account_id: out ? r.otherAccountId : accountId,
-          note: (r.note ?? '').trim() || null,
-        }
-      }
+  // A review row → the createTransactions payload (currency comes from the account).
+  function rowPayload(r) {
+    if (r.kind === 'transfer') {
+      const out = r.transferDir !== 'in' // money leaving the statement account
       return {
-        kind: r.kind,
-        date: r.date,
-        amount: r.amount,
-        account_id: accountId,
-        category_id: r.subId || r.categoryId || null,
+        kind: 'transfer', date: r.date, amount: r.amount,
+        to_amount: r.amount, // same-currency assumed on import; fix in edit if cross-currency
+        account_id: out ? accountId : r.otherAccountId,
+        to_account_id: out ? r.otherAccountId : accountId,
         note: (r.note ?? '').trim() || null,
       }
-    })
-    const { error: err } = await createTransactions(user.id, payload)
+    }
+    return {
+      kind: r.kind, date: r.date, amount: r.amount, account_id: accountId,
+      category_id: r.subId || r.categoryId || null, note: (r.note ?? '').trim() || null,
+    }
+  }
+
+  // Save the given rows; on success drop them from the list (and leave the rest
+  // to keep reviewing). When nothing is left, head Home.
+  async function saveRows(rows, badMsg) {
+    setError('')
+    if (!rows.length) return
+    if (!rows.every(rowValid)) { setError(badMsg); return }
+    setSaving(true)
+    const { error: err } = await createTransactions(user.id, rows.map(rowPayload))
     if (err) { setError(err.message); setSaving(false); return }
-    navigate('/')
+    const savedIds = new Set(rows.map((r) => r.tempId))
+    const remaining = reviewRows.filter((r) => !savedIds.has(r.tempId))
+    setSelected(new Set())
+    setSaving(false)
+    if (remaining.length === 0) { navigate('/'); return }
+    setReviewRows(remaining)
+  }
+  const saveAll = () => saveRows(reviewRows, 'Every row needs a date and an amount; transfers need a second account.')
+  const saveSelected = () => saveRows(selectedRows, 'Selected rows need a date and an amount; transfers need a second account.')
+  function removeSelected() {
+    setReviewRows((rs) => rs.filter((r) => !selected.has(r.tempId)))
+    setSelected(new Set())
   }
 
   // ---- Render --------------------------------------------------------------
@@ -420,14 +445,26 @@ export default function BankStatement() {
           </div>
         </main>
 
-        {/* Save bar (review step only) */}
+        {/* Save bar (review step only). With rows ticked it acts on the
+            selection (save → into the app + off the list, or remove); with
+            none ticked it saves everything. */}
         {step === 'review' && !loading && (
-          <div className="shrink-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
-            <div className="flex-1 text-[13px] text-muted">
-              {reviewRows.length} row{reviewRows.length === 1 ? '' : 's'} · into {account?.name}
-              <div className="text-[17px] font-extrabold text-text tabular">{formatMoney(reviewTotal, currency)}</div>
-            </div>
-            <Button onClick={saveAll} disabled={saving || !validReview}>{saving ? 'Saving…' : `Save ${reviewRows.length}`}</Button>
+          <div className="shrink-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-2.5">
+            {selected.size > 0 ? (
+              <>
+                <div className="flex-1 text-[13px] font-semibold text-muted">{selected.size} selected</div>
+                <Button variant="ghost" onClick={removeSelected} disabled={saving}>Remove {selected.size}</Button>
+                <Button onClick={saveSelected} disabled={saving || !selectedValid}>{saving ? 'Saving…' : `Save ${selected.size}`}</Button>
+              </>
+            ) : (
+              <>
+                <div className="flex-1 text-[13px] text-muted">
+                  {reviewRows.length} row{reviewRows.length === 1 ? '' : 's'} · into {account?.name}
+                  <div className="text-[17px] font-extrabold text-text tabular">{formatMoney(reviewTotal, currency)}</div>
+                </div>
+                <Button onClick={saveAll} disabled={saving || !validReview}>{saving ? 'Saving…' : `Save ${reviewRows.length}`}</Button>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -753,22 +790,32 @@ export default function BankStatement() {
     return (
       <div>
         <p className="text-[13px] text-muted mb-3">
-          Check each row, set a category if you like, and fix anything that looks off. Spending is an <span className="text-expense font-semibold">expense</span>, money in is <span className="text-income font-semibold">income</span> — change the type on any row.
+          Check each row, set a category if you like, and fix anything that looks off. Spending is an <span className="text-expense font-semibold">expense</span>, money in is <span className="text-income font-semibold">income</span> — change the type on any row. Tick rows to save or remove just those.
         </p>
-        {anyNotes && (
-          <div className="flex justify-end mb-1">
+        <div className="flex items-center justify-between gap-3 mb-1.5">
+          <label className="flex items-center gap-2 text-[12.5px] font-semibold text-muted cursor-pointer select-none">
+            <input type="checkbox" checked={allSelected}
+              ref={(el) => { if (el) el.indeterminate = selected.size > 0 && !allSelected }}
+              onChange={toggleSelectAll} className="w-4 h-4 accent-primary" />
+            {selected.size > 0 ? `${selected.size} selected` : 'Select all'}
+          </label>
+          {anyNotes && (
             <button type="button" onClick={clearAllNotes}
               className="text-[12px] font-semibold text-muted hover:text-expense">
               ✕ Clear all notes
             </button>
-          </div>
-        )}
+          )}
+        </div>
         {reviewRows.map((row, idx) => {
           const subs = row.categoryId ? subsFor(row.categoryId) : []
+          const isSel = selected.has(row.tempId)
           return (
-            <div key={row.tempId} className="bg-surface border border-border rounded-[14px] p-3 mt-2.5 first:mt-0">
+            <div key={row.tempId} className={`bg-surface border rounded-[14px] p-3 mt-2.5 first:mt-0 ${isSel ? 'border-primary ring-1 ring-primary/30' : 'border-border'}`}>
               <div className="flex justify-between items-center mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={isSel} onChange={() => toggleSelect(row.tempId)} className="w-4 h-4 accent-primary" />
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
+                </label>
                 <button type="button" onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
               </div>
               <div className="grid grid-cols-2 gap-2.5 desk:flex desk:flex-wrap desk:items-end">
