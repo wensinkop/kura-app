@@ -81,7 +81,9 @@ const DatePicker = forwardRef(function DatePicker(
 
   function onSegInput(key, raw) {
     const cfg = SEG[key]
-    const digits = raw.replace(/\D/g, '').slice(0, cfg.len)
+    // Keep the LAST `len` digits so typing past a full segment rolls (e.g. typing
+    // into a complete year 2023 then "6" shows 0236) rather than ignoring input.
+    const digits = raw.replace(/\D/g, '').slice(-cfg.len)
     const next = { ...seg, [key]: digits }
     const early = cfg.len === 2 && digits.length === 1 && cfg.hi != null && Number(digits) > cfg.hi
     if (early) next[key] = digits.padStart(2, '0')

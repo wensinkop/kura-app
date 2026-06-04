@@ -131,7 +131,12 @@ export default function NewTransaction() {
   useEffect(() => {
     if (!openSubFor) return
     const t = setTimeout(() => {
-      subRefs.current[openSubFor]?.open?.()
+      if (window.innerWidth >= DESK) {
+        // Desktop: focus the sub-category type-to-search (no modal sheet).
+        rowRefs.current[openSubFor]?.querySelector('[data-field="subcategory"] input')?.focus()
+      } else {
+        subRefs.current[openSubFor]?.open?.() // Mobile: pop the bottom sheet.
+      }
       setOpenSubFor(null)
     }, 0)
     return () => clearTimeout(t)
@@ -209,6 +214,13 @@ export default function NewTransaction() {
     setTimeout(() => setEnteringIds((s) => {
       const n = new Set(s); n.delete(next.tempId); return n
     }), 360)
+    // Desktop: drop focus into the new row's first field so keying onward keeps
+    // entering (Enter on the add button no longer just re-triggers it).
+    if (window.innerWidth >= DESK) {
+      setTimeout(() => {
+        rowRefs.current[next.tempId]?.querySelector('[data-field] input')?.focus()
+      }, 0)
+    }
   }
   function removeRow(id) {
     setRows((rs) => (rs.length === 1 ? [newRow()] : rs.filter((r) => r.tempId !== id)))
