@@ -368,7 +368,7 @@ export default function NewTransaction() {
                         </>
                       ) : (
                         <>
-                          <MField label="Category" field="category" full={subs.length === 0}>
+                          <MField label="Category" field="category" full={subs.length === 0} deskW="desk:flex-1 desk:max-w-[162px] desk:min-w-[140px]">
                             <ResponsiveSelect title="Category" placeholder="— Category —" value={row.categoryId}
                               onChange={(v) => onPickCat(row.tempId, v)} options={catOptionsFor(row.kind)}
                               onCreate={(name) => createCat(row.kind, name)} />
@@ -376,7 +376,7 @@ export default function NewTransaction() {
                           {/* Sub-category is a stable column on desktop (kept even when the
                               chosen category has none, so rows don't reflow); on mobile it
                               only appears when there's something to pick. */}
-                          <MField label="Sub-category" field="subcategory" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
+                          <MField label="Sub-category" field="subcategory" deskW="desk:flex-1 desk:max-w-[162px] desk:min-w-[140px]" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
                             {subs.length > 0 ? (
                               <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }}
                                 title="Sub-category" placeholder="— none —" noneLabel="— none —"
