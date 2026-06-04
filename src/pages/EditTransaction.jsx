@@ -143,13 +143,15 @@ export default function EditTransaction() {
         }
     const { error: e } = await updateTransaction(id, payload)
     if (e) { setError(e.message); setBusy(false); return }
-    navigate('/')
+    // Return to wherever this was opened from (Home, an account ledger, search,
+    // or the Stats category drill) rather than always jumping Home.
+    navigate(-1)
   }
 
   async function doDelete() {
     setBusy(true)
     await deleteTransaction(id)
-    navigate('/')
+    navigate(-1)
   }
 
   return (
