@@ -167,6 +167,11 @@ export default function AccountDetail() {
     return key
   }
 
+  // Credit-card billing-cycle totals: charges (money out / new spending) and any
+  // payments (money in) within the cycle currently in view.
+  const cycleSpent = isCC ? inScope.reduce((s, e) => { const d = delta(e.t); return d < 0 ? s - d : s }, 0) : 0
+  const cyclePaid = isCC ? inScope.reduce((s, e) => { const d = delta(e.t); return d > 0 ? s + d : s }, 0) : 0
+
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-bg">
       <Sidebar />
@@ -213,6 +218,23 @@ export default function AccountDetail() {
                     <ChevronRight className="w-[18px] h-[18px]" />
                   </button>
                 </div>
+
+                {/* Credit-card billing-cycle totals (the header already shows the
+                    outstanding across all cycles). */}
+                {isCC && (
+                  <div className="bg-surface border border-border rounded-[14px] mb-3 flex overflow-hidden text-center">
+                    <div className="flex-1 py-2.5 px-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">Spent this cycle</div>
+                      <div className="text-[15px] font-extrabold tabular text-expense leading-tight mt-0.5">{formatAbs(cycleSpent, currency)}</div>
+                    </div>
+                    {cyclePaid > 0 && (
+                      <div className="flex-1 py-2.5 px-3 border-l border-border">
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">Paid this cycle</div>
+                        <div className="text-[15px] font-extrabold tabular text-income leading-tight mt-0.5">{formatAbs(cyclePaid, currency)}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {groups.length === 0 ? (
                   <p className="text-muted text-sm py-10 text-center">No transactions in this period.</p>
