@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Per-build stamp + locally-saved test APKs (named by build id)
+.build-id
+test-builds/
+
 # Environment variables — never commit real keys
 .env
 .env.*

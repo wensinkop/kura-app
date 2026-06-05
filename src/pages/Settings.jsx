@@ -141,7 +141,8 @@ export default function Settings() {
         </Group>
       </div>
 
-      <p className="text-center text-xs text-faint py-6">Kura · steady, patient, protected 🐢</p>
+      <p className="text-center text-xs text-faint pt-6 pb-1.5">Kura · steady, patient, protected 🐢</p>
+      <p className="text-center text-[11px] text-faint pb-6">v1.0.0 · build {import.meta.env.VITE_BUILD_ID}</p>
 
       {dateOpen && (
         <Modal title="Date format" onClose={() => setDateOpen(false)}>
