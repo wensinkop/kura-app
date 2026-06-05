@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
+import { SafeArea, SystemBarsStyle } from '@capacitor-community/safe-area'
 import { useAuth } from './AuthContext'
 
 const ThemeContext = createContext({})
@@ -22,6 +24,14 @@ export function ThemeProvider({ children }) {
     const root = document.documentElement
     root.classList.toggle('dark', theme === 'dark')
     localStorage.setItem(STORAGE_KEY, theme)
+    // In the native Android shell, match the system bar icon colour to the
+    // theme so the clock/battery icons stay legible over our header. (Dark =
+    // light icons for a dark UI, Light = dark icons for a light UI.) No-op on web.
+    if (Capacitor.isNativePlatform()) {
+      SafeArea.setSystemBarsStyle({
+        style: theme === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
+      }).catch(() => {})
+    }
   }, [theme])
 
   // When a profile loads (login / cross-device), adopt its saved theme.

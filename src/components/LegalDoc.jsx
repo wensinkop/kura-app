@@ -69,7 +69,7 @@ export default function LegalDoc({ title, updated, children }) {
 
   return (
     <div className="min-h-[100dvh] bg-bg">
-      <header className="sticky top-0 z-20 bg-surface border-b border-border px-4 h-[52px] flex items-center gap-2.5">
+      <header className="sticky top-0 z-20 bg-surface border-b border-border px-4 min-h-[52px] pt-[env(safe-area-inset-top)] flex items-center gap-2.5">
         <button
           onClick={goBack}
           aria-label="Back"

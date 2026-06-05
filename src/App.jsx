@@ -4,6 +4,7 @@ import { ThemeProvider } from './ThemeContext'
 import { MonthProvider } from './MonthContext'
 import { FilterProvider } from './FilterContext'
 import AppShell from './components/AppShell'
+import NativeBackButton from './components/NativeBackButton'
 import SignUp from './pages/SignUp'
 import SignIn from './pages/SignIn'
 import ForgotPassword from './pages/ForgotPassword'
@@ -62,6 +63,7 @@ function PublicOnlyRoute({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <NativeBackButton />
       <AuthProvider>
         <ThemeProvider>
           <MonthProvider>

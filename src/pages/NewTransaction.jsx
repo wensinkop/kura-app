@@ -298,7 +298,7 @@ export default function NewTransaction() {
       <Sidebar />
 
       <div className="flex-1 flex flex-col h-[100dvh] min-w-0">
-        <header className="shrink-0 bg-surface border-b border-border px-4 py-2.5 flex items-center gap-2">
+        <header className="shrink-0 bg-surface border-b border-border px-4 pt-[calc(0.625rem_+_env(safe-area-inset-top))] pb-2.5 flex items-center gap-2">
           <button onClick={() => navigate(-1)} aria-label="Back"
             className="w-8 h-8 -ml-1 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
             <ChevronLeft />

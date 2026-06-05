@@ -246,7 +246,7 @@ function Shell({ title = 'Edit transaction', onBack, children }) {
     <div className="flex min-h-screen bg-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-20 bg-surface border-b border-border px-4 py-3 flex items-center gap-3">
+        <header className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-[calc(0.75rem_+_env(safe-area-inset-top))] pb-3 flex items-center gap-3">
           {onBack && (
             <button onClick={onBack} aria-label="Back" className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
               <ChevronLeft />

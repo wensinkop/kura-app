@@ -59,7 +59,7 @@ export default function Search() {
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">
-      <header className="sticky top-0 z-20 bg-surface border-b border-border px-3 py-2.5 flex items-center gap-2 w-full max-w-[760px] mx-auto">
+      <header className="sticky top-0 z-20 bg-surface border-b border-border px-3 pt-[calc(0.625rem_+_env(safe-area-inset-top))] pb-2.5 flex items-center gap-2 w-full max-w-[760px] mx-auto">
         <button onClick={() => navigate(-1)} aria-label="Back"
           className="w-9 h-9 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
           <ChevronLeft />

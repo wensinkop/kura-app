@@ -1,5 +1,11 @@
 {
   "appId": "com.kura.app",
   "appName": "Kura",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "SafeArea": {
+      "statusBarStyle": "DEFAULT",
+      "navigationBarStyle": "DEFAULT"
+    }
+  }
 }

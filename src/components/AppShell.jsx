@@ -124,8 +124,15 @@ export default function AppShell() {
 
         {/* ===== Main column ===== */}
         <div className="flex-1 w-full max-w-[520px] mx-auto desk:max-w-none flex flex-col min-h-screen bg-bg">
+          {/* On headerless tabs (Stats/Accounts/Settings) nothing covers the
+              status bar, so a thin bar painted in the page background keeps the
+              clock/battery legible over scrolling content. Height is the device
+              safe-area inset → 0 (invisible) on web and desktop. */}
+          {!showHeader && (
+            <div className="desk:hidden fixed top-0 inset-x-0 z-30 bg-bg pointer-events-none h-[env(safe-area-inset-top)]" />
+          )}
           {showHeader && (
-            <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 desk:px-8 h-[52px] desk:h-auto desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
+            <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 desk:px-8 min-h-[52px] pt-[env(safe-area-inset-top)] desk:h-auto desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
               {isHome ? (
                 <div className="font-extrabold text-[18px] tracking-[-.3px] desk:hidden">
                   Kura<span className="text-primary">·</span>
@@ -162,12 +169,12 @@ export default function AppShell() {
             </header>
           )}
 
-          <main className={`flex-1 px-4 pb-24 w-full desk:max-w-[1120px] desk:mx-auto desk:px-8 desk:pb-10 ${showHeader ? 'pt-4 desk:pt-0' : 'pt-5 desk:pt-6'}`}>
+          <main className={`flex-1 px-4 pb-24 w-full desk:max-w-[1120px] desk:mx-auto desk:px-8 desk:pb-10 ${showHeader ? 'pt-4 desk:pt-0' : 'pt-[calc(1.25rem_+_env(safe-area-inset-top))] desk:pt-6'}`}>
             <Outlet />
           </main>
 
           {/* ===== Mobile bottom nav + center FAB (< --breakpoint-desk) ===== */}
-          <nav className="desk:hidden sticky bottom-0 z-20 bg-surface border-t border-border grid grid-cols-5 items-center px-1.5 py-2">
+          <nav className="desk:hidden sticky bottom-0 z-20 bg-surface border-t border-border grid grid-cols-5 items-center px-1.5 pt-2 pb-[calc(0.5rem_+_env(safe-area-inset-bottom))]">
             <NavLink to="/" end className={bottomLink}>
               <HomeIcon className="w-[18px] h-[18px]" />Home
             </NavLink>

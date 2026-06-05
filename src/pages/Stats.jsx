@@ -182,7 +182,7 @@ export default function Stats() {
           both stay visible while the category list scrolls. -mt-5 cancels the
           main's pt-5 so the top gap is this block's own padding only —
           constant whether scrolled or not. */}
-      <div className="sticky top-0 z-20 bg-bg -mt-5 desk:mt-0 pt-3 pb-2">
+      <div className="sticky top-0 z-20 bg-bg -mt-[calc(1.25rem_+_env(safe-area-inset-top))] desk:mt-0 pt-[calc(0.75rem_+_env(safe-area-inset-top))] desk:pt-3 pb-2">
       {/* Compact period control: ‹ [label ⌄] › — tap the label to switch
           Week / Month / Year / Custom; arrows page within the current mode. */}
       <div className="relative flex items-center justify-center gap-1">
