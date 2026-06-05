@@ -4,6 +4,7 @@ import { useMonth } from '../MonthContext'
 import { useAccountFilter } from '../FilterContext'
 import Sidebar from './Sidebar'
 import AccountFilterSheet from './AccountFilterSheet'
+import { BrandMark } from './Logo'
 import {
   HomeIcon, StatsIcon, AccountsIcon, SettingsIcon,
   PlusIcon, SearchIcon, FilterIcon, ChevronLeft, ChevronRight,
@@ -132,11 +133,9 @@ export default function AppShell() {
             <div className="desk:hidden fixed top-0 inset-x-0 z-30 bg-bg pointer-events-none h-[env(safe-area-inset-top)]" />
           )}
           {showHeader && (
-            <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 desk:px-8 min-h-[52px] pt-[env(safe-area-inset-top)] desk:h-auto desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
+            <header className="sticky top-0 z-20 bg-surface desk:bg-transparent border-b border-border desk:border-0 px-4 desk:px-8 pt-[calc(0.75rem_+_env(safe-area-inset-top))] pb-3 desk:pt-2 desk:pb-4 flex items-center gap-2.5 w-full desk:max-w-[1120px] desk:mx-auto">
               {isHome ? (
-                <div className="font-extrabold text-[18px] tracking-[-.3px] desk:hidden">
-                  Kura<span className="text-primary">·</span>
-                </div>
+                <BrandMark className="w-7 h-7 shrink-0 desk:hidden" />
               ) : (
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   {backTarget && (

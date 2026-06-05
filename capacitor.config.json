@@ -6,6 +6,10 @@
     "SafeArea": {
       "statusBarStyle": "DEFAULT",
       "navigationBarStyle": "DEFAULT"
+    },
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
     }
   }
 }

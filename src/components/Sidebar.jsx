@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { HomeIcon, StatsIcon, AccountsIcon, SettingsIcon, PlusIcon } from '../lib/icons'
+import Logo from './Logo'
 
 const NAV = [
   { to: '/', label: 'Home', Icon: HomeIcon, end: true },
@@ -22,8 +23,8 @@ export default function Sidebar() {
 
   return (
     <aside className="hidden desk:flex flex-col w-[248px] shrink-0 bg-surface border-r border-border px-3.5 py-[18px] sticky top-0 h-screen">
-      <div className="font-extrabold text-[21px] tracking-[-.3px] px-3 pt-1.5 pb-4">
-        Kura<span className="text-primary">·</span>
+      <div className="px-3 pt-1.5 pb-4">
+        <Logo markClassName="w-8 h-8" textClassName="text-[21px]" />
       </div>
       <button onClick={() => navigate('/new')}
         className="flex items-center justify-center gap-2 bg-primary text-on-primary font-bold text-sm py-2.5 rounded-[11px] mb-3.5 hover:bg-primary-press">

@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
+import Logo from './Logo'
 
 // Centered card used by every auth screen (sign in / up / recovery).
 export default function AuthLayout({ title, subtitle, children, footer }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-bg px-4 pt-[calc(2.5rem_+_env(safe-area-inset-top))] pb-[calc(2.5rem_+_env(safe-area-inset-bottom))]">
-      <Link to="/" className="font-extrabold text-2xl tracking-[-.3px] mb-6">
-        Kura<span className="text-primary">·</span>
+      <Link to="/" className="mb-6">
+        <Logo markClassName="w-9 h-9" textClassName="text-2xl" />
       </Link>
       <div className="w-full max-w-md bg-surface border border-border rounded-2xl shadow-sm p-7">
         <h1 className="text-xl font-extrabold text-text">{title}</h1>
