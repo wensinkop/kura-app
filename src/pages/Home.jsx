@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
+import SwipePager from '../components/SwipePager'
 import { useAccountFilter, matchesAccountFilter } from '../FilterContext'
 import { listTransactionsForMonth, listCategories, deleteTransactions } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
@@ -21,7 +22,7 @@ function dayHeading(dateStr) {
 }
 
 export default function Home() {
-  const { year, monthIndex } = useMonth()
+  const { year, monthIndex, prev, next } = useMonth()
   const { accountIds } = useAccountFilter()
   const navigate = useNavigate()
   const monthKey = `month:${year}-${monthIndex}`
@@ -36,6 +37,7 @@ export default function Home() {
   const [selected, setSelected] = useState(() => new Set())
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
 
   useEffect(() => {
     listCategories().then(({ data, error }) => {
@@ -127,7 +129,7 @@ export default function Home() {
         })}
       </div>
 
-      <div className="min-w-0">
+      <SwipePager enabled={!selectMode} onPrev={prev} onNext={next} className="min-w-0">
         {days.length === 0 ? (
           <div className="bg-surface border border-border rounded-[14px] p-8 text-center mt-0">
             <p className="text-sm text-muted mb-4">No transactions this month yet.</p>
@@ -164,7 +166,7 @@ export default function Home() {
             )
           })
         )}
-      </div>
+      </SwipePager>
 
       {/* Summary rail — desktop only (mobile uses the compact sticky bar above) */}
       <aside className="hidden desk:flex desk:sticky desk:top-[84px] flex-col gap-3.5">

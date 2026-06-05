@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useMonth } from '../MonthContext'
+import SwipePager from '../components/SwipePager'
 import { listTransactionsInRange, listCategories, listRates } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
 import { formatMoney, dayLabel } from '../lib/format'
@@ -253,6 +254,7 @@ export default function Stats() {
       )}
       </div>
 
+      <SwipePager enabled={mode !== 'period'} onPrev={() => shift(-1)} onNext={() => shift(1)}>
       {mode === 'period' && !range ? (
         <p className="text-sm text-muted text-center py-10">Pick a start and end date to see your stats.</p>
       ) : loading ? (
@@ -280,6 +282,7 @@ export default function Stats() {
           )}
         </>
       )}
+      </SwipePager>
     </div>
   )
 }

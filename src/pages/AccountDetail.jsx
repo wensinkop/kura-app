@@ -16,6 +16,7 @@ import { Segmented } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
 import Sidebar from '../components/Sidebar'
 import { ChevronLeft, ChevronRight } from '../lib/icons'
+import SwipePager from '../components/SwipePager'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const pad = (n) => String(n).padStart(2, '0')
@@ -184,7 +185,7 @@ export default function AccountDetail() {
           {account && <div className={`font-extrabold text-[15px] tabular shrink-0 ${amountColor(currentBalance)}`}>{formatAbs(currentBalance, currency)}</div>}
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-3.5 desk:px-8 w-full">
+        <main className="flex-1 overflow-y-auto overflow-x-clip px-4 py-3.5 desk:px-8 w-full">
           <div className="max-w-[760px] mx-auto">
             {loading ? (
               <p className="text-muted text-sm py-8 text-center">Loading…</p>
@@ -219,6 +220,7 @@ export default function AccountDetail() {
                   </button>
                 </div>
 
+                <SwipePager enabled={canNavigate} onPrev={() => shift(-1)} onNext={() => shift(1)}>
                 {/* Credit-card billing-cycle totals (the header already shows the
                     outstanding across all cycles). */}
                 {isCC && (
@@ -274,6 +276,7 @@ export default function AccountDetail() {
                   </div>
                 )}
                 {detailed && groups.length > 0 && <p className="text-[11px] text-faint text-center mt-2 mb-8">Tap a transaction to edit it.</p>}
+                </SwipePager>
               </>
             )}
           </div>

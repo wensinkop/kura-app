@@ -169,7 +169,7 @@ export default function AppShell() {
             </header>
           )}
 
-          <main className={`flex-1 px-4 pb-24 w-full desk:max-w-[1120px] desk:mx-auto desk:px-8 desk:pb-10 ${showHeader ? 'pt-4 desk:pt-0' : 'pt-[calc(1.25rem_+_env(safe-area-inset-top))] desk:pt-6'}`}>
+          <main className={`flex-1 overflow-x-clip px-4 pb-24 w-full desk:max-w-[1120px] desk:mx-auto desk:px-8 desk:pb-10 ${showHeader ? 'pt-4 desk:pt-0' : 'pt-[calc(1.25rem_+_env(safe-area-inset-top))] desk:pt-6'}`}>
             <Outlet />
           </main>
 
