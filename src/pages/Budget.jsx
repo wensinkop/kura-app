@@ -11,6 +11,7 @@ import {
 import { formatMoney, formatDate } from '../lib/format'
 import { localeFor } from '../lib/currencies'
 import { Button, Field, TextInput, Segmented, Modal, ConfirmDialog } from '../components/ui'
+import SwipePager from '../components/SwipePager'
 import ResponsiveSelect from '../components/ResponsiveSelect'
 import NumberInput from '../components/NumberInput'
 import DatePicker from '../components/DatePicker'
@@ -149,13 +150,15 @@ export default function Budget() {
   }
 
   const hasAny = budgets.length > 0
+  const goPrev = () => setAnchor((a) => shiftAnchor(period, a, -1))
+  const goNext = () => setAnchor((a) => shiftAnchor(period, a, 1))
 
   return (
     <div className="max-w-[760px] mx-auto">
       {/* Recurring period control: ‹ [label ⌄] › — tap label to switch Week/Month/Year. */}
       <div className="pb-3">
         <div className="relative flex items-center justify-center gap-1">
-          <button onClick={() => setAnchor((a) => shiftAnchor(period, a, -1))} aria-label="Previous"
+          <button onClick={goPrev} aria-label="Previous"
             className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
@@ -164,7 +167,7 @@ export default function Budget() {
             {PERIOD_LABEL[period]} · {range.label}
             <ChevronDown className="w-4 h-4 text-muted" />
           </button>
-          <button onClick={() => setAnchor((a) => shiftAnchor(period, a, 1))} aria-label="Next"
+          <button onClick={goNext} aria-label="Next"
             className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
             <ChevronRight />
           </button>
@@ -200,6 +203,7 @@ export default function Budget() {
             </div>
           )}
 
+          <SwipePager enabled onPrev={goPrev} onNext={goNext} className="min-w-0">
           {/* Per-currency subtotals for this period */}
           {subtotals.length > 0 && (
             <div className="flex flex-col gap-2 mb-3">
@@ -269,6 +273,7 @@ export default function Budget() {
               )}
             </div>
           )}
+          </SwipePager>
 
           {/* One-off budgets */}
           {(activeCustom.length > 0 || pastCustom.length > 0) && (
@@ -346,22 +351,24 @@ function BudgetRow({ budget, catMap, spent, showCurrency, onEdit }) {
   const st = budgetStatus(spent, Number(budget.amount))
   const name = catMap.get(budget.category_id)?.name ?? '…'
   return (
-    <div className="w-full flex items-center gap-3 px-3.5 py-3 border-t border-border first:border-t-0">
+    <div className="w-full flex items-center gap-2 px-3.5 py-3 border-t border-border first:border-t-0">
       <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-baseline gap-2">
-          <span className="font-semibold text-[14.5px] truncate">
-            {name}{showCurrency ? <span className="text-faint font-normal"> · {budget.currency}</span> : ''}
+        {/* Title line: name takes the row; only the short % shares it. */}
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="font-semibold text-[14.5px] truncate min-w-0">
+            {name}{showCurrency && <span className="text-faint font-normal"> · {budget.currency}</span>}
           </span>
-          <span className="text-[12px] font-semibold text-muted tabular shrink-0">
-            {formatMoney(spent, budget.currency)} <span className="text-faint">of</span> {formatMoney(Number(budget.amount), budget.currency)}
-          </span>
+          <span className={`text-[11px] font-semibold tabular shrink-0 ${st.over ? 'text-expense' : 'text-faint'}`}>{st.pct}%</span>
         </div>
         <Bar status={st} />
-        <div className="flex justify-between items-baseline mt-1.5">
-          <span className={`text-[12px] font-semibold tabular ${st.over ? 'text-expense' : 'text-muted'}`}>
-            {st.over ? `Over by ${formatMoney(-st.remaining, budget.currency)}` : `${formatMoney(st.remaining, budget.currency)} left`}
+        {/* Figures live under the bar so the long IDR amounts never crowd the name. */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1.5 text-[12px] tabular">
+          <span className="text-muted">
+            {formatMoney(spent, budget.currency)} <span className="text-faint">of</span> {formatMoney(Number(budget.amount), budget.currency)}
           </span>
-          <span className="text-[11px] text-faint tabular">{st.pct}%</span>
+          <span className={`font-semibold ${st.over ? 'text-expense' : 'text-muted'}`}>
+            {st.over ? `over ${formatMoney(-st.remaining, budget.currency)}` : `${formatMoney(st.remaining, budget.currency)} left`}
+          </span>
         </div>
       </div>
       <button onClick={onEdit} aria-label="Edit budget"
@@ -395,12 +402,16 @@ function CustomCard({ budget, catMap, spent, state, dateFmt, showCurrency, onEdi
         </button>
       </div>
       <Bar status={st} />
-      <div className="flex justify-between items-baseline mt-1.5">
-        <span className={`text-[12px] font-semibold tabular ${st.over ? 'text-expense' : 'text-muted'}`}>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1.5 text-[12px] tabular">
+        <span className="text-muted">
           {formatMoney(spent, budget.currency)} <span className="text-faint">of</span> {formatMoney(Number(budget.amount), budget.currency)}
-          {st.over ? ` · over by ${formatMoney(-st.remaining, budget.currency)}` : ` · ${formatMoney(st.remaining, budget.currency)} left`}
         </span>
-        <span className="text-[11px] text-faint tabular">{st.pct}%</span>
+        <span className="flex items-baseline gap-1.5">
+          <span className={`font-semibold ${st.over ? 'text-expense' : 'text-muted'}`}>
+            {st.over ? `over ${formatMoney(-st.remaining, budget.currency)}` : `${formatMoney(st.remaining, budget.currency)} left`}
+          </span>
+          <span className="text-faint">{st.pct}%</span>
+        </span>
       </div>
     </div>
   )
