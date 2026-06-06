@@ -396,21 +396,22 @@ function CustomCard({ budget, catMap, spent, state, dateFmt, showCurrency, onEdi
             {formatDate(budget.start_date, dateFmt)} – {formatDate(budget.end_date, dateFmt)}
           </div>
         </div>
-        <button onClick={onEdit} aria-label="Edit budget"
-          className="w-8 h-8 -mr-1.5 -mt-1 rounded-[9px] grid place-items-center shrink-0 text-muted hover:bg-surface-2">
-          <PencilIcon className="w-[16px] h-[16px]" />
-        </button>
+        {/* % spent sits by the title (with the bar), never next to "X left". */}
+        <div className="flex items-center gap-1 shrink-0 -mr-1.5 -mt-1">
+          <span className={`text-[11px] font-semibold tabular ${st.over ? 'text-expense' : 'text-faint'}`}>{st.pct}%</span>
+          <button onClick={onEdit} aria-label="Edit budget"
+            className="w-8 h-8 rounded-[9px] grid place-items-center text-muted hover:bg-surface-2">
+            <PencilIcon className="w-[16px] h-[16px]" />
+          </button>
+        </div>
       </div>
       <Bar status={st} />
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1.5 text-[12px] tabular">
         <span className="text-muted">
           {formatMoney(spent, budget.currency)} <span className="text-faint">of</span> {formatMoney(Number(budget.amount), budget.currency)}
         </span>
-        <span className="flex items-baseline gap-1.5">
-          <span className={`font-semibold ${st.over ? 'text-expense' : 'text-muted'}`}>
-            {st.over ? `over ${formatMoney(-st.remaining, budget.currency)}` : `${formatMoney(st.remaining, budget.currency)} left`}
-          </span>
-          <span className="text-faint">{st.pct}%</span>
+        <span className={`font-semibold ${st.over ? 'text-expense' : 'text-muted'}`}>
+          {st.over ? `over ${formatMoney(-st.remaining, budget.currency)}` : `${formatMoney(st.remaining, budget.currency)} left`}
         </span>
       </div>
     </div>
