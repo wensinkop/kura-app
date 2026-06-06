@@ -29,6 +29,16 @@ const ROLL_HINT = {
 const pad = (n) => String(n).padStart(2, '0')
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 
+// Title + subtitle for a one-off (custom-window) budget card.
+const oneOffTitle = (b, catMap) => b.label?.trim() || (catMap.get(b.category_id)?.name ?? '…')
+function oneOffSubtitle(b, catMap, multiCurrency, dateFmt) {
+  const parts = []
+  if (b.label?.trim()) parts.push(catMap.get(b.category_id)?.name ?? '…')
+  if (multiCurrency) parts.push(b.currency)
+  parts.push(`${formatDate(b.start_date, dateFmt)} – ${formatDate(b.end_date, dateFmt)}`)
+  return parts.join(' · ')
+}
+
 export default function Budget() {
   const { user, profile } = useAuth()
   const base = profile?.base_currency ?? 'IDR'
@@ -251,20 +261,20 @@ export default function Budget() {
                 const st = budgetStatus(s.spent, s.budgeted)
                 return (
                   <div key={s.currency} className="bg-surface border border-border rounded-[14px] px-4 py-3">
-                    <div className="flex justify-between items-baseline">
+                    <div className="flex items-baseline justify-between gap-2">
                       <span className="text-[11px] font-bold uppercase tracking-wide text-faint">
                         {currencyList.length > 1 ? `${s.currency} · ` : ''}This {period}
                       </span>
-                      <span className="text-[12px] font-semibold text-muted tabular">
-                        {formatMoney(s.spent, s.currency)} <span className="text-faint">of</span> {formatMoney(s.budgeted, s.currency)}
-                      </span>
+                      <span className={`text-[11px] font-semibold tabular shrink-0 ${st.over ? 'text-expense' : 'text-faint'}`}>{st.pct}%</span>
                     </div>
                     <Bar status={st} />
-                    <div className="flex justify-between items-baseline mt-1.5">
-                      <span className={`text-[12px] font-semibold tabular ${st.over ? 'text-expense' : 'text-muted'}`}>
-                        {st.over ? `Over by ${formatMoney(-st.remaining, s.currency)}` : `${formatMoney(st.remaining, s.currency)} left`}
+                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1.5 text-[12px] tabular">
+                      <span className="text-muted">
+                        {formatMoney(s.spent, s.currency)} <span className="text-faint">of</span> {formatMoney(s.budgeted, s.currency)}
                       </span>
-                      <span className="text-[11px] text-faint tabular">{st.pct}%</span>
+                      <span className={`font-semibold ${st.over ? 'text-expense' : 'text-muted'}`}>
+                        {st.over ? `over ${formatMoney(-st.remaining, s.currency)}` : `${formatMoney(st.remaining, s.currency)} left`}
+                      </span>
                     </div>
                   </div>
                 )
@@ -272,20 +282,25 @@ export default function Budget() {
             </div>
           )}
 
-          {/* Recurring budget rows */}
+          {/* Recurring budget cards */}
           {recurring.length > 0 && (
-            <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+            <div className="flex flex-col gap-2.5">
               {recurring
                 .slice()
                 .sort((a, b) => (catMap.get(a.category_id)?.name ?? '').localeCompare(catMap.get(b.category_id)?.name ?? ''))
-                .map((b) => (
-                  <BudgetRow key={b.id} budget={b} catMap={catMap}
-                    spent={rollup.get(`${b.category_id}|${b.currency}`)?.spent ?? 0}
-                    effectiveAmount={effectiveMap.get(b.id)?.amount ?? Number(b.amount)}
-                    rolled={effectiveMap.get(b.id)?.rolled ?? 0}
-                    showCurrency={currencyList.length > 1}
-                    onEdit={() => setSheet(b)} />
-                ))}
+                .map((b) => {
+                  const eff = effectiveMap.get(b.id) ?? { amount: Number(b.amount), rolled: 0 }
+                  return (
+                    <BudgetCard key={b.id}
+                      title={catMap.get(b.category_id)?.name ?? '…'}
+                      subtitle={currencyList.length > 1 ? b.currency : undefined}
+                      rolled={eff.rolled}
+                      spent={rollup.get(`${b.category_id}|${b.currency}`)?.spent ?? 0}
+                      amount={eff.amount}
+                      currency={b.currency}
+                      onEdit={() => setSheet(b)} />
+                  )
+                })}
             </div>
           )}
 
@@ -324,8 +339,12 @@ export default function Budget() {
               {activeCustom.length > 0 ? (
                 <div className="flex flex-col gap-2.5">
                   {activeCustom.map(({ b, spent, state }) => (
-                    <CustomCard key={b.id} budget={b} catMap={catMap} spent={spent} state={state}
-                      dateFmt={dateFmt} showCurrency={currencyList.length > 1} onEdit={() => setSheet(b)} />
+                    <BudgetCard key={b.id}
+                      title={oneOffTitle(b, catMap)}
+                      badge={state === 'upcoming' ? <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-primary">Upcoming</span> : undefined}
+                      subtitle={oneOffSubtitle(b, catMap, currencyList.length > 1, dateFmt)}
+                      spent={spent} amount={Number(b.amount)} currency={b.currency}
+                      onEdit={() => setSheet(b)} />
                   ))}
                 </div>
               ) : (
@@ -340,9 +359,12 @@ export default function Budget() {
                   </button>
                   {showPast && (
                     <div className="flex flex-col gap-2.5 mt-2">
-                      {pastCustom.map(({ b, spent, state }) => (
-                        <CustomCard key={b.id} budget={b} catMap={catMap} spent={spent} state={state}
-                          dateFmt={dateFmt} showCurrency={currencyList.length > 1} onEdit={() => setSheet(b)} />
+                      {pastCustom.map(({ b, spent }) => (
+                        <BudgetCard key={b.id} dim
+                          title={oneOffTitle(b, catMap)}
+                          subtitle={oneOffSubtitle(b, catMap, currencyList.length > 1, dateFmt)}
+                          spent={spent} amount={Number(b.amount)} currency={b.currency}
+                          onEdit={() => setSheet(b)} />
                       ))}
                     </div>
                   )}
@@ -389,78 +411,42 @@ function Bar({ status }) {
   )
 }
 
-function BudgetRow({ budget, catMap, spent, effectiveAmount, rolled = 0, showCurrency, onEdit }) {
-  const amount = effectiveAmount ?? Number(budget.amount)
+// One budget card — shared by the recurring budgets, the one-off budgets, and
+// the per-currency subtotal so every card has the SAME layout: title (with an
+// optional subtitle / badge) and the % beside it, a bar, then the figures
+// (spent of amount · remaining) wrapping below.
+function BudgetCard({ title, subtitle, badge, rolled = 0, spent, amount, currency, dim, onEdit }) {
   const st = budgetStatus(spent, amount)
-  const name = catMap.get(budget.category_id)?.name ?? '…'
-  const cur = budget.currency
   return (
-    <div className="w-full flex items-center gap-2 px-3.5 py-3 border-t border-border first:border-t-0">
-      <div className="flex-1 min-w-0">
-        {/* Title line: name takes the row; only the short % shares it. */}
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="font-semibold text-[14.5px] truncate min-w-0">
-            {name}{showCurrency && <span className="text-faint font-normal"> · {cur}</span>}
-          </span>
-          <span className={`text-[11px] font-semibold tabular shrink-0 ${st.over ? 'text-expense' : 'text-faint'}`}>{st.pct}%</span>
-        </div>
-        {rolled !== 0 && (
-          <div className={`text-[11px] tabular truncate ${rolled > 0 ? 'text-primary' : 'text-expense'}`}>
-            {rolled > 0 ? `+${formatMoney(rolled, cur)} rolled over` : `−${formatMoney(-rolled, cur)} from overspend`}
-          </div>
-        )}
-        <Bar status={st} />
-        {/* Figures live under the bar so the long IDR amounts never crowd the name. */}
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1.5 text-[12px] tabular">
-          <span className="text-muted">
-            {formatMoney(spent, cur)} <span className="text-faint">of</span> {formatMoney(amount, cur)}
-          </span>
-          <span className={`font-semibold ${st.over ? 'text-expense' : 'text-muted'}`}>
-            {st.over ? `over ${formatMoney(-st.remaining, cur)}` : `${formatMoney(st.remaining, cur)} left`}
-          </span>
-        </div>
-      </div>
-      <button onClick={onEdit} aria-label="Edit budget"
-        className="w-8 h-8 rounded-[9px] grid place-items-center shrink-0 text-muted hover:bg-surface-2">
-        <PencilIcon className="w-[16px] h-[16px]" />
-      </button>
-    </div>
-  )
-}
-
-function CustomCard({ budget, catMap, spent, state, dateFmt, showCurrency, onEdit }) {
-  const st = budgetStatus(spent, Number(budget.amount))
-  const catName = catMap.get(budget.category_id)?.name ?? '…'
-  const title = budget.label?.trim() || catName
-  return (
-    <div className={`bg-surface border border-border rounded-[14px] px-4 py-3 ${state === 'past' ? 'opacity-70' : ''}`}>
+    <div className={`bg-surface border border-border rounded-[14px] px-4 py-3 ${dim ? 'opacity-70' : ''}`}>
       <div className="flex justify-between items-start gap-2">
         <div className="min-w-0">
-          <div className="font-bold text-[14.5px] truncate">
-            {title}
-            {state === 'upcoming' && <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-primary">Upcoming</span>}
-          </div>
-          <div className="text-[12px] text-muted truncate">
-            {budget.label?.trim() ? `${catName} · ` : ''}{showCurrency ? `${budget.currency} · ` : ''}
-            {formatDate(budget.start_date, dateFmt)} – {formatDate(budget.end_date, dateFmt)}
-          </div>
+          <div className="font-semibold text-[14.5px] truncate">{title}{badge}</div>
+          {subtitle && <div className="text-[12px] text-muted truncate">{subtitle}</div>}
         </div>
         {/* % spent sits by the title (with the bar), never next to "X left". */}
         <div className="flex items-center gap-1 shrink-0 -mr-1.5 -mt-1">
           <span className={`text-[11px] font-semibold tabular ${st.over ? 'text-expense' : 'text-faint'}`}>{st.pct}%</span>
-          <button onClick={onEdit} aria-label="Edit budget"
-            className="w-8 h-8 rounded-[9px] grid place-items-center text-muted hover:bg-surface-2">
-            <PencilIcon className="w-[16px] h-[16px]" />
-          </button>
+          {onEdit && (
+            <button onClick={onEdit} aria-label="Edit budget"
+              className="w-8 h-8 rounded-[9px] grid place-items-center text-muted hover:bg-surface-2">
+              <PencilIcon className="w-[16px] h-[16px]" />
+            </button>
+          )}
         </div>
       </div>
+      {rolled !== 0 && (
+        <div className={`text-[11px] tabular truncate mt-0.5 ${rolled > 0 ? 'text-primary' : 'text-expense'}`}>
+          {rolled > 0 ? `+${formatMoney(rolled, currency)} rolled over` : `−${formatMoney(-rolled, currency)} from overspend`}
+        </div>
+      )}
       <Bar status={st} />
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1.5 text-[12px] tabular">
         <span className="text-muted">
-          {formatMoney(spent, budget.currency)} <span className="text-faint">of</span> {formatMoney(Number(budget.amount), budget.currency)}
+          {formatMoney(spent, currency)} <span className="text-faint">of</span> {formatMoney(amount, currency)}
         </span>
         <span className={`font-semibold ${st.over ? 'text-expense' : 'text-muted'}`}>
-          {st.over ? `over ${formatMoney(-st.remaining, budget.currency)}` : `${formatMoney(st.remaining, budget.currency)} left`}
+          {st.over ? `over ${formatMoney(-st.remaining, currency)}` : `${formatMoney(st.remaining, currency)} left`}
         </span>
       </div>
     </div>
