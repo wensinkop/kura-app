@@ -352,13 +352,14 @@ const norm = (s) => (s ?? '').trim().toLowerCase()
 
 // Insert transactions in chunks so a very large history doesn't hit request
 // limits. Returns { inserted, error } (first error stops the run).
-async function insertTransactionsChunked(userId, rows, size = 500) {
+async function insertTransactionsChunked(userId, rows, size = 500, onProgress) {
   let inserted = 0
   for (let i = 0; i < rows.length; i += size) {
     const slice = rows.slice(i, i + size)
     const { error } = await createTransactions(userId, slice)
     if (error) return { inserted, error }
     inserted += slice.length
+    onProgress?.(inserted, rows.length)
   }
   return { inserted, error: null }
 }
@@ -566,6 +567,128 @@ export async function importKuraTransactions(userId, parsedRows) {
   const ins = await insertTransactionsChunked(userId, payloads)
   if (ins.error) throw ins.error
   return { inserted: ins.inserted, skipped, categoriesCreated }
+}
+
+// ---- App migration / import batches (Session 13) ---------------------------
+// Bring a whole history in from another expense tracker. Unlike
+// importKuraTransactions (which skips unknown accounts), migration RESOLVES
+// every source account up front via an account plan the user confirmed —
+// creating new accounts or merging into existing ones — then tags every
+// inserted row with an import_batch_id so the whole import can be undone.
+
+export function listImportBatches() {
+  return supabase.from('import_batches').select('*').order('created_at', { ascending: false })
+}
+
+// Undo an import: delete its tagged transactions (RLS scopes to the owner),
+// then the batch record. Returns { error }.
+export async function undoImport(batchId) {
+  cacheClear()
+  const del = await supabase.from('transactions').delete().eq('import_batch_id', batchId)
+  if (del.error) return del
+  return supabase.from('import_batches').delete().eq('id', batchId)
+}
+
+// Import normalized migration rows (from lib/migrate). `accountPlan` is the
+// user-confirmed resolution for each source account name:
+//   [{ source, action:'create'|'merge'|'skip', accountId?, name?, type?, currency?, groupId? }]
+// `meta` is { source, label }. Returns { batchId, inserted, skipped, accountsCreated, categoriesCreated }.
+export async function importMigration(userId, rows, accountPlan, meta = {}, onProgress) {
+  cacheClear()
+  const skipped = []
+
+  // 1) Open a batch so every inserted row can be rolled back together.
+  const batchR = await supabase
+    .from('import_batches')
+    .insert({ user_id: userId, source: meta.source ?? null, label: meta.label ?? null, count: 0 })
+    .select()
+    .single()
+  if (batchR.error) throw batchR.error
+  const batchId = batchR.data.id
+
+  try {
+    // 2) Resolve accounts from the plan: create new ones, reuse merges.
+    const accountsR = await listAccounts()
+    if (accountsR.error) throw accountsR.error
+    const exAccounts = accountsR.data ?? []
+    const nameToId = new Map() // normalized source name -> account id (or null = skip)
+    let accountsCreated = 0
+    for (const p of accountPlan ?? []) {
+      const key = norm(p.source)
+      if (p.action === 'skip') { nameToId.set(key, null); continue }
+      if (p.action === 'merge') { nameToId.set(key, p.accountId); continue }
+      // create
+      const { data, error } = await createAccount(
+        userId,
+        {
+          name: p.name ?? p.source,
+          type: p.type ?? 'debit',
+          currency: p.currency ?? 'IDR',
+          group_id: p.groupId ?? null,
+          opening_balance: 0,
+        },
+        exAccounts.length
+      )
+      if (error) throw error
+      exAccounts.push(data)
+      nameToId.set(key, data.id)
+      accountsCreated++
+    }
+
+    // 3) Categories: match-or-create as we go (income/expense only).
+    const catsR = await listCategories()
+    if (catsR.error) throw catsR.error
+    const exCats = catsR.data ?? []
+    let categoriesCreated = 0
+
+    // 4) Build payloads, each tagged with the batch id.
+    const payloads = []
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i]
+      const line = i + 1
+      const accountId = nameToId.get(norm(r.account))
+      if (!accountId) { skipped.push({ line, reason: `account "${r.account}" not imported` }); continue }
+
+      const base = { date: r.date, amount: r.amount, account_id: accountId, note: r.note || null, import_batch_id: batchId }
+
+      if (r.type === 'transfer') {
+        const toId = nameToId.get(norm(r.toAccount))
+        if (!toId) { skipped.push({ line, reason: `transfer destination "${r.toAccount}" not imported` }); continue }
+        if (toId === accountId) { skipped.push({ line, reason: 'transfer to the same account' }); continue }
+        payloads.push({ ...base, kind: 'transfer', to_account_id: toId, to_amount: r.amount })
+      } else {
+        let categoryId = null
+        try {
+          if (r.category) {
+            const parent = await ensureCategory(userId, r.type, r.category, null, exCats)
+            if (parent.created) categoriesCreated++
+            if (r.subCategory) {
+              const child = await ensureCategory(userId, r.type, r.subCategory, parent.id, exCats)
+              if (child.created) categoriesCreated++
+              categoryId = child.id
+            } else {
+              categoryId = parent.id
+            }
+          }
+        } catch (e) {
+          skipped.push({ line, reason: `could not create category (${e.message})` }); continue
+        }
+        payloads.push({ ...base, kind: r.type, category_id: categoryId })
+      }
+    }
+
+    // 5) Insert in chunks, then record the final count on the batch.
+    const ins = await insertTransactionsChunked(userId, payloads, 500, onProgress)
+    if (ins.error) throw ins.error
+    await supabase.from('import_batches').update({ count: ins.inserted }).eq('id', batchId)
+
+    return { batchId, inserted: ins.inserted, skipped, accountsCreated, categoriesCreated }
+  } catch (e) {
+    // Roll the batch back so a failed import doesn't leave a phantom record or
+    // a half-inserted set the user can't find to undo.
+    await undoImport(batchId)
+    throw e
+  }
 }
 
 // ---- Reset (destructive) ---------------------------------------------------

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useMonth } from '../MonthContext'
 import ResponsiveSelect from '../components/ResponsiveSelect'
@@ -51,6 +52,7 @@ function nextDayISO(iso) {
 export default function SettingsData() {
   const { user, profile, updateProfile } = useAuth()
   const { year, monthIndex } = useMonth()
+  const navigate = useNavigate()
 
   const [accounts, setAccounts] = useState([])
   const [txCount, setTxCount] = useState(null)
@@ -248,6 +250,18 @@ export default function SettingsData() {
           )}
         </div>
       )}
+
+      {/* ===== Switch from another app ===== */}
+      <SectionTitle>Switch to Kura</SectionTitle>
+      <Card>
+        <p className="text-[13px] text-muted mb-3">
+          Moving from another expense tracker? Bring your whole history across — accounts, categories and transfers. <strong>Money Manager</strong> exports are recognised automatically; most other apps work by matching columns. A whole import can be undone in one tap.
+        </p>
+        <Button onClick={() => navigate('/import/migrate')} className="w-full">
+          <UploadIcon className="w-[18px] h-[18px]" />
+          Import from another app
+        </Button>
+      </Card>
 
       {/* ===== Export ===== */}
       <SectionTitle>Export</SectionTitle>

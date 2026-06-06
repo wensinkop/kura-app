@@ -24,6 +24,7 @@ import NewTransaction from './pages/NewTransaction'
 import EditTransaction from './pages/EditTransaction'
 import Search from './pages/Search'
 import BankStatement from './pages/BankStatement'
+import Migrate from './pages/Migrate'
 import AccountDetail from './pages/AccountDetail'
 import Admin from './pages/Admin'
 import AdminContent from './pages/AdminContent'
@@ -128,6 +129,8 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Migration from another app — free; lowers the switching barrier */}
+            <Route path="/import/migrate" element={<ProtectedRoute><Migrate /></ProtectedRoute>} />
             <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><AdminRoute><Admin /></AdminRoute></ProtectedRoute>} />
             <Route path="/admin/content" element={<ProtectedRoute><AdminRoute><AdminContent /></AdminRoute></ProtectedRoute>} />
