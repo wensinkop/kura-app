@@ -6,7 +6,7 @@ import {
 } from '../lib/data'
 import {
   periodRange, shiftAnchor, endExclusive, spendFor, rollupByParentCurrency,
-  budgetStatus, windowState, PERIOD_LABEL,
+  budgetStatus, windowState, carryover, PERIOD_LABEL,
 } from '../lib/budgets'
 import { formatMoney, formatDate } from '../lib/format'
 import { localeFor } from '../lib/currencies'
@@ -18,6 +18,13 @@ import DatePicker from '../components/DatePicker'
 import { PlusIcon, PencilIcon, ChevronLeft, ChevronRight, ChevronDown } from '../lib/icons'
 
 const RECURRING = ['week', 'month', 'year']
+
+// Plain-language explanation of each rollover mode, shown under the picker.
+const ROLL_HINT = {
+  none: 'Each period starts fresh at the set amount.',
+  forgiving: 'Unused budget carries to the next period. If you overspend, it’s forgiven — the next period still starts at the full amount.',
+  strict: 'Unused budget carries forward, and overspending carries too — the next period is reduced by what you went over (YNAB-style).',
+}
 
 const pad = (n) => String(n).padStart(2, '0')
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
@@ -38,6 +45,7 @@ export default function Budget() {
 
   const [rangeTxns, setRangeTxns] = useState([])
   const [customTxns, setCustomTxns] = useState([])
+  const [histTxns, setHistTxns] = useState([])
 
   const [sheet, setSheet] = useState(null) // budget object | { prefill } | null
   const [confirmDel, setConfirmDel] = useState(null)
@@ -99,18 +107,50 @@ export default function Budget() {
   const recurring = useMemo(() => budgets.filter((b) => b.period === period), [budgets, period])
   const rollup = useMemo(() => rollupByParentCurrency(rangeTxns), [rangeTxns])
 
-  // Per-currency subtotals for the recurring budgets in view.
+  // Historical transactions for any rollover budgets in view: one fetch over
+  // [earliest budget-creation period start, viewed period start).
+  const rollBudgets = useMemo(() => recurring.filter((b) => b.rollover && b.rollover !== 'none'), [recurring])
+  const rollKey = rollBudgets.map((b) => `${b.id}:${b.rollover}:${b.created_at}`).join(',') + '|' + range.start
+  useEffect(() => {
+    const tid = setTimeout(() => {
+      if (!rollBudgets.length) { setHistTxns([]); return }
+      let minStart = range.start
+      for (const b of rollBudgets) {
+        const s = periodRange(b.period, new Date(b.created_at)).start
+        if (s < minStart) minStart = s
+      }
+      if (minStart >= range.start) { setHistTxns([]); return }
+      listTransactionsInRange(minStart, range.start).then(({ data, error }) => {
+        if (!error) setHistTxns(data ?? [])
+      })
+    }, 0)
+    return () => clearTimeout(tid)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rollKey])
+
+  // Effective cap per recurring budget = base amount + rollover carried in.
+  const effectiveMap = useMemo(() => {
+    const m = new Map()
+    for (const b of recurring) {
+      const rolled = b.rollover && b.rollover !== 'none' ? carryover(b, histTxns, range.start) : 0
+      m.set(b.id, { amount: Number(b.amount) + rolled, rolled })
+    }
+    return m
+  }, [recurring, histTxns, range.start])
+
+  // Per-currency subtotals for the recurring budgets in view (effective caps).
   const subtotals = useMemo(() => {
     const m = new Map()
     for (const b of recurring) {
       const spent = rollup.get(`${b.category_id}|${b.currency}`)?.spent ?? 0
+      const eff = effectiveMap.get(b.id)?.amount ?? Number(b.amount)
       if (!m.has(b.currency)) m.set(b.currency, { currency: b.currency, budgeted: 0, spent: 0 })
       const s = m.get(b.currency)
-      s.budgeted += Number(b.amount)
+      s.budgeted += eff
       s.spent += spent
     }
     return [...m.values()]
-  }, [recurring, rollup])
+  }, [recurring, rollup, effectiveMap])
 
   // Categories with spend this period but no budget set for (category, currency).
   const unbudgeted = useMemo(() => {
@@ -241,6 +281,8 @@ export default function Budget() {
                 .map((b) => (
                   <BudgetRow key={b.id} budget={b} catMap={catMap}
                     spent={rollup.get(`${b.category_id}|${b.currency}`)?.spent ?? 0}
+                    effectiveAmount={effectiveMap.get(b.id)?.amount ?? Number(b.amount)}
+                    rolled={effectiveMap.get(b.id)?.rolled ?? 0}
                     showCurrency={currencyList.length > 1}
                     onEdit={() => setSheet(b)} />
                 ))}
@@ -347,27 +389,34 @@ function Bar({ status }) {
   )
 }
 
-function BudgetRow({ budget, catMap, spent, showCurrency, onEdit }) {
-  const st = budgetStatus(spent, Number(budget.amount))
+function BudgetRow({ budget, catMap, spent, effectiveAmount, rolled = 0, showCurrency, onEdit }) {
+  const amount = effectiveAmount ?? Number(budget.amount)
+  const st = budgetStatus(spent, amount)
   const name = catMap.get(budget.category_id)?.name ?? '…'
+  const cur = budget.currency
   return (
     <div className="w-full flex items-center gap-2 px-3.5 py-3 border-t border-border first:border-t-0">
       <div className="flex-1 min-w-0">
         {/* Title line: name takes the row; only the short % shares it. */}
         <div className="flex items-baseline justify-between gap-2">
           <span className="font-semibold text-[14.5px] truncate min-w-0">
-            {name}{showCurrency && <span className="text-faint font-normal"> · {budget.currency}</span>}
+            {name}{showCurrency && <span className="text-faint font-normal"> · {cur}</span>}
           </span>
           <span className={`text-[11px] font-semibold tabular shrink-0 ${st.over ? 'text-expense' : 'text-faint'}`}>{st.pct}%</span>
         </div>
+        {rolled !== 0 && (
+          <div className={`text-[11px] tabular truncate ${rolled > 0 ? 'text-primary' : 'text-expense'}`}>
+            {rolled > 0 ? `+${formatMoney(rolled, cur)} rolled over` : `−${formatMoney(-rolled, cur)} from overspend`}
+          </div>
+        )}
         <Bar status={st} />
         {/* Figures live under the bar so the long IDR amounts never crowd the name. */}
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1.5 text-[12px] tabular">
           <span className="text-muted">
-            {formatMoney(spent, budget.currency)} <span className="text-faint">of</span> {formatMoney(Number(budget.amount), budget.currency)}
+            {formatMoney(spent, cur)} <span className="text-faint">of</span> {formatMoney(amount, cur)}
           </span>
           <span className={`font-semibold ${st.over ? 'text-expense' : 'text-muted'}`}>
-            {st.over ? `over ${formatMoney(-st.remaining, budget.currency)}` : `${formatMoney(st.remaining, budget.currency)} left`}
+            {st.over ? `over ${formatMoney(-st.remaining, cur)}` : `${formatMoney(st.remaining, cur)} left`}
           </span>
         </div>
       </div>
@@ -432,6 +481,7 @@ function BudgetSheet({ initial, prefill, categories, currencyList, base, budgets
   const [startDate, setStartDate] = useState(seed.start_date ?? '')
   const [endDate, setEndDate] = useState(seed.end_date ?? '')
   const [label, setLabel] = useState(seed.label ?? '')
+  const [rollover, setRollover] = useState(seed.rollover ?? 'none')
 
   const catOptions = categories.map((c) => ({ value: c.id, label: c.name }))
   const isEdit = !!initial
@@ -446,8 +496,8 @@ function BudgetSheet({ initial, prefill, categories, currencyList, base, budgets
   function submit() {
     if (!canSave) return
     const payload = kind === 'custom'
-      ? { category_id: categoryId, period: 'custom', currency, amount, start_date: startDate, end_date: endDate, label: label.trim() || null }
-      : { category_id: categoryId, period, currency, amount }
+      ? { category_id: categoryId, period: 'custom', currency, amount, start_date: startDate, end_date: endDate, label: label.trim() || null, rollover: 'none' }
+      : { category_id: categoryId, period, currency, amount, rollover }
     onSave(payload, initial?.id)
   }
 
@@ -513,6 +563,13 @@ function BudgetSheet({ initial, prefill, categories, currencyList, base, budgets
         <Field label="Amount">
           <NumberInput value={amount} onChange={setAmount} locale={localeFor(currency)} currency={currency} />
         </Field>
+
+        {kind === 'recurring' && (
+          <Field label="Roll unused budget over" hint={ROLL_HINT[rollover]}>
+            <Segmented value={rollover} onChange={setRollover}
+              options={[{ value: 'none', label: 'Off' }, { value: 'forgiving', label: 'Forgiving' }, { value: 'strict', label: 'Strict' }]} />
+          </Field>
+        )}
 
         {dup && (
           <p className="text-[12px] text-expense font-semibold">

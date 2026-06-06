@@ -54,6 +54,38 @@ export function endExclusive(endISO) {
   return isoOfDate(addDays(new Date(y, m - 1, d), 1))
 }
 
+const addDaysISO = (iso, n) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return isoOfDate(addDays(new Date(y, m - 1, d), n))
+}
+
+// Rollover carried INTO the viewed period for a recurring budget. Sums
+// (amount − spent) over every whole period from the budget's creation period up
+// to (not including) the viewed period, using `historicalTxns` (fetched for
+// [firstPeriodStart, viewedStart)). Forgiving floors each period's net at 0 —
+// overspend is forgiven; strict carries the net, so overspend reduces the pot.
+// Returns 0 for non-recurring or rollover='none'.
+export function carryover(budget, historicalTxns, viewedStartISO) {
+  const mode = budget.rollover
+  if (!mode || mode === 'none' || budget.period === 'custom') return 0
+  const amt = Number(budget.amount) || 0
+  let anchor = new Date(budget.created_at)
+  let r = periodRange(budget.period, anchor)
+  let carry = 0
+  // Guard against an unbounded loop (weekly over decades): ~1200 weeks ≈ 23 yrs.
+  for (let guard = 0; r.start < viewedStartISO && guard < 1200; guard++) {
+    const spent = spendFor(historicalTxns, budget.category_id, budget.currency, {
+      start: r.start,
+      end: addDaysISO(r.end, -1), // period end is exclusive; spendFor wants inclusive
+    })
+    const net = amt - spent
+    carry += mode === 'forgiving' ? Math.max(0, net) : net
+    anchor = shiftAnchor(budget.period, anchor, 1)
+    r = periodRange(budget.period, anchor)
+  }
+  return carry
+}
+
 // Does transaction `t` count toward a budget on top-level category `catId` in
 // `currency`? Expense only; the category itself OR any of its sub-categories.
 export function txCountsToward(t, catId, currency) {
