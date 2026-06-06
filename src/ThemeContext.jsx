@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { SafeArea, SystemBarsStyle } from '@capacitor-community/safe-area'
+import { StatusBar, Style } from '@capacitor/status-bar'
 import { useAuth } from './AuthContext'
 
 const ThemeContext = createContext({})
@@ -24,13 +24,12 @@ export function ThemeProvider({ children }) {
     const root = document.documentElement
     root.classList.toggle('dark', theme === 'dark')
     localStorage.setItem(STORAGE_KEY, theme)
-    // In the native Android shell, match the system bar icon colour to the
-    // theme so the clock/battery icons stay legible over our header. (Dark =
-    // light icons for a dark UI, Light = dark icons for a light UI.) No-op on web.
+    // Native: match the status-bar icon colour to the theme so the clock/battery
+    // icons stay legible over our header. Style.Dark = light icons (for our dark
+    // UI), Style.Light = dark icons (for our light UI). Icon colour only — this
+    // does not change insets or the keyboard resize behaviour. No-op on web.
     if (Capacitor.isNativePlatform()) {
-      SafeArea.setSystemBarsStyle({
-        style: theme === 'dark' ? SystemBarsStyle.Dark : SystemBarsStyle.Light,
-      }).catch(() => {})
+      StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light }).catch(() => {})
     }
   }, [theme])
 

@@ -16,6 +16,10 @@ dist-ssr
 .build-id
 test-builds/
 
+# Local scratch — on-device test screenshots + ad-hoc CDP/debug scripts
+test-screenshots/
+_*.mjs
+
 # Environment variables — never commit real keys
 .env
 .env.*

@@ -172,8 +172,11 @@ export default function AppShell() {
             <Outlet />
           </main>
 
-          {/* ===== Mobile bottom nav + center FAB (< --breakpoint-desk) ===== */}
-          <nav className="desk:hidden sticky bottom-0 z-20 bg-surface border-t border-border grid grid-cols-5 items-center px-1.5 pt-2 pb-[calc(0.5rem_+_env(safe-area-inset-bottom))]">
+          {/* ===== Mobile bottom nav + center FAB (< --breakpoint-desk) =====
+              data-hide-on-keyboard: hidden on native while the soft keyboard is
+              open (e.g. changing email/password in Settings) so it doesn't float
+              above the keyboard. */}
+          <nav data-hide-on-keyboard className="desk:hidden sticky bottom-0 z-20 bg-surface border-t border-border grid grid-cols-5 items-center px-1.5 pt-2 pb-[calc(0.5rem_+_env(safe-area-inset-bottom))]">
             <NavLink to="/" end className={bottomLink}>
               <HomeIcon className="w-[18px] h-[18px]" />Home
             </NavLink>

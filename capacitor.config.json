@@ -3,13 +3,8 @@
   "appName": "Kura",
   "webDir": "dist",
   "plugins": {
-    "SafeArea": {
-      "statusBarStyle": "DEFAULT",
-      "navigationBarStyle": "DEFAULT"
-    },
     "Keyboard": {
-      "resize": "native",
-      "resizeOnFullScreen": true
+      "resize": "none"
     }
   }
 }

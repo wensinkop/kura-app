@@ -4,10 +4,28 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/icon-192.webp" />
-    <!-- interactive-widget=resizes-content: when the on-screen keyboard opens, shrink the
-         layout viewport to the space above it, so sticky/fixed bottom bars (modal Save/Cancel
-         footers, the entry save bar) and bottom buttons stay visible instead of hiding behind it. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <!-- Viewport set at parse time (the browser reads `interactive-widget` once and ignores
+         later mutation). viewport-fit=cover is required for edge-to-edge / safe-area insets.
+         NATIVE: the WebView resizes to sit above the keyboard (so the focused field stays
+         visible). interactive-widget is omitted; the entry Save bar is hidden while the keyboard
+         is open via the `keyboard-open` class (see lib/nativeKeyboard) so it doesn't float above
+         the keyboard.
+         WEB/PWA: resizes-content shrinks the layout viewport so sticky bottom bars stay visible
+         above the keyboard (the working browser behaviour). -->
+    <script>
+      (function () {
+        var native =
+          (window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()) ||
+          location.hostname === 'localhost' ||
+          location.hostname === '127.0.0.1'
+        var m = document.createElement('meta')
+        m.name = 'viewport'
+        m.content =
+          'width=device-width, initial-scale=1.0, viewport-fit=cover' +
+          (native ? '' : ', interactive-widget=resizes-content')
+        document.head.appendChild(m)
+      })()
+    </script>
     <meta name="theme-color" content="#047857" />
     <meta name="description" content="Kura — steady, patient personal finance. Track income, expenses and transfers across accounts and currencies." />
     <link rel="manifest" href="/manifest.webmanifest" />

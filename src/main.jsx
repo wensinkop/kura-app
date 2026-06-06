@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import { Capacitor } from '@capacitor/core'
 import './index.css'
 import App from './App.jsx'
+import { setupNativeKeyboard } from './lib/nativeKeyboard'
+
+setupNativeKeyboard()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

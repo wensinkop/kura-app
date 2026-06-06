@@ -430,9 +430,10 @@ export default function NewTransaction() {
           )}
         </main>
 
-        {/* Fixed save bar (below the scroll area — never overlaps fields) */}
+        {/* Save bar (below the scroll area — never overlaps fields). Hidden on
+            native while the keyboard is open so it doesn't float above it. */}
         {!loading && !noAccounts && (
-          <div className="shrink-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
+          <div data-hide-on-keyboard className="shrink-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
             <div className="flex-1 text-[13px] text-muted">
               Total · {rows.length} row{rows.length === 1 ? '' : 's'}
               <div className="text-[17px] font-extrabold text-text tabular">

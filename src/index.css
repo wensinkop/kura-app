@@ -91,6 +91,13 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Native only: while the soft keyboard is open (class set in lib/nativeKeyboard),
+   hide bottom bars (the entry Save bar, the app's bottom navigation bar) so they
+   don't float directly above the keyboard. They reappear when it closes. */
+.keyboard-open [data-hide-on-keyboard] {
+  display: none;
+}
+
 /* Tabular figures for all money/number displays (matches the mockup). */
 .tabular {
   font-variant-numeric: tabular-nums;
