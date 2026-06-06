@@ -12,6 +12,7 @@ import ResetPassword from './pages/ResetPassword'
 import ForgotEmail from './pages/ForgotEmail'
 import Home from './pages/Home'
 import Stats from './pages/Stats'
+import Budget from './pages/Budget'
 import Accounts from './pages/Accounts'
 import Settings from './pages/Settings'
 import SettingsCategories from './pages/SettingsCategories'
@@ -53,6 +54,14 @@ function AdminRoute({ children }) {
   return children
 }
 
+// Budget is opt-in (Settings → Preferences). Off by default → route redirects home.
+function BudgetRoute({ children }) {
+  const { profile, loading } = useAuth()
+  if (loading) return <Loading />
+  if (!profile?.budgets_enabled) return <Navigate to="/" replace />
+  return children
+}
+
 function PublicOnlyRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <Loading />
@@ -86,6 +95,7 @@ export default function App() {
             <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
               <Route path="/" element={<Home />} />
               <Route path="/stats" element={<Stats />} />
+              <Route path="/budget" element={<BudgetRoute><Budget /></BudgetRoute>} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/categories" element={<SettingsCategories />} />

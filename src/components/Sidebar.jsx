@@ -1,14 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { HomeIcon, StatsIcon, AccountsIcon, SettingsIcon, PlusIcon } from '../lib/icons'
+import { HomeIcon, StatsIcon, BudgetIcon, AccountsIcon, SettingsIcon, PlusIcon } from '../lib/icons'
 import Logo from './Logo'
-
-const NAV = [
-  { to: '/', label: 'Home', Icon: HomeIcon, end: true },
-  { to: '/stats', label: 'Stats', Icon: StatsIcon },
-  { to: '/accounts', label: 'Accounts', Icon: AccountsIcon },
-  { to: '/settings', label: 'Settings', Icon: SettingsIcon },
-]
 
 // Desktop-only left sidebar (hidden below --breakpoint-desk). Shared by the
 // AppShell and the full-page New Transaction screen so the nav persists beside
@@ -16,6 +9,14 @@ const NAV = [
 export default function Sidebar() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
+
+  const nav = [
+    { to: '/', label: 'Home', Icon: HomeIcon, end: true },
+    { to: '/stats', label: 'Stats', Icon: StatsIcon },
+    ...(profile?.budgets_enabled ? [{ to: '/budget', label: 'Budget', Icon: BudgetIcon }] : []),
+    { to: '/accounts', label: 'Accounts', Icon: AccountsIcon },
+    { to: '/settings', label: 'Settings', Icon: SettingsIcon },
+  ]
 
   const sidebarLink = ({ isActive }) =>
     `flex items-center gap-3 px-3 py-2.5 rounded-[10px] font-semibold text-[14.5px] mb-0.5 ` +
@@ -30,7 +31,7 @@ export default function Sidebar() {
         className="flex items-center justify-center gap-2 bg-primary text-on-primary font-bold text-sm py-2.5 rounded-[11px] mb-3.5 hover:bg-primary-press">
         <PlusIcon className="w-[18px] h-[18px]" /> New transaction
       </button>
-      {NAV.map(({ to, label, Icon, end }) => (
+      {nav.map(({ to, label, Icon, end }) => (
         <NavLink key={to} to={to} end={end} className={sidebarLink}>
           <Icon className="w-[18px] h-[18px]" /> {label}
         </NavLink>

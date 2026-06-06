@@ -302,6 +302,32 @@ export function listTransactionsForAccounts(accountIds) {
     .order('id', { ascending: true }))
 }
 
+// ---- Budgets (Session 12) --------------------------------------------------
+// Per-category spending caps: recurring (week/month/year) or one-off (custom
+// start/end window). Per-currency, no conversion. RLS scopes rows to the owner;
+// INSERTs must set user_id. Spend is computed client-side from the existing
+// transaction queries (a period is within the paginated range fetches).
+
+export function listBudgets() {
+  return supabase.from('budgets').select('*').order('created_at', { ascending: true })
+}
+
+// payload: { category_id, period, currency, amount, start_date?, end_date?, label? }
+export function createBudget(userId, payload) {
+  cacheClear()
+  return supabase.from('budgets').insert({ user_id: userId, ...payload }).select().single()
+}
+
+export function updateBudget(id, patch) {
+  cacheClear()
+  return supabase.from('budgets').update(patch).eq('id', id)
+}
+
+export function deleteBudget(id) {
+  cacheClear()
+  return supabase.from('budgets').delete().eq('id', id)
+}
+
 // ---- Exchange rates (manual, value of 1 unit of currency in base currency) --
 
 export function listRates() {

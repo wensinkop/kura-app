@@ -13,6 +13,7 @@ import {
 function titleFor(pathname) {
   if (pathname === '/') return 'Home'
   if (pathname.startsWith('/stats')) return 'Statistics'
+  if (pathname === '/budget') return 'Budget'
   if (pathname.startsWith('/accounts')) return 'Accounts'
   if (pathname === '/settings/categories') return 'Categories'
   if (pathname === '/settings/accounts') return 'Accounts & groups'
@@ -26,6 +27,7 @@ function titleFor(pathname) {
 // Settings sub-pages get a back arrow that returns to the Settings index.
 function backTargetFor(pathname) {
   if (pathname.startsWith('/settings/')) return '/settings'
+  if (pathname === '/budget') return '/' // reached from the Home card / Settings, not the bottom nav
   return null
 }
 

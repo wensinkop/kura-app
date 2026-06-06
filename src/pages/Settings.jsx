@@ -62,10 +62,15 @@ export default function Settings() {
   const navigate = useNavigate()
   const [dateOpen, setDateOpen] = useState(false)
   const dateFmt = profile?.date_format ?? 'dmy'
+  const budgetsOn = profile?.budgets_enabled ?? false
 
   async function pickDateFormat(f) {
     setDateOpen(false)
     if (f !== dateFmt) await updateProfile({ date_format: f })
+  }
+
+  function toggleBudgets() {
+    updateProfile({ budgets_enabled: !budgetsOn })
   }
 
   return (
@@ -104,6 +109,14 @@ export default function Settings() {
           right={Chevron}
           onClick={() => navigate('/settings/rates')}
         />
+        <Row
+          title="Budgets"
+          sub="Set spending caps per category"
+          right={<Switch on={budgetsOn} onClick={toggleBudgets} />}
+        />
+        {budgetsOn && (
+          <Row title="Open budgets" sub="View and edit your budgets" right={Chevron} onClick={() => navigate('/budget')} />
+        )}
       </Group>
 
       <SectionTitle>Structure</SectionTitle>

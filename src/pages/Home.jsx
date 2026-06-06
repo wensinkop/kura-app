@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
 import { useMonth } from '../MonthContext'
 import SwipePager from '../components/SwipePager'
 import { useAccountFilter, matchesAccountFilter } from '../FilterContext'
-import { listTransactionsForMonth, listCategories, deleteTransactions } from '../lib/data'
+import { listTransactionsForMonth, listCategories, listBudgets, deleteTransactions } from '../lib/data'
+import { rollupByParentCurrency, budgetStatus } from '../lib/budgets'
 import { cacheGet, cacheSet } from '../lib/cache'
 import { formatMoney, amountColor } from '../lib/format'
 import { Button, ConfirmDialog } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
-import { PlusIcon, TrashIcon, CloseIcon } from '../lib/icons'
+import { PlusIcon, TrashIcon, CloseIcon, BudgetIcon } from '../lib/icons'
 
 // "2026-06-25" -> { num: "25", rest: "June 2026 · Wednesday" }, parsed in local
 // time from the date parts (avoids UTC off-by-one).
@@ -24,6 +26,7 @@ function dayHeading(dateStr) {
 export default function Home() {
   const { year, monthIndex, prev, next } = useMonth()
   const { accountIds } = useAccountFilter()
+  const { profile } = useAuth()
   const navigate = useNavigate()
   const monthKey = `month:${year}-${monthIndex}`
   // Seed from the session cache so revisiting a month is instant (no spinner);
@@ -38,6 +41,17 @@ export default function Home() {
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+
+  // Monthly budgets for the Home card (only when the feature is on). Spend is
+  // derived from `txns` (this month) below — no extra fetch.
+  const [budgets, setBudgets] = useState([])
+  useEffect(() => {
+    const tid = setTimeout(() => {
+      if (!profile?.budgets_enabled) { setBudgets([]); return }
+      listBudgets().then(({ data, error }) => { if (!error) setBudgets(data ?? []) })
+    }, 0)
+    return () => clearTimeout(tid)
+  }, [profile?.budgets_enabled])
 
   useEffect(() => {
     listCategories().then(({ data, error }) => {
@@ -107,6 +121,26 @@ export default function Home() {
   }
   const summaryCurs = Object.keys(summary)
 
+  // Monthly-budget progress for the Home card, per currency (wallet-wide, so it
+  // uses the unfiltered month `txns`, not the account-filtered `visible`).
+  const budgetView = useMemo(() => {
+    if (!profile?.budgets_enabled) return null
+    const monthly = budgets.filter((b) => b.period === 'month')
+    if (!monthly.length) return null
+    const roll = rollupByParentCurrency(txns)
+    const byCur = new Map()
+    let over = 0
+    for (const b of monthly) {
+      const spent = roll.get(`${b.category_id}|${b.currency}`)?.spent ?? 0
+      if (!byCur.has(b.currency)) byCur.set(b.currency, { currency: b.currency, budgeted: 0, spent: 0 })
+      const s = byCur.get(b.currency)
+      s.budgeted += Number(b.amount)
+      s.spent += spent
+      if (spent > Number(b.amount)) over++
+    }
+    return { rows: [...byCur.values()], over }
+  }, [profile?.budgets_enabled, budgets, txns])
+
   if (loading) return <p className="text-muted text-sm py-8 text-center">Loading…</p>
 
   return (
@@ -128,6 +162,12 @@ export default function Home() {
           )
         })}
       </div>
+
+      {budgetView && (
+        <div className="desk:hidden mb-3.5">
+          <BudgetCard view={budgetView} onClick={() => navigate('/budget')} />
+        </div>
+      )}
 
       <SwipePager enabled={!selectMode} onPrev={prev} onNext={next} className="min-w-0">
         {days.length === 0 ? (
@@ -185,6 +225,7 @@ export default function Home() {
             )
           })
         )}
+        {budgetView && <BudgetCard view={budgetView} onClick={() => navigate('/budget')} />}
       </aside>
 
       {/* Floating selection action bar */}
@@ -223,6 +264,38 @@ function CompactCell({ label, value, color, border }) {
       <div className="text-[9.5px] font-semibold uppercase tracking-wide text-faint">{label}</div>
       <div className={`text-[12.5px] font-extrabold tabular leading-tight mt-0.5 ${color}`}>{value}</div>
     </div>
+  )
+}
+
+// Compact monthly-budget card (Home). Per-currency spent-vs-budgeted bars; taps
+// through to the full Budget page.
+function BudgetCard({ view, onClick }) {
+  return (
+    <button onClick={onClick}
+      className="w-full bg-surface border border-border rounded-[14px] px-4 py-3 text-left hover:bg-surface-2">
+      <div className="flex items-center justify-between mb-2">
+        <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-faint">
+          <BudgetIcon className="w-4 h-4" /> Budgets · this month
+        </span>
+        {view.over > 0
+          ? <span className="text-[11px] font-bold text-expense">{view.over} over</span>
+          : <span className="text-[11px] font-semibold text-muted">on track ›</span>}
+      </div>
+      {view.rows.map((s) => {
+        const st = budgetStatus(s.spent, s.budgeted)
+        return (
+          <div key={s.currency} className="mt-2 first:mt-0">
+            <div className="flex justify-between text-[12px] tabular">
+              <span className="text-muted font-semibold">{view.rows.length > 1 ? s.currency : 'Spent'}</span>
+              <span className="text-muted">{formatMoney(s.spent, s.currency)} <span className="text-faint">of</span> {formatMoney(s.budgeted, s.currency)}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-surface-2 mt-1 overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.round(st.ratio * 100))}%`, background: st.color }} />
+            </div>
+          </div>
+        )
+      })}
+    </button>
   )
 }
 
