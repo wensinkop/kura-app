@@ -23,6 +23,12 @@
     "kura": "Kura"
   },
   "common": {
+    "confirm": "Xác nhận",
+    "working": "Đang xử lý…",
+    "close": "Đóng",
+    "create": "Tạo",
+    "uncategorised": "Chưa phân loại",
+    "openCalendar": "Mở lịch",
     "save": "Lưu",
     "cancel": "Hủy",
     "done": "Xong",
@@ -39,6 +45,11 @@
     "backToThis": "Về tháng này"
   },
   "home": {
+    "importCta": "Nhập từ ứng dụng khác",
+    "budgetsThisMonth": "Ngân sách · tháng này",
+    "onTrack": "đúng kế hoạch ›",
+    "overCount": "vượt {{count}}",
+    "spent": "Đã chi",
     "income": "Thu nhập",
     "expenses": "Chi tiêu",
     "net": "Ròng",
@@ -189,6 +200,7 @@
     "transactions": "Giao dịch"
   },
   "tx": {
+    "saveFailed": "Lưu không thành công. Vui lòng kiểm tra kết nối và thử lại.",
     "kind": { "expense": "Chi tiêu", "income": "Thu nhập", "transfer": "Chuyển khoản" },
     "newTitle": "Giao dịch mới",
     "editTitle": "Sửa giao dịch",
@@ -251,6 +263,15 @@
     "tapToEdit": "Chạm vào giao dịch để sửa."
   },
   "auth": {
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "passwordRule": "Ít nhất 6 ký tự",
+    "errInvalidLogin": "Email hoặc mật khẩu không khớp. Vui lòng thử lại.",
+    "errEmailTaken": "Đã có tài khoản cho email này. Hãy thử đăng nhập.",
+    "errEmailNotConfirmed": "Vui lòng xác minh email trước — kiểm tra mã trong hộp thư.",
+    "errRate": "Quá nhiều lần thử. Vui lòng đợi một lát rồi thử lại.",
+    "errGeneric": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "errInvalidCode": "Mã không đúng hoặc đã hết hạn. Hãy yêu cầu mã mới.",
     "email": "Email",
     "password": "Mật khẩu",
     "signIn": "Đăng nhập",
@@ -306,5 +327,58 @@
     "confirmNewPassword": "Xác nhận mật khẩu mới",
     "updating": "Đang cập nhật…",
     "updatePassword": "Cập nhật mật khẩu"
+  },
+  "select": {
+    "placeholder": "— chọn —",
+    "noOptions": "Không có lựa chọn",
+    "noMatches": "Không có kết quả",
+    "create": "Tạo “{{name}}”",
+    "creating": "Đang tạo…",
+    "createNew": "Tạo mới",
+    "newTitle": "{{title}} mới",
+    "nameLabel": "Tên"
+  },
+  "filter": {
+    "title": "Lọc theo tài khoản",
+    "all": "Tất cả tài khoản",
+    "ungrouped": "Chưa nhóm",
+    "apply": "Áp dụng",
+    "empty": "Chưa có tài khoản.",
+    "addAccount": "Thêm tài khoản"
+  },
+  "onboarding": {
+    "welcomeTitle": "Chào mừng đến với Kura, {{name}}",
+    "welcomeTitleNoName": "Chào mừng đến với Kura",
+    "welcomeBody": "Một nơi yên tĩnh và riêng tư để theo dõi tiền của bạn. Cùng thiết lập nào — chỉ mất một phút.",
+    "valuePrivate": "Riêng tư từ đầu — không cần đăng nhập ngân hàng, dữ liệu là của bạn",
+    "valueMultiCurrency": "Đa tiền tệ, cho cuộc sống xuyên biên giới",
+    "valueOffline": "Nhanh, và hoạt động ngoại tuyến",
+    "getStarted": "Bắt đầu",
+    "skip": "Bỏ qua",
+    "skipForNow": "Để sau",
+    "next": "Tiếp tục",
+    "back": "Quay lại",
+    "currencyTitle": "Tiền tệ chính của bạn",
+    "currencyBody": "Chọn loại tiền bạn quen dùng. Dùng để gộp tổng qua các tài khoản — bạn vẫn có thể thêm tài khoản loại tiền khác.",
+    "currencyLabel": "Tiền tệ chính",
+    "accountTitle": "Thêm tài khoản đầu tiên",
+    "accountBody": "Tài khoản là nơi tiền của bạn nằm — tiền mặt, tài khoản ngân hàng, hoặc ví điện tử. Có thể thêm sau.",
+    "accountKind": "Loại",
+    "presetCash": "Tiền mặt",
+    "presetBank": "Ngân hàng",
+    "presetEwallet": "Ví điện tử",
+    "accountNameLabel": "Tên tài khoản",
+    "accountNamePlaceholder": "vd. BCA — Chính",
+    "openingLabel": "Số dư hiện tại (tùy chọn)",
+    "openingHint": "Hiện trong tài khoản này có bao nhiêu.",
+    "createAccount": "Tạo tài khoản",
+    "forkTitle": "Đã sẵn sàng",
+    "forkBody": "Bạn muốn bắt đầu thế nào?",
+    "forkImport": "Nhập từ ứng dụng khác",
+    "forkImportSub": "Mang lịch sử của bạn từ Money Manager và các app khác",
+    "forkAdd": "Thêm giao dịch đầu tiên",
+    "forkAddSub": "Ghi một khoản thu hoặc chi ngay",
+    "forkExplore": "Tự khám phá",
+    "forkExploreSub": "Xem xung quanh trước"
   }
 }

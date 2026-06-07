@@ -286,7 +286,7 @@ export default function NewTransaction() {
       }
     })
     const { error } = await createTransactions(user.id, payload)
-    if (error) { setSaveError(error.message); setSaving(false); return }
+    if (error) { setSaveError(t('tx.saveFailed')); setSaving(false); return }
     navigate('/')
   }
 

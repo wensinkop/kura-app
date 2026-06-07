@@ -1,5 +1,8 @@
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import Logo from './Logo'
+import { EyeIcon, EyeOffIcon } from '../lib/icons'
 
 // Centered card used by every auth screen (sign in / up / recovery).
 export default function AuthLayout({ title, subtitle, children, footer }) {
@@ -44,6 +47,36 @@ export function AuthNotice({ children }) {
   return (
     <div className="text-sm text-primary bg-primary-soft border border-primary/30 rounded-xl p-3">
       {children}
+    </div>
+  )
+}
+
+// Password field with a show/hide toggle. Typing a password blind on mobile is
+// error-prone; the eye lets the user verify it. `aria-label` localised.
+export function PasswordInput({ value, onChange, placeholder, autoComplete, required, id }) {
+  const { t } = useTranslation()
+  const [show, setShow] = useState(false)
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoComplete={autoComplete}
+        required={required}
+        className={`${authInput} pr-11`}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow((s) => !s)}
+        aria-label={show ? t('auth.hidePassword') : t('auth.showPassword')}
+        className="absolute inset-y-0 right-0 px-3 flex items-center text-muted hover:text-primary"
+      >
+        {show ? <EyeOffIcon className="w-[18px] h-[18px]" /> : <EyeIcon className="w-[18px] h-[18px]" />}
+      </button>
     </div>
   )
 }

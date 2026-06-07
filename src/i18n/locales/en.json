@@ -23,6 +23,12 @@
     "kura": "Kura"
   },
   "common": {
+    "confirm": "Confirm",
+    "working": "Working…",
+    "close": "Close",
+    "create": "Create",
+    "uncategorised": "Uncategorised",
+    "openCalendar": "Open calendar",
     "save": "Save",
     "cancel": "Cancel",
     "done": "Done",
@@ -39,6 +45,11 @@
     "backToThis": "Back to this month"
   },
   "home": {
+    "importCta": "Import from another app",
+    "budgetsThisMonth": "Budgets · this month",
+    "onTrack": "on track ›",
+    "overCount": "{{count}} over",
+    "spent": "Spent",
     "income": "Income",
     "expenses": "Expenses",
     "net": "Net",
@@ -190,6 +201,7 @@
     "transactions": "Transactions"
   },
   "tx": {
+    "saveFailed": "Couldn’t save. Please check your connection and try again.",
     "kind": { "expense": "Expense", "income": "Income", "transfer": "Transfer" },
     "newTitle": "New transactions",
     "editTitle": "Edit transaction",
@@ -254,6 +266,15 @@
     "tapToEdit": "Tap a transaction to edit it."
   },
   "auth": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "passwordRule": "At least 6 characters",
+    "errInvalidLogin": "That email or password doesn’t match. Please try again.",
+    "errEmailTaken": "An account already exists for this email. Try signing in instead.",
+    "errEmailNotConfirmed": "Please verify your email first — check your inbox for the code.",
+    "errRate": "Too many attempts. Please wait a moment and try again.",
+    "errGeneric": "Something went wrong. Please try again.",
+    "errInvalidCode": "That code isn’t right or has expired. Request a new one.",
     "email": "Email",
     "password": "Password",
     "signIn": "Sign in",
@@ -309,5 +330,58 @@
     "confirmNewPassword": "Confirm new password",
     "updating": "Updating…",
     "updatePassword": "Update password"
+  },
+  "select": {
+    "placeholder": "— select —",
+    "noOptions": "No options",
+    "noMatches": "No matches",
+    "create": "Create “{{name}}”",
+    "creating": "Creating…",
+    "createNew": "Create new",
+    "newTitle": "New {{title}}",
+    "nameLabel": "Name"
+  },
+  "filter": {
+    "title": "Filter by account",
+    "all": "All accounts",
+    "ungrouped": "Ungrouped",
+    "apply": "Apply",
+    "empty": "No accounts yet.",
+    "addAccount": "Add an account"
+  },
+  "onboarding": {
+    "welcomeTitle": "Welcome to Kura, {{name}}",
+    "welcomeTitleNoName": "Welcome to Kura",
+    "welcomeBody": "A calm, private place to track your money. Let’s set things up — it only takes a minute.",
+    "valuePrivate": "Private by design — no bank logins, your data stays yours",
+    "valueMultiCurrency": "Multi-currency, built for life across borders",
+    "valueOffline": "Fast, and works offline",
+    "getStarted": "Get started",
+    "skip": "Skip setup",
+    "skipForNow": "I’ll do this later",
+    "next": "Continue",
+    "back": "Back",
+    "currencyTitle": "Your main currency",
+    "currencyBody": "Pick the currency you think in. It’s used to combine totals across your accounts — you can still add accounts in other currencies.",
+    "currencyLabel": "Main currency",
+    "accountTitle": "Add your first account",
+    "accountBody": "An account is where your money lives — cash, a bank account, or an e-wallet. You can add more later.",
+    "accountKind": "Type",
+    "presetCash": "Cash",
+    "presetBank": "Bank",
+    "presetEwallet": "E-wallet",
+    "accountNameLabel": "Account name",
+    "accountNamePlaceholder": "e.g. BCA — Main",
+    "openingLabel": "Current balance (optional)",
+    "openingHint": "How much is in this account right now.",
+    "createAccount": "Create account",
+    "forkTitle": "You’re all set",
+    "forkBody": "How would you like to start?",
+    "forkImport": "Import from another app",
+    "forkImportSub": "Bring your history over from Money Manager and others",
+    "forkAdd": "Add my first transaction",
+    "forkAddSub": "Log an income or expense now",
+    "forkExplore": "Explore on my own",
+    "forkExploreSub": "Take a look around first"
   }
 }

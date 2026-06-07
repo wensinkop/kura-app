@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listGroups, listAccounts, getAccountBalances, listTransactionsForAccounts, listRates } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
-import { accountSubtitle, formatAbs, amountColor } from '../lib/format'
+import { accountSubtitle, formatAbs, formatSigned, amountColor } from '../lib/format'
 import { toBase, netWorth, creditCardBilling } from '../lib/balances'
 import { Button } from '../components/ui'
 import { PlusIcon } from '../lib/icons'
@@ -71,7 +71,7 @@ export default function Accounts() {
         <div className={`text-[27px] font-extrabold mt-1.5 tracking-[-.5px] tabular ${
           active.length === 0 ? 'text-primary' : nw.total < 0 ? 'text-expense' : 'text-primary'
         }`}>
-          {active.length === 0 ? '—' : formatAbs(nw.total, base)}
+          {active.length === 0 ? '—' : formatSigned(nw.total, base)}
         </div>
         {nw.missing.length > 0 && (
           <button onClick={() => navigate('/settings/rates')} className="text-[11px] text-expense mt-1 hover:underline">
@@ -117,7 +117,7 @@ function AccountGroup({ title, rollupValue, accounts, balances, txns, rates, bas
     <div className="bg-surface border border-border rounded-[14px] overflow-hidden mt-3">
       <div className="flex justify-between gap-3 px-3.5 py-2.5 text-xs font-bold text-faint bg-surface-2">
         <span className="truncate uppercase tracking-wide">{title}</span>
-        {rollupValue != null && <span className={`tabular shrink-0 ${amountColor(rollupValue)}`}>{formatAbs(rollupValue, base)}</span>}
+        {rollupValue != null && <span className={`tabular shrink-0 ${amountColor(rollupValue)}`}>{formatSigned(rollupValue, base)}</span>}
       </div>
       {accounts.map((a) => (
         <AccountRow key={a.id} a={a} balance={balances.get(a.id) ?? 0} txns={txns} rates={rates} base={base} />
@@ -142,10 +142,10 @@ function AccountRow({ a, balance, txns, rates, base }) {
         </div>
         <div className="text-right shrink-0">
           <div className={`font-bold text-[14.5px] tabular ${amountColor(balance)}`}>
-            {formatAbs(balance, a.currency)}
+            {formatSigned(balance, a.currency)}
           </div>
           {approx != null && (
-            <div className="text-[11px] text-faint mt-0.5">≈ {formatAbs(approx, base)}</div>
+            <div className="text-[11px] text-faint mt-0.5">≈ {formatSigned(approx, base)}</div>
           )}
         </div>
       </div>

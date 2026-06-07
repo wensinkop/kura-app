@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Combobox: type-or-click select with a filtered, optionally grouped dropdown
 // and keyboard nav (↑/↓ move · Enter/Tab commit · Esc cancel).
@@ -13,10 +14,12 @@ export default function SearchableSelect({
   value,
   onChange,
   options,
-  placeholder = '— select —',
+  placeholder,
   className,
   onCreate,
 }) {
+  const { t } = useTranslation()
+  const ph = placeholder ?? t('select.placeholder')
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
@@ -109,14 +112,14 @@ export default function SearchableSelect({
         onChange={(e) => { setQuery(e.target.value); setOpen(true); setHighlight(0) }}
         onFocus={() => { setOpen(true); setQuery(''); setHighlight(0) }}
         onKeyDown={handleKey}
-        placeholder={placeholder}
+        placeholder={ph}
         className={className}
         autoComplete="off"
       />
       {open && (
         <ul className="absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg max-h-60 overflow-auto">
           {filtered.length === 0 && !canCreate ? (
-            <li className="px-3 py-2 text-sm text-muted italic">No matches</li>
+            <li className="px-3 py-2 text-sm text-muted italic">{t('select.noMatches')}</li>
           ) : (
             groups.map(([groupKey, items]) => (
               <Fragment key={groupKey || '__nogroup'}>
@@ -149,7 +152,7 @@ export default function SearchableSelect({
               onMouseDown={(e) => { e.preventDefault(); handleCreate() }}
               className="px-3 py-2 text-sm cursor-pointer text-primary hover:bg-surface-2 border-t border-border first:border-t-0"
             >
-              {creating ? 'Creating…' : `＋ Create “${trimmed}”`}
+              {creating ? t('select.creating') : `＋ ${t('select.create', { name: trimmed })}`}
             </li>
           )}
         </ul>

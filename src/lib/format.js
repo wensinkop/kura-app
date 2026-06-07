@@ -27,6 +27,16 @@ export function formatAbs(amount, currency) {
   return formatMoney(Math.abs(Number(amount) || 0), currency)
 }
 
+// Signed money string for BALANCES (net worth, account balances) where a
+// negative is meaningful and must never depend on colour alone: negatives get a
+// real leading minus ("−Rp 5.000"), positives/zero print plain. Use this — not
+// formatAbs — anywhere a figure can legitimately be below zero.
+export function formatSigned(amount, currency) {
+  const n = Number(amount) || 0
+  const s = formatMoney(Math.abs(n), currency)
+  return n < 0 ? `−${s}` : s
+}
+
 // Sign → colour. Positive = green, negative = red, zero = neutral. No +/− text.
 export function amountColor(v) {
   return v > 0 ? 'text-income' : v < 0 ? 'text-expense' : 'text-muted'

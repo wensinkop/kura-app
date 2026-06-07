@@ -23,6 +23,12 @@
     "kura": "Kura"
   },
   "common": {
+    "confirm": "Konfirmasi",
+    "working": "Memproses…",
+    "close": "Tutup",
+    "create": "Buat",
+    "uncategorised": "Tanpa kategori",
+    "openCalendar": "Buka kalender",
     "save": "Simpan",
     "cancel": "Batal",
     "done": "Selesai",
@@ -39,6 +45,11 @@
     "backToThis": "Kembali ke bulan ini"
   },
   "home": {
+    "importCta": "Impor dari aplikasi lain",
+    "budgetsThisMonth": "Anggaran · bulan ini",
+    "onTrack": "sesuai rencana ›",
+    "overCount": "{{count}} lewat",
+    "spent": "Terpakai",
     "income": "Pemasukan",
     "expenses": "Pengeluaran",
     "net": "Bersih",
@@ -189,6 +200,7 @@
     "transactions": "Transaksi"
   },
   "tx": {
+    "saveFailed": "Gagal menyimpan. Periksa koneksimu lalu coba lagi.",
     "kind": { "expense": "Pengeluaran", "income": "Pemasukan", "transfer": "Transfer" },
     "newTitle": "Transaksi baru",
     "editTitle": "Edit transaksi",
@@ -251,6 +263,15 @@
     "tapToEdit": "Ketuk transaksi untuk mengeditnya."
   },
   "auth": {
+    "showPassword": "Tampilkan kata sandi",
+    "hidePassword": "Sembunyikan kata sandi",
+    "passwordRule": "Minimal 6 karakter",
+    "errInvalidLogin": "Email atau kata sandi tidak cocok. Coba lagi.",
+    "errEmailTaken": "Sudah ada akun dengan email ini. Coba masuk saja.",
+    "errEmailNotConfirmed": "Verifikasi emailmu dulu — cek kode di kotak masuk.",
+    "errRate": "Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.",
+    "errGeneric": "Terjadi kesalahan. Silakan coba lagi.",
+    "errInvalidCode": "Kode salah atau sudah kedaluwarsa. Minta kode baru.",
     "email": "Email",
     "password": "Kata sandi",
     "signIn": "Masuk",
@@ -306,5 +327,58 @@
     "confirmNewPassword": "Konfirmasi kata sandi baru",
     "updating": "Memperbarui…",
     "updatePassword": "Perbarui kata sandi"
+  },
+  "select": {
+    "placeholder": "— pilih —",
+    "noOptions": "Tidak ada pilihan",
+    "noMatches": "Tidak ada yang cocok",
+    "create": "Buat “{{name}}”",
+    "creating": "Membuat…",
+    "createNew": "Buat baru",
+    "newTitle": "{{title}} baru",
+    "nameLabel": "Nama"
+  },
+  "filter": {
+    "title": "Filter berdasarkan akun",
+    "all": "Semua akun",
+    "ungrouped": "Tanpa grup",
+    "apply": "Terapkan",
+    "empty": "Belum ada akun.",
+    "addAccount": "Tambah akun"
+  },
+  "onboarding": {
+    "welcomeTitle": "Selamat datang di Kura, {{name}}",
+    "welcomeTitleNoName": "Selamat datang di Kura",
+    "welcomeBody": "Tempat yang tenang dan privat untuk mencatat keuanganmu. Yuk siapkan dulu — cuma sebentar.",
+    "valuePrivate": "Privat sejak awal — tanpa login bank, datamu tetap milikmu",
+    "valueMultiCurrency": "Multi-mata uang, untuk hidup lintas negara",
+    "valueOffline": "Cepat, dan bisa dipakai offline",
+    "getStarted": "Mulai",
+    "skip": "Lewati",
+    "skipForNow": "Nanti saja",
+    "next": "Lanjut",
+    "back": "Kembali",
+    "currencyTitle": "Mata uang utamamu",
+    "currencyBody": "Pilih mata uang yang biasa kamu pakai. Dipakai untuk menggabungkan total antar akun — kamu tetap bisa menambah akun mata uang lain.",
+    "currencyLabel": "Mata uang utama",
+    "accountTitle": "Tambah akun pertamamu",
+    "accountBody": "Akun adalah tempat uangmu berada — tunai, rekening bank, atau e-wallet. Bisa tambah lagi nanti.",
+    "accountKind": "Jenis",
+    "presetCash": "Tunai",
+    "presetBank": "Bank",
+    "presetEwallet": "E-wallet",
+    "accountNameLabel": "Nama akun",
+    "accountNamePlaceholder": "mis. BCA — Utama",
+    "openingLabel": "Saldo saat ini (opsional)",
+    "openingHint": "Berapa saldo di akun ini sekarang.",
+    "createAccount": "Buat akun",
+    "forkTitle": "Semua siap",
+    "forkBody": "Mau mulai dari mana?",
+    "forkImport": "Impor dari aplikasi lain",
+    "forkImportSub": "Pindahkan riwayatmu dari Money Manager dan lainnya",
+    "forkAdd": "Tambah transaksi pertama",
+    "forkAddSub": "Catat pemasukan atau pengeluaran sekarang",
+    "forkExplore": "Lihat-lihat dulu",
+    "forkExploreSub": "Jelajahi sendiri dulu"
   }
 }

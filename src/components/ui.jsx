@@ -3,11 +3,13 @@
 // TextInput, Segmented, IconButton, ConfirmDialog.
 
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CloseIcon } from '../lib/icons'
 
 // Modal: full-screen dim backdrop. Mobile = bottom sheet; desktop = centered
 // card. Closes on Esc and backdrop click. `footer` pins actions to the bottom.
 export function Modal({ title, onClose, children, footer }) {
+  const { t } = useTranslation()
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') onClose()
@@ -34,7 +36,7 @@ export function Modal({ title, onClose, children, footer }) {
           <div className="font-bold text-[16px] flex-1">{title}</div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t('common.close')}
             className="w-9 h-9 -mr-1.5 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2"
           >
             <CloseIcon className="w-[18px] h-[18px]" />
@@ -116,7 +118,8 @@ export function IconButton({ label, onClick, disabled, danger, children }) {
 }
 
 // Confirmation dialog built on Modal. `tone='danger'` for destructive actions.
-export function ConfirmDialog({ title, message, confirmLabel = 'Confirm', tone = 'danger', onConfirm, onClose, busy }) {
+export function ConfirmDialog({ title, message, confirmLabel, tone = 'danger', onConfirm, onClose, busy }) {
+  const { t } = useTranslation()
   return (
     <Modal
       title={title}
@@ -124,10 +127,10 @@ export function ConfirmDialog({ title, message, confirmLabel = 'Confirm', tone =
       footer={
         <>
           <Button variant="ghost" className="flex-1" onClick={onClose} disabled={busy}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button variant={tone === 'danger' ? 'danger' : 'primary'} className="flex-1" onClick={onConfirm} disabled={busy}>
-            {busy ? 'Working…' : confirmLabel}
+            {busy ? t('common.working') : (confirmLabel ?? t('common.confirm'))}
           </Button>
         </>
       }

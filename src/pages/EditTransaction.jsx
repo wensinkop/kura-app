@@ -143,7 +143,7 @@ export default function EditTransaction() {
           to_account_id: null, to_amount: null, exchange_rate: null,
         }
     const { error: e } = await updateTransaction(id, payload)
-    if (e) { setError(e.message); setBusy(false); return }
+    if (e) { setError(t('tx.saveFailed')); setBusy(false); return }
     // Return to wherever this was opened from (Home, an account ledger, search,
     // or the Stats category drill) rather than always jumping Home.
     navigate(-1)
@@ -242,14 +242,15 @@ export default function EditTransaction() {
   )
 }
 
-function Shell({ title = 'Edit transaction', onBack, children }) {
+function Shell({ title, onBack, children }) {
+  const { t } = useTranslation()
   return (
     <div className="flex min-h-screen bg-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="sticky top-0 z-20 bg-surface border-b border-border px-4 pt-[calc(0.75rem_+_env(safe-area-inset-top))] pb-3 flex items-center gap-3">
           {onBack && (
-            <button onClick={onBack} aria-label="Back" className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
+            <button onClick={onBack} aria-label={t('common.back')} className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
               <ChevronLeft />
             </button>
           )}

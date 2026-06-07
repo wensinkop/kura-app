@@ -1,4 +1,5 @@
 import { forwardRef, Fragment, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../AuthContext'
 
 // Segmented date field. The native <input type=date> can't be forced into a
@@ -50,6 +51,7 @@ const DatePicker = forwardRef(function DatePicker(
   { value, onChange, min, max, className, ...rest },
   forwardedRef
 ) {
+  const { t } = useTranslation()
   const { profile } = useAuth()
   const order = ORDER[profile?.date_format ?? 'dmy'] ?? ORDER.dmy
 
@@ -126,7 +128,7 @@ const DatePicker = forwardRef(function DatePicker(
           />
         </Fragment>
       ))}
-      <button type="button" tabIndex={-1} onClick={openPicker} aria-label="Open calendar"
+      <button type="button" tabIndex={-1} onClick={openPicker} aria-label={t('common.openCalendar')}
         className="ml-auto pl-1.5 text-muted hover:text-primary shrink-0">
         <CalendarGlyph />
       </button>

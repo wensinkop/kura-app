@@ -23,6 +23,12 @@
     "kura": "Kura"
   },
   "common": {
+    "confirm": "Sahkan",
+    "working": "Memproses…",
+    "close": "Tutup",
+    "create": "Cipta",
+    "uncategorised": "Tanpa kategori",
+    "openCalendar": "Buka kalendar",
     "save": "Simpan",
     "cancel": "Batal",
     "done": "Selesai",
@@ -39,6 +45,11 @@
     "backToThis": "Kembali ke bulan ini"
   },
   "home": {
+    "importCta": "Import dari apl lain",
+    "budgetsThisMonth": "Bajet · bulan ini",
+    "onTrack": "ikut rancangan ›",
+    "overCount": "{{count}} lebih",
+    "spent": "Dibelanja",
     "income": "Pendapatan",
     "expenses": "Perbelanjaan",
     "net": "Bersih",
@@ -189,6 +200,7 @@
     "transactions": "Transaksi"
   },
   "tx": {
+    "saveFailed": "Gagal menyimpan. Sila semak sambungan anda dan cuba lagi.",
     "kind": { "expense": "Perbelanjaan", "income": "Pendapatan", "transfer": "Pindahan" },
     "newTitle": "Transaksi baharu",
     "editTitle": "Edit transaksi",
@@ -251,6 +263,15 @@
     "tapToEdit": "Ketik transaksi untuk menyuntingnya."
   },
   "auth": {
+    "showPassword": "Tunjuk kata laluan",
+    "hidePassword": "Sembunyi kata laluan",
+    "passwordRule": "Sekurang-kurangnya 6 aksara",
+    "errInvalidLogin": "E-mel atau kata laluan tidak sepadan. Cuba lagi.",
+    "errEmailTaken": "Akaun sudah wujud untuk e-mel ini. Cuba log masuk.",
+    "errEmailNotConfirmed": "Sahkan e-mel anda dahulu — semak kod dalam peti masuk.",
+    "errRate": "Terlalu banyak cubaan. Tunggu sebentar dan cuba lagi.",
+    "errGeneric": "Sesuatu tidak kena. Sila cuba lagi.",
+    "errInvalidCode": "Kod salah atau telah tamat tempoh. Minta kod baharu.",
     "email": "E-mel",
     "password": "Kata laluan",
     "signIn": "Log masuk",
@@ -306,5 +327,58 @@
     "confirmNewPassword": "Sahkan kata laluan baharu",
     "updating": "Mengemas kini…",
     "updatePassword": "Kemas kini kata laluan"
+  },
+  "select": {
+    "placeholder": "— pilih —",
+    "noOptions": "Tiada pilihan",
+    "noMatches": "Tiada padanan",
+    "create": "Cipta “{{name}}”",
+    "creating": "Mencipta…",
+    "createNew": "Cipta baharu",
+    "newTitle": "{{title}} baharu",
+    "nameLabel": "Nama"
+  },
+  "filter": {
+    "title": "Tapis mengikut akaun",
+    "all": "Semua akaun",
+    "ungrouped": "Tanpa kumpulan",
+    "apply": "Guna",
+    "empty": "Belum ada akaun.",
+    "addAccount": "Tambah akaun"
+  },
+  "onboarding": {
+    "welcomeTitle": "Selamat datang ke Kura, {{name}}",
+    "welcomeTitleNoName": "Selamat datang ke Kura",
+    "welcomeBody": "Tempat tenang dan peribadi untuk menjejak wang anda. Mari sediakan dahulu — hanya seminit.",
+    "valuePrivate": "Peribadi dari awal — tanpa log masuk bank, data kekal milik anda",
+    "valueMultiCurrency": "Pelbagai mata wang, untuk hidup merentas sempadan",
+    "valueOffline": "Pantas, dan berfungsi luar talian",
+    "getStarted": "Mula",
+    "skip": "Langkau",
+    "skipForNow": "Nanti dulu",
+    "next": "Teruskan",
+    "back": "Kembali",
+    "currencyTitle": "Mata wang utama anda",
+    "currencyBody": "Pilih mata wang yang anda fikir. Ia digunakan untuk menggabungkan jumlah merentas akaun — anda masih boleh menambah akaun mata wang lain.",
+    "currencyLabel": "Mata wang utama",
+    "accountTitle": "Tambah akaun pertama anda",
+    "accountBody": "Akaun ialah tempat wang anda berada — tunai, akaun bank, atau e-dompet. Boleh tambah lagi nanti.",
+    "accountKind": "Jenis",
+    "presetCash": "Tunai",
+    "presetBank": "Bank",
+    "presetEwallet": "E-dompet",
+    "accountNameLabel": "Nama akaun",
+    "accountNamePlaceholder": "cth. BCA — Utama",
+    "openingLabel": "Baki semasa (pilihan)",
+    "openingHint": "Berapa baki dalam akaun ini sekarang.",
+    "createAccount": "Cipta akaun",
+    "forkTitle": "Semua sedia",
+    "forkBody": "Bagaimana anda mahu mula?",
+    "forkImport": "Import dari apl lain",
+    "forkImportSub": "Bawa sejarah anda dari Money Manager dan lain-lain",
+    "forkAdd": "Tambah transaksi pertama",
+    "forkAddSub": "Catat pendapatan atau perbelanjaan sekarang",
+    "forkExplore": "Terokai sendiri",
+    "forkExploreSub": "Lihat-lihat dahulu"
   }
 }

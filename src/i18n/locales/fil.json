@@ -23,6 +23,12 @@
     "kura": "Kura"
   },
   "common": {
+    "confirm": "Kumpirmahin",
+    "working": "Ginagawa…",
+    "close": "Isara",
+    "create": "Gumawa",
+    "uncategorised": "Walang kategorya",
+    "openCalendar": "Buksan ang kalendaryo",
     "save": "I-save",
     "cancel": "Kanselahin",
     "done": "Tapos",
@@ -39,6 +45,11 @@
     "backToThis": "Balik sa buwang ito"
   },
   "home": {
+    "importCta": "Mag-import mula sa ibang app",
+    "budgetsThisMonth": "Badyet · ngayong buwan",
+    "onTrack": "nasa tama ›",
+    "overCount": "{{count}} lampas",
+    "spent": "Nagastos",
     "income": "Kita",
     "expenses": "Gastos",
     "net": "Net",
@@ -189,6 +200,7 @@
     "transactions": "Mga transaksyon"
   },
   "tx": {
+    "saveFailed": "Hindi na-save. Pakisuri ang iyong koneksyon at subukan muli.",
     "kind": { "expense": "Gastos", "income": "Kita", "transfer": "Transfer" },
     "newTitle": "Mga bagong transaksyon",
     "editTitle": "I-edit ang transaksyon",
@@ -251,6 +263,15 @@
     "tapToEdit": "I-tap ang transaksyon para i-edit."
   },
   "auth": {
+    "showPassword": "Ipakita ang password",
+    "hidePassword": "Itago ang password",
+    "passwordRule": "Hindi bababa sa 6 na karakter",
+    "errInvalidLogin": "Hindi tugma ang email o password. Subukan muli.",
+    "errEmailTaken": "May account na para sa email na ito. Subukan na lang mag-sign in.",
+    "errEmailNotConfirmed": "I-verify muna ang iyong email — tingnan ang code sa inbox.",
+    "errRate": "Masyadong maraming subok. Maghintay sandali at subukan muli.",
+    "errGeneric": "May nangyaring mali. Pakisubukan muli.",
+    "errInvalidCode": "Mali o expired na ang code. Humiling ng bago.",
     "email": "Email",
     "password": "Password",
     "signIn": "Mag-sign in",
@@ -306,5 +327,58 @@
     "confirmNewPassword": "Kumpirmahin ang bagong password",
     "updating": "Ina-update…",
     "updatePassword": "I-update ang password"
+  },
+  "select": {
+    "placeholder": "— pumili —",
+    "noOptions": "Walang opsyon",
+    "noMatches": "Walang tugma",
+    "create": "Gumawa ng “{{name}}”",
+    "creating": "Ginagawa…",
+    "createNew": "Gumawa ng bago",
+    "newTitle": "Bagong {{title}}",
+    "nameLabel": "Pangalan"
+  },
+  "filter": {
+    "title": "Salain ayon sa account",
+    "all": "Lahat ng account",
+    "ungrouped": "Walang grupo",
+    "apply": "Ilapat",
+    "empty": "Wala pang account.",
+    "addAccount": "Magdagdag ng account"
+  },
+  "onboarding": {
+    "welcomeTitle": "Maligayang pagdating sa Kura, {{name}}",
+    "welcomeTitleNoName": "Maligayang pagdating sa Kura",
+    "welcomeBody": "Isang panatag at pribadong lugar para subaybayan ang iyong pera. I-set up muna natin — sandali lang ito.",
+    "valuePrivate": "Pribado mula sa simula — walang bank login, sa iyo ang iyong data",
+    "valueMultiCurrency": "Multi-currency, para sa buhay sa iba't ibang bansa",
+    "valueOffline": "Mabilis, at gumagana offline",
+    "getStarted": "Magsimula",
+    "skip": "Laktawan",
+    "skipForNow": "Mamaya na lang",
+    "next": "Magpatuloy",
+    "back": "Bumalik",
+    "currencyTitle": "Ang pangunahin mong pera",
+    "currencyBody": "Piliin ang perang ginagamit mo. Ginagamit ito para pagsamahin ang mga kabuuan sa mga account — puwede ka pa ring magdagdag ng account sa ibang pera.",
+    "currencyLabel": "Pangunahing pera",
+    "accountTitle": "Idagdag ang unang account mo",
+    "accountBody": "Ang account ay kung saan nakalagay ang pera mo — cash, bank account, o e-wallet. Puwede kang magdagdag pa mamaya.",
+    "accountKind": "Uri",
+    "presetCash": "Cash",
+    "presetBank": "Bank",
+    "presetEwallet": "E-wallet",
+    "accountNameLabel": "Pangalan ng account",
+    "accountNamePlaceholder": "hal. BCA — Pangunahin",
+    "openingLabel": "Kasalukuyang balanse (opsyonal)",
+    "openingHint": "Magkano ang nasa account na ito ngayon.",
+    "createAccount": "Gumawa ng account",
+    "forkTitle": "Handa na ang lahat",
+    "forkBody": "Paano mo gustong magsimula?",
+    "forkImport": "Mag-import mula sa ibang app",
+    "forkImportSub": "Dalhin ang iyong history mula sa Money Manager at iba pa",
+    "forkAdd": "Idagdag ang unang transaksyon",
+    "forkAddSub": "Mag-log ng kita o gastos ngayon",
+    "forkExplore": "Mag-explore mag-isa",
+    "forkExploreSub": "Tumingin-tingin muna"
   }
 }

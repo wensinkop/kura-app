@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice } from '../components/AuthLayout'
+import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice, PasswordInput } from '../components/AuthLayout'
+import { friendlyAuthError } from '../lib/authErrors'
 
 export default function SignUp() {
   const { t } = useTranslation()
@@ -41,7 +42,7 @@ export default function SignUp() {
     })
     setLoading(false)
 
-    if (error) { setError(error.message); return }
+    if (error) { setError(friendlyAuthError(error, t)); return }
 
     // If email confirmation is disabled, Supabase returns a live session — go in.
     if (data.session) { navigate('/'); return }
@@ -64,14 +65,14 @@ export default function SignUp() {
     })
     setLoading(false)
 
-    if (error) { setError(error.message); return }
+    if (error) { setError(friendlyAuthError(error, t)); return }
     navigate('/') // onAuthStateChange picks up the new session
   }
 
   async function handleResend() {
     setError(''); setNotice('')
     const { error } = await supabase.auth.resend({ type: 'signup', email })
-    if (error) setError(error.message)
+    if (error) setError(friendlyAuthError(error, t))
     else setNotice(t('auth.newCodeSent', { email }))
   }
 
@@ -121,19 +122,20 @@ export default function SignUp() {
       <form onSubmit={handleSignUp} className="space-y-4">
         <div>
           <label className={authLabel}>{t('auth.name')}</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={authInput} placeholder={t('auth.namePlaceholder')} required />
+          <input value={name} autoComplete="name" autoFocus onChange={(e) => setName(e.target.value)} className={authInput} placeholder={t('auth.namePlaceholder')} required />
         </div>
         <div>
           <label className={authLabel}>{t('auth.email')}</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} required />
+          <input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} required />
         </div>
         <div>
           <label className={authLabel}>{t('auth.password')}</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder={t('auth.passwordPlaceholder')} required />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('auth.passwordPlaceholder')} autoComplete="new-password" required />
+          <p className="text-xs text-faint mt-1 pl-0.5">{t('auth.passwordRule')}</p>
         </div>
         <div>
           <label className={authLabel}>{t('auth.confirmPassword')}</label>
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={authInput} required />
+          <PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
         </div>
         <AuthError>{error}</AuthError>
         <button type="submit" disabled={loading} className={authBtn}>

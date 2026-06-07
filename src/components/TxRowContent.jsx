@@ -3,14 +3,16 @@
 // they stay visually identical. The pressable wrapper (tap / long-press /
 // selection checkbox) lives at each call site.
 
+import { useTranslation } from 'react-i18next'
 import { formatMoney } from '../lib/format'
 
 const KIND_COLOR = { income: 'text-income', expense: 'text-expense', transfer: 'text-transfer' }
 
 // Resolve the chip (top-level category name) + sub (sub-category name) for a tx.
-function catLabels(tx, catMap) {
+// `tr` is the i18n translator (the component's own `t` prop is the transaction).
+function catLabels(tx, catMap, tr) {
   const c = tx.category
-  if (!c) return { chip: 'Uncategorised', sub: null }
+  if (!c) return { chip: tr('common.uncategorised'), sub: null }
   if (c.parent_id) return { chip: catMap.get(c.parent_id)?.name ?? '…', sub: c.name }
   return { chip: c.name, sub: null }
 }
@@ -30,10 +32,11 @@ function Highlighted({ text, q }) {
 }
 
 export default function TxRowContent({ t, catMap, highlight, hideAccount }) {
+  const { t: tr } = useTranslation()
   const isTransfer = t.kind === 'transfer'
   const { chip, sub } = isTransfer
-    ? { chip: 'Transfer', sub: `${t.account?.name ?? '?'} → ${t.to_account?.name ?? '?'}` }
-    : catLabels(t, catMap)
+    ? { chip: tr('tx.kind.transfer'), sub: `${t.account?.name ?? '?'} → ${t.to_account?.name ?? '?'}` }
+    : catLabels(t, catMap, tr)
 
   return (
     <div className="flex-1 min-w-0">

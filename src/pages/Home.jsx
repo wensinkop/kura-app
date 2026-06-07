@@ -11,7 +11,7 @@ import { cacheGet, cacheSet } from '../lib/cache'
 import { formatMoney, amountColor } from '../lib/format'
 import { Button, ConfirmDialog } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
-import { PlusIcon, TrashIcon, CloseIcon, BudgetIcon } from '../lib/icons'
+import { PlusIcon, TrashIcon, CloseIcon, BudgetIcon, UploadIcon } from '../lib/icons'
 
 // "2026-06-25" -> { num: "25", rest: "June 2026 · Wednesday" }, parsed in local
 // time from the date parts (avoids UTC off-by-one).
@@ -190,9 +190,15 @@ export default function Home() {
         {days.length === 0 ? (
           <div className="bg-surface border border-border rounded-[14px] p-8 text-center mt-0">
             <p className="text-sm text-muted mb-4">{t('home.noTransactions')}</p>
-            <Button onClick={() => navigate('/new')}>
-              <PlusIcon className="w-[18px] h-[18px]" /> {t('home.addTransaction')}
-            </Button>
+            <div className="flex flex-col items-center gap-2.5">
+              <Button onClick={() => navigate('/new')}>
+                <PlusIcon className="w-[18px] h-[18px]" /> {t('home.addTransaction')}
+              </Button>
+              <button onClick={() => navigate('/import/migrate')}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+                <UploadIcon className="w-4 h-4" /> {t('home.importCta')}
+              </button>
+            </div>
           </div>
         ) : (
           days.map((date, di) => {
@@ -287,24 +293,25 @@ function CompactCell({ label, value, color, border }) {
 // Compact monthly-budget card (Home). Per-currency spent-vs-budgeted bars; taps
 // through to the full Budget page.
 function BudgetCard({ view, onClick }) {
+  const { t } = useTranslation()
   return (
     <button onClick={onClick}
       className="w-full bg-surface border border-border rounded-[14px] px-4 py-3 text-left hover:bg-surface-2">
       <div className="flex items-center justify-between mb-2">
         <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-faint">
-          <BudgetIcon className="w-4 h-4" /> Budgets · this month
+          <BudgetIcon className="w-4 h-4" /> {t('home.budgetsThisMonth')}
         </span>
         {view.over > 0
-          ? <span className="text-[11px] font-bold text-expense">{view.over} over</span>
-          : <span className="text-[11px] font-semibold text-muted">on track ›</span>}
+          ? <span className="text-[11px] font-bold text-expense">{t('home.overCount', { count: view.over })}</span>
+          : <span className="text-[11px] font-semibold text-muted">{t('home.onTrack')}</span>}
       </div>
       {view.rows.map((s) => {
         const st = budgetStatus(s.spent, s.budgeted)
         return (
           <div key={s.currency} className="mt-2 first:mt-0">
             <div className="flex justify-between text-[12px] tabular">
-              <span className="text-muted font-semibold">{view.rows.length > 1 ? s.currency : 'Spent'}</span>
-              <span className="text-muted">{formatMoney(s.spent, s.currency)} <span className="text-faint">of</span> {formatMoney(s.budgeted, s.currency)}</span>
+              <span className="text-muted font-semibold">{view.rows.length > 1 ? s.currency : t('home.spent')}</span>
+              <span className="text-muted">{formatMoney(s.spent, s.currency)} <span className="text-faint">{t('budget.of')}</span> {formatMoney(s.budgeted, s.currency)}</span>
             </div>
             <div className="h-1.5 rounded-full bg-surface-2 mt-1 overflow-hidden">
               <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.round(st.ratio * 100))}%`, background: st.color }} />

@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { listAccounts, listAccountTransactionsFull, listCategories } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
-import { formatAbs, amountColor, dayLabel, monthYearLabel } from '../lib/format'
+import { formatAbs, formatSigned, amountColor, dayLabel, monthYearLabel } from '../lib/format'
 import { Segmented } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
 import Sidebar from '../components/Sidebar'
@@ -188,7 +188,7 @@ export default function AccountDetail() {
             <ChevronLeft />
           </button>
           <div className="min-w-0 flex-1"><div className="font-bold text-[15px] truncate">{account?.name ?? t('nav.accounts')}</div></div>
-          {account && <div className={`font-extrabold text-[15px] tabular shrink-0 ${amountColor(currentBalance)}`}>{formatAbs(currentBalance, currency)}</div>}
+          {account && <div className={`font-extrabold text-[15px] tabular shrink-0 ${amountColor(currentBalance)}`}>{formatSigned(currentBalance, currency)}</div>}
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-clip px-4 py-3.5 desk:px-8 w-full">
@@ -208,7 +208,7 @@ export default function AccountDetail() {
                 )}
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <button onClick={() => shift(-1)} aria-label={t('month.previous')} disabled={!canNavigate}
-                    className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-0">
+                    className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent">
                     <ChevronLeft className="w-[18px] h-[18px]" />
                   </button>
                   <div className="text-center min-w-0">
@@ -221,7 +221,7 @@ export default function AccountDetail() {
                     )}
                   </div>
                   <button onClick={() => shift(1)} aria-label={t('month.next')} disabled={!canNavigate}
-                    className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-0">
+                    className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-transparent">
                     <ChevronRight className="w-[18px] h-[18px]" />
                   </button>
                 </div>
@@ -256,7 +256,7 @@ export default function AccountDetail() {
                             className="w-full px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
                             <div className="flex"><TxRowContent t={t} catMap={catMap} hideAccount /></div>
                             <div className="text-[11px] text-faint text-right mt-1 tabular">
-                              {t('accountDetail.balance')} <span className="font-semibold text-muted">{formatAbs(balance, currency)}</span>
+                              {t('accountDetail.balance')} <span className="font-semibold text-muted">{formatSigned(balance, currency)}</span>
                             </div>
                           </button>
                         ))}
@@ -270,12 +270,12 @@ export default function AccountDetail() {
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-[14.5px]">{groupLabel(g.key)}</div>
                           <div className="text-[12px] text-muted mt-0.5">
-                            {t('accountDetail.txnsNet', { count: g.rows.length, net: formatAbs(g.net, currency) })}
+                            {t('accountDetail.txnsNet', { count: g.rows.length, net: formatSigned(g.net, currency) })}
                           </div>
                         </div>
                         <div className="text-right shrink-0">
                           <div className="text-[10px] text-faint uppercase tracking-wide">{t('accountDetail.endBalance')}</div>
-                          <div className="text-[13.5px] font-bold tabular text-text">{formatAbs(g.endBalance, currency)}</div>
+                          <div className="text-[13.5px] font-bold tabular text-text">{formatSigned(g.endBalance, currency)}</div>
                         </div>
                       </div>
                     ))}

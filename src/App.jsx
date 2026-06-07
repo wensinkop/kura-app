@@ -27,6 +27,7 @@ import Search from './pages/Search'
 import BankStatement from './pages/BankStatement'
 import Migrate from './pages/Migrate'
 import AccountDetail from './pages/AccountDetail'
+import Onboarding from './pages/Onboarding'
 import Admin from './pages/Admin'
 import AdminContent from './pages/AdminContent'
 import PrivacyPolicy from './pages/PrivacyPolicy'
@@ -42,10 +43,23 @@ function Loading() {
   )
 }
 
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
+// Signed-in AND past first-run onboarding. New sign-ups (onboarded=false) are
+// sent to /welcome until they finish or skip. A null profile (fetch error) is
+// treated as onboarded so a hiccup never traps the user out of the app.
+function AppRoute({ children }) {
+  const { user, profile, loading } = useAuth()
   if (loading) return <Loading />
   if (!user) return <Navigate to="/signin" replace />
+  if (profile && !profile.onboarded) return <Navigate to="/welcome" replace />
+  return children
+}
+
+// The onboarding screen: signed-in only, and skipped (→ home) once onboarded.
+function WelcomeRoute({ children }) {
+  const { user, profile, loading } = useAuth()
+  if (loading) return <Loading />
+  if (!user) return <Navigate to="/signin" replace />
+  if (profile?.onboarded) return <Navigate to="/" replace />
   return children
 }
 
@@ -94,8 +108,11 @@ export default function App() {
             <Route path="/legal/terms" element={<Terms />} />
             <Route path="/help" element={<Help />} />
 
-            {/* App (signed-in) — shared responsive shell */}
-            <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+            {/* First-run onboarding (signed-in, before setup is done) */}
+            <Route path="/welcome" element={<WelcomeRoute><Onboarding /></WelcomeRoute>} />
+
+            {/* App (signed-in + onboarded) — shared responsive shell */}
+            <Route element={<AppRoute><AppShell /></AppRoute>}>
               <Route path="/" element={<Home />} />
               <Route path="/stats" element={<Stats />} />
               <Route path="/budget" element={<BudgetRoute><Budget /></BudgetRoute>} />
@@ -108,14 +125,14 @@ export default function App() {
               <Route path="/settings/account" element={<SettingsAccount />} />
             </Route>
 
-            {/* Full-screen entry (signed-in, outside the shell) */}
-            <Route path="/new" element={<ProtectedRoute><NewTransaction /></ProtectedRoute>} />
-            <Route path="/tx/:id" element={<ProtectedRoute><EditTransaction /></ProtectedRoute>} />
-            <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+            {/* Full-screen entry (signed-in + onboarded, outside the shell) */}
+            <Route path="/new" element={<AppRoute><NewTransaction /></AppRoute>} />
+            <Route path="/tx/:id" element={<AppRoute><EditTransaction /></AppRoute>} />
+            <Route path="/search" element={<AppRoute><Search /></AppRoute>} />
             <Route
               path="/import/statement"
               element={
-                <ProtectedRoute>
+                <AppRoute>
                   <PremiumGate
                     feature="Bank statement upload"
                     tagline="A Premium feature"
@@ -128,14 +145,14 @@ export default function App() {
                   >
                     <BankStatement />
                   </PremiumGate>
-                </ProtectedRoute>
+                </AppRoute>
               }
             />
             {/* Migration from another app — free; lowers the switching barrier */}
-            <Route path="/import/migrate" element={<ProtectedRoute><Migrate /></ProtectedRoute>} />
-            <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminRoute><Admin /></AdminRoute></ProtectedRoute>} />
-            <Route path="/admin/content" element={<ProtectedRoute><AdminRoute><AdminContent /></AdminRoute></ProtectedRoute>} />
+            <Route path="/import/migrate" element={<AppRoute><Migrate /></AppRoute>} />
+            <Route path="/accounts/:id" element={<AppRoute><AccountDetail /></AppRoute>} />
+            <Route path="/admin" element={<AppRoute><AdminRoute><Admin /></AdminRoute></AppRoute>} />
+            <Route path="/admin/content" element={<AppRoute><AdminRoute><AdminContent /></AdminRoute></AppRoute>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

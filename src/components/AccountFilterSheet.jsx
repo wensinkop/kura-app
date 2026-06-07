@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { listGroups, listAccounts } from '../lib/data'
 import { useAccountFilter } from '../FilterContext'
 import { Modal, Button } from './ui'
@@ -8,6 +10,8 @@ import { accountSubtitle } from '../lib/format'
 // Home. A local draft is committed on "Apply"; "All accounts" clears the draft
 // (empty = no filter). Archived accounts are excluded.
 export default function AccountFilterSheet({ onClose }) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
   const { accountIds, setAccountIds } = useAccountFilter()
   const [groups, setGroups] = useState([])
   const [accounts, setAccounts] = useState([])
@@ -41,9 +45,12 @@ export default function AccountFilterSheet({ onClose }) {
     return (
       <button
         onClick={() => toggle(a.id)}
+        role="checkbox"
+        aria-checked={on}
+        aria-label={a.name}
         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-2 text-left"
       >
-        <span
+        <span aria-hidden="true"
           className={`w-5 h-5 rounded-md border grid place-items-center shrink-0 text-[11px] font-bold ${
             on ? 'bg-primary border-primary text-on-primary' : 'border-border text-transparent'
           }`}
@@ -60,37 +67,45 @@ export default function AccountFilterSheet({ onClose }) {
 
   return (
     <Modal
-      title="Filter by account"
+      title={t('filter.title')}
       onClose={onClose}
       footer={
         <>
           <Button variant="ghost" className="flex-1" onClick={() => setDraft(new Set())} disabled={allSelected}>
-            All accounts
+            {t('filter.all')}
           </Button>
           <Button className="flex-1" onClick={apply}>
-            Apply
+            {t('filter.apply')}
           </Button>
         </>
       }
     >
       <button
         onClick={() => setDraft(new Set())}
+        role="checkbox"
+        aria-checked={allSelected}
+        aria-label={t('filter.all')}
         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left mb-1 ${
           allSelected ? 'bg-primary-soft' : 'hover:bg-surface-2'
         }`}
       >
-        <span
+        <span aria-hidden="true"
           className={`w-5 h-5 rounded-md border grid place-items-center shrink-0 text-[11px] font-bold ${
             allSelected ? 'bg-primary border-primary text-on-primary' : 'border-border text-transparent'
           }`}
         >
           ✓
         </span>
-        <span className="font-semibold text-[14.5px]">All accounts</span>
+        <span className="font-semibold text-[14.5px]">{t('filter.all')}</span>
       </button>
 
       {accounts.length === 0 && (
-        <p className="text-sm text-muted text-center py-4">No accounts yet.</p>
+        <div className="text-center py-6">
+          <p className="text-sm text-muted mb-3">{t('filter.empty')}</p>
+          <Button variant="ghost" onClick={() => { onClose(); navigate('/settings/accounts') }}>
+            {t('filter.addAccount')}
+          </Button>
+        </div>
       )}
 
       {groups.map((g) => {
@@ -106,7 +121,7 @@ export default function AccountFilterSheet({ onClose }) {
 
       {ungrouped.length > 0 && (
         <div className="mt-2">
-          <div className="text-[10.5px] font-bold uppercase tracking-wide text-faint px-3 pt-1 pb-0.5">Ungrouped</div>
+          <div className="text-[10.5px] font-bold uppercase tracking-wide text-faint px-3 pt-1 pb-0.5">{t('filter.ungrouped')}</div>
           {ungrouped.map((a) => <Row key={a.id} a={a} />)}
         </div>
       )}

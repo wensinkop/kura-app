@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Button, inputClass } from './ui'
 import { ChevronDown, CloseIcon } from '../lib/icons'
 
@@ -14,9 +15,11 @@ import { ChevronDown, CloseIcon } from '../lib/icons'
 // Props: value, onChange(value), options:[{value,label,group?}], placeholder,
 //        title, noneLabel? (adds a clear-to-empty row at the top).
 const MobileSelect = forwardRef(function MobileSelect(
-  { value, onChange, options, placeholder = '— select —', title, noneLabel, onCreate },
+  { value, onChange, options, placeholder, title, noneLabel, onCreate },
   ref
 ) {
+  const { t } = useTranslation()
+  const ph = placeholder ?? t('select.placeholder')
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [draft, setDraft] = useState('')
@@ -57,7 +60,7 @@ const MobileSelect = forwardRef(function MobileSelect(
     <>
       <button type="button" onClick={() => setOpen(true)}
         className={`${inputClass} flex items-center justify-between text-left`}>
-        <span className={`truncate ${selected ? '' : 'text-faint'}`}>{selected?.label ?? placeholder}</span>
+        <span className={`truncate ${selected ? '' : 'text-faint'}`}>{selected?.label ?? ph}</span>
         <ChevronDown className="w-4 h-4 text-faint shrink-0 ml-2" />
       </button>
 
@@ -66,8 +69,8 @@ const MobileSelect = forwardRef(function MobileSelect(
           onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}>
           <div className="bg-surface w-full rounded-t-2xl border-t border-border max-h-[70vh] flex flex-col">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-              <div className="font-bold text-[15px] flex-1">{creating ? `New ${title?.toLowerCase() ?? 'item'}` : title}</div>
-              <button onClick={close} aria-label="Close"
+              <div className="font-bold text-[15px] flex-1">{creating ? t('select.newTitle', { title: title?.toLowerCase() ?? '' }) : title}</div>
+              <button onClick={close} aria-label={t('common.close')}
                 className="w-9 h-9 -mr-1.5 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
                 <CloseIcon className="w-[18px] h-[18px]" />
               </button>
@@ -77,17 +80,17 @@ const MobileSelect = forwardRef(function MobileSelect(
                 <div className="p-4">
                   <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') doCreate() }}
-                    placeholder="Name" className={inputClass} />
+                    placeholder={t('select.nameLabel')} className={inputClass} />
                   <div className="flex gap-2.5 mt-3">
-                    <Button variant="ghost" className="flex-1" onClick={() => { setCreating(false); setDraft('') }} disabled={busy}>Cancel</Button>
-                    <Button className="flex-1" onClick={doCreate} disabled={busy || !draft.trim()}>{busy ? 'Creating…' : 'Create'}</Button>
+                    <Button variant="ghost" className="flex-1" onClick={() => { setCreating(false); setDraft('') }} disabled={busy}>{t('common.cancel')}</Button>
+                    <Button className="flex-1" onClick={doCreate} disabled={busy || !draft.trim()}>{busy ? t('select.creating') : t('common.create')}</Button>
                   </div>
                 </div>
               ) : (
                 <>
                   {noneLabel != null && <Item label={noneLabel} active={!value} onClick={() => pick('')} muted />}
                   {options.length === 0 && !onCreate && (
-                    <div className="px-4 py-3 text-sm text-faint italic">No options</div>
+                    <div className="px-4 py-3 text-sm text-faint italic">{t('select.noOptions')}</div>
                   )}
                   {groups.map((g) => (
                     <div key={g || '__'}>
@@ -100,7 +103,7 @@ const MobileSelect = forwardRef(function MobileSelect(
                   {onCreate && (
                     <button type="button" onClick={() => { setCreating(true); setDraft('') }}
                       className="w-full text-left px-4 py-3 text-[15px] text-primary hover:bg-surface-2 border-t border-border">
-                      ＋ Create new
+                      ＋ {t('select.createNew')}
                     </button>
                   )}
                 </>

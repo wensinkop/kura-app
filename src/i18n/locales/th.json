@@ -23,6 +23,12 @@
     "kura": "Kura"
   },
   "common": {
+    "confirm": "ยืนยัน",
+    "working": "กำลังดำเนินการ…",
+    "close": "ปิด",
+    "create": "สร้าง",
+    "uncategorised": "ไม่มีหมวดหมู่",
+    "openCalendar": "เปิดปฏิทิน",
     "save": "บันทึก",
     "cancel": "ยกเลิก",
     "done": "เสร็จ",
@@ -39,6 +45,11 @@
     "backToThis": "กลับไปเดือนนี้"
   },
   "home": {
+    "importCta": "นำเข้าจากแอปอื่น",
+    "budgetsThisMonth": "งบประมาณ · เดือนนี้",
+    "onTrack": "เป็นไปตามแผน ›",
+    "overCount": "เกิน {{count}}",
+    "spent": "ใช้ไป",
     "income": "รายรับ",
     "expenses": "รายจ่าย",
     "net": "สุทธิ",
@@ -189,6 +200,7 @@
     "transactions": "ธุรกรรม"
   },
   "tx": {
+    "saveFailed": "บันทึกไม่สำเร็จ โปรดตรวจสอบการเชื่อมต่อแล้วลองใหม่",
     "kind": { "expense": "รายจ่าย", "income": "รายรับ", "transfer": "โอน" },
     "newTitle": "ธุรกรรมใหม่",
     "editTitle": "แก้ไขธุรกรรม",
@@ -251,6 +263,15 @@
     "tapToEdit": "แตะธุรกรรมเพื่อแก้ไข"
   },
   "auth": {
+    "showPassword": "แสดงรหัสผ่าน",
+    "hidePassword": "ซ่อนรหัสผ่าน",
+    "passwordRule": "อย่างน้อย 6 ตัวอักษร",
+    "errInvalidLogin": "อีเมลหรือรหัสผ่านไม่ถูกต้อง ลองใหม่อีกครั้ง",
+    "errEmailTaken": "มีบัญชีสำหรับอีเมลนี้แล้ว ลองเข้าสู่ระบบแทน",
+    "errEmailNotConfirmed": "โปรดยืนยันอีเมลก่อน — ตรวจสอบรหัสในกล่องจดหมาย",
+    "errRate": "พยายามมากเกินไป โปรดรอสักครู่แล้วลองใหม่",
+    "errGeneric": "เกิดข้อผิดพลาด โปรดลองใหม่",
+    "errInvalidCode": "รหัสไม่ถูกต้องหรือหมดอายุ ขอรหัสใหม่",
     "email": "อีเมล",
     "password": "รหัสผ่าน",
     "signIn": "เข้าสู่ระบบ",
@@ -306,5 +327,58 @@
     "confirmNewPassword": "ยืนยันรหัสผ่านใหม่",
     "updating": "กำลังอัปเดต…",
     "updatePassword": "อัปเดตรหัสผ่าน"
+  },
+  "select": {
+    "placeholder": "— เลือก —",
+    "noOptions": "ไม่มีตัวเลือก",
+    "noMatches": "ไม่มีรายการที่ตรงกัน",
+    "create": "สร้าง “{{name}}”",
+    "creating": "กำลังสร้าง…",
+    "createNew": "สร้างใหม่",
+    "newTitle": "{{title}}ใหม่",
+    "nameLabel": "ชื่อ"
+  },
+  "filter": {
+    "title": "กรองตามบัญชี",
+    "all": "ทุกบัญชี",
+    "ungrouped": "ไม่มีกลุ่ม",
+    "apply": "ใช้",
+    "empty": "ยังไม่มีบัญชี",
+    "addAccount": "เพิ่มบัญชี"
+  },
+  "onboarding": {
+    "welcomeTitle": "ยินดีต้อนรับสู่ Kura, {{name}}",
+    "welcomeTitleNoName": "ยินดีต้อนรับสู่ Kura",
+    "welcomeBody": "พื้นที่ที่สงบและเป็นส่วนตัวสำหรับติดตามเงินของคุณ มาตั้งค่ากันก่อน — ใช้เวลาแค่ครู่เดียว",
+    "valuePrivate": "เป็นส่วนตัวตั้งแต่ต้น — ไม่ต้องล็อกอินธนาคาร ข้อมูลเป็นของคุณ",
+    "valueMultiCurrency": "หลายสกุลเงิน เพื่อชีวิตข้ามพรมแดน",
+    "valueOffline": "รวดเร็ว และใช้งานออฟไลน์ได้",
+    "getStarted": "เริ่ม",
+    "skip": "ข้าม",
+    "skipForNow": "ไว้ทีหลัง",
+    "next": "ต่อไป",
+    "back": "กลับ",
+    "currencyTitle": "สกุลเงินหลักของคุณ",
+    "currencyBody": "เลือกสกุลเงินที่คุณใช้คิด ใช้สำหรับรวมยอดข้ามบัญชี — คุณยังเพิ่มบัญชีสกุลเงินอื่นได้",
+    "currencyLabel": "สกุลเงินหลัก",
+    "accountTitle": "เพิ่มบัญชีแรกของคุณ",
+    "accountBody": "บัญชีคือที่ที่เงินของคุณอยู่ — เงินสด บัญชีธนาคาร หรือ e-wallet เพิ่มได้อีกภายหลัง",
+    "accountKind": "ประเภท",
+    "presetCash": "เงินสด",
+    "presetBank": "ธนาคาร",
+    "presetEwallet": "อีวอลเล็ต",
+    "accountNameLabel": "ชื่อบัญชี",
+    "accountNamePlaceholder": "เช่น BCA — หลัก",
+    "openingLabel": "ยอดคงเหลือปัจจุบัน (ไม่บังคับ)",
+    "openingHint": "ตอนนี้ในบัญชีนี้มีเท่าไร",
+    "createAccount": "สร้างบัญชี",
+    "forkTitle": "พร้อมแล้ว",
+    "forkBody": "อยากเริ่มแบบไหน?",
+    "forkImport": "นำเข้าจากแอปอื่น",
+    "forkImportSub": "ย้ายประวัติของคุณจาก Money Manager และอื่น ๆ",
+    "forkAdd": "เพิ่มรายการแรก",
+    "forkAddSub": "บันทึกรายรับหรือรายจ่ายตอนนี้",
+    "forkExplore": "สำรวจด้วยตัวเอง",
+    "forkExploreSub": "ลองดูรอบ ๆ ก่อน"
   }
 }

@@ -79,6 +79,12 @@ export const SparkleIcon = (p) => (
 export const BudgetIcon = (p) => (
   <Svg {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r="0.6" fill="currentColor" /></Svg>
 )
+export const EyeIcon = (p) => (
+  <Svg {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></Svg>
+)
+export const EyeOffIcon = (p) => (
+  <Svg {...p}><path d="M3 3l18 18" /><path d="M10.6 10.6a3 3 0 004.2 4.2" /><path d="M9.9 5.2A9.5 9.5 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.6 4.4" /><path d="M6.1 6.1A17 17 0 002 12s3.5 7 10 7a9.5 9.5 0 003.9-.8" /></Svg>
+)
 export const ShieldIcon = (p) => (
   <Svg {...p}><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" /></Svg>
 )

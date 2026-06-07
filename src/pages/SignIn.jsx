@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import AuthLayout, { authInput, authLabel, authBtn, AuthError } from '../components/AuthLayout'
+import AuthLayout, { authInput, authLabel, authBtn, AuthError, PasswordInput } from '../components/AuthLayout'
+import { friendlyAuthError } from '../lib/authErrors'
 
 export default function SignIn() {
   const { t } = useTranslation()
@@ -18,7 +19,7 @@ export default function SignIn() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (error) { setError(error.message); return }
+    if (error) { setError(friendlyAuthError(error, t)); return }
     navigate('/')
   }
 
@@ -30,14 +31,14 @@ export default function SignIn() {
       <form onSubmit={handleSignIn} className="space-y-4">
         <div>
           <label className={authLabel}>{t('auth.email')}</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} required />
+          <input type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} required />
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-sm font-medium text-muted">{t('auth.password')}</label>
             <Link to="/forgot-password" className="text-xs text-primary hover:underline">{t('auth.forgotPassword')}</Link>
           </div>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} required />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         </div>
         <AuthError>{error}</AuthError>
         <button type="submit" disabled={loading} className={authBtn}>
