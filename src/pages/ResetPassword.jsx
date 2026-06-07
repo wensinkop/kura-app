@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice } from '../components/AuthLayout'
@@ -7,6 +8,7 @@ import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice } from
 // establishes a short-lived recovery session on arrival; we then let them set a
 // new password with updateUser().
 export default function ResetPassword() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [ready, setReady] = useState(false)
   const [password, setPassword] = useState('')
@@ -29,8 +31,8 @@ export default function ResetPassword() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
-    if (password !== confirm) { setError('Passwords do not match.'); return }
+    if (password.length < 6) { setError(t('auth.errPwMin')); return }
+    if (password !== confirm) { setError(t('auth.errPwMismatch')); return }
 
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password })
@@ -42,29 +44,29 @@ export default function ResetPassword() {
 
   return (
     <AuthLayout
-      title="Set a new password"
-      footer={<Link to="/signin" className="text-primary hover:underline">← Back to sign in</Link>}
+      title={t('auth.setNewTitle')}
+      footer={<Link to="/signin" className="text-primary hover:underline">{t('auth.backToSignIn')}</Link>}
     >
       {done ? (
-        <AuthNotice>Password updated. Taking you in…</AuthNotice>
+        <AuthNotice>{t('auth.updated')}</AuthNotice>
       ) : !ready ? (
         <p className="text-sm text-muted">
-          Open this page from the reset link in your email. If you got here another way, request a new
-          link from <Link to="/forgot-password" className="text-primary hover:underline">Forgot password</Link>.
+          {t('auth.openFromLinkPre')}{' '}
+          <Link to="/forgot-password" className="text-primary hover:underline">{t('auth.forgotPasswordLink')}</Link>.
         </p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className={authLabel}>New password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder="At least 6 characters" required />
+            <label className={authLabel}>{t('auth.newPassword')}</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder={t('auth.passwordPlaceholder')} required />
           </div>
           <div>
-            <label className={authLabel}>Confirm new password</label>
+            <label className={authLabel}>{t('auth.confirmNewPassword')}</label>
             <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={authInput} required />
           </div>
           <AuthError>{error}</AuthError>
           <button type="submit" disabled={loading} className={authBtn}>
-            {loading ? 'Updating…' : 'Update password'}
+            {loading ? t('auth.updating') : t('auth.updatePassword')}
           </button>
         </form>
       )}

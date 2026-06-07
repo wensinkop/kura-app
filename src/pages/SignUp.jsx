@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice } from '../components/AuthLayout'
 
 export default function SignUp() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [phase, setPhase] = useState('form') // 'form' | 'otp'
 
@@ -18,10 +20,10 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false)
 
   function validate() {
-    if (name.trim().length < 2) return 'Please enter your name.'
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Please enter a valid email.'
-    if (password.length < 6) return 'Password must be at least 6 characters.'
-    if (password !== confirm) return 'Passwords do not match.'
+    if (name.trim().length < 2) return t('auth.errName')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return t('auth.errEmail')
+    if (password.length < 6) return t('auth.errPwMin')
+    if (password !== confirm) return t('auth.errPwMismatch')
     return null
   }
 
@@ -45,14 +47,14 @@ export default function SignUp() {
     if (data.session) { navigate('/'); return }
 
     // Otherwise a 6-digit code was emailed; collect it.
-    setNotice(`We sent a 6-digit verification code to ${email}.`)
+    setNotice(t('auth.sentCode', { email }))
     setPhase('otp')
   }
 
   async function handleVerify(e) {
     e.preventDefault()
     setError('')
-    if (!/^\d{6}$/.test(code.trim())) { setError('Enter the 6-digit code from your email.'); return }
+    if (!/^\d{6}$/.test(code.trim())) { setError(t('auth.errCode')); return }
 
     setLoading(true)
     const { error } = await supabase.auth.verifyOtp({
@@ -70,24 +72,24 @@ export default function SignUp() {
     setError(''); setNotice('')
     const { error } = await supabase.auth.resend({ type: 'signup', email })
     if (error) setError(error.message)
-    else setNotice(`A new code was sent to ${email}.`)
+    else setNotice(t('auth.newCodeSent', { email }))
   }
 
   if (phase === 'otp') {
     return (
       <AuthLayout
-        title="Verify your email"
-        subtitle="Enter the code we emailed you to finish creating your account."
+        title={t('auth.verifyTitle')}
+        subtitle={t('auth.verifySubtitle')}
         footer={
           <button onClick={() => { setPhase('form'); setError(''); setNotice('') }} className="text-primary hover:underline">
-            ← Use a different email
+            {t('auth.useDifferentEmail')}
           </button>
         }
       >
         <form onSubmit={handleVerify} className="space-y-4">
           <AuthNotice>{notice}</AuthNotice>
           <div>
-            <label className={authLabel}>6-digit code</label>
+            <label className={authLabel}>{t('auth.code6')}</label>
             <input
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -100,10 +102,10 @@ export default function SignUp() {
           </div>
           <AuthError>{error}</AuthError>
           <button type="submit" disabled={loading} className={authBtn}>
-            {loading ? 'Verifying…' : 'Verify & continue'}
+            {loading ? t('auth.verifying') : t('auth.verifyContinue')}
           </button>
           <button type="button" onClick={handleResend} className="w-full text-sm text-muted hover:text-primary">
-            Didn’t get it? Resend code
+            {t('auth.resendPrompt')}
           </button>
         </form>
       </AuthLayout>
@@ -112,35 +114,35 @@ export default function SignUp() {
 
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Track income, expenses and transfers across all your accounts."
-      footer={<>Already have an account? <Link to="/signin" className="text-primary hover:underline">Sign in</Link></>}
+      title={t('auth.createAccountTitle')}
+      subtitle={t('auth.createSubtitle')}
+      footer={<>{t('auth.haveAccount')} <Link to="/signin" className="text-primary hover:underline">{t('auth.signIn')}</Link></>}
     >
       <form onSubmit={handleSignUp} className="space-y-4">
         <div>
-          <label className={authLabel}>Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={authInput} placeholder="Your name" required />
+          <label className={authLabel}>{t('auth.name')}</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className={authInput} placeholder={t('auth.namePlaceholder')} required />
         </div>
         <div>
-          <label className={authLabel}>Email</label>
+          <label className={authLabel}>{t('auth.email')}</label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} required />
         </div>
         <div>
-          <label className={authLabel}>Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder="At least 6 characters" required />
+          <label className={authLabel}>{t('auth.password')}</label>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} placeholder={t('auth.passwordPlaceholder')} required />
         </div>
         <div>
-          <label className={authLabel}>Confirm password</label>
+          <label className={authLabel}>{t('auth.confirmPassword')}</label>
           <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={authInput} required />
         </div>
         <AuthError>{error}</AuthError>
         <button type="submit" disabled={loading} className={authBtn}>
-          {loading ? 'Creating account…' : 'Create account'}
+          {loading ? t('auth.creatingAccount') : t('auth.createAccount')}
         </button>
         <p className="text-xs text-muted text-center leading-relaxed">
-          By creating an account, you agree to our{' '}
-          <Link to="/legal/terms" className="text-primary hover:underline">Terms</Link> and{' '}
-          <Link to="/legal/privacy" className="text-primary hover:underline">Privacy Policy</Link>.
+          {t('auth.agreePre')}{' '}
+          <Link to="/legal/terms" className="text-primary hover:underline">{t('auth.termsWord')}</Link> {t('auth.and')}{' '}
+          <Link to="/legal/privacy" className="text-primary hover:underline">{t('auth.privacyWord')}</Link>.
         </p>
       </form>
     </AuthLayout>

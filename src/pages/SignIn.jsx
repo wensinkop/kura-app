@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import AuthLayout, { authInput, authLabel, authBtn, AuthError } from '../components/AuthLayout'
 
 export default function SignIn() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,27 +24,27 @@ export default function SignIn() {
 
   return (
     <AuthLayout
-      title="Welcome back"
-      footer={<>No account yet? <Link to="/signup" className="text-primary hover:underline">Create one</Link></>}
+      title={t('auth.welcomeBack')}
+      footer={<>{t('auth.noAccount')} <Link to="/signup" className="text-primary hover:underline">{t('auth.createOne')}</Link></>}
     >
       <form onSubmit={handleSignIn} className="space-y-4">
         <div>
-          <label className={authLabel}>Email</label>
+          <label className={authLabel}>{t('auth.email')}</label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} required />
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="text-sm font-medium text-muted">Password</label>
-            <Link to="/forgot-password" className="text-xs text-primary hover:underline">Forgot password?</Link>
+            <label className="text-sm font-medium text-muted">{t('auth.password')}</label>
+            <Link to="/forgot-password" className="text-xs text-primary hover:underline">{t('auth.forgotPassword')}</Link>
           </div>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={authInput} required />
         </div>
         <AuthError>{error}</AuthError>
         <button type="submit" disabled={loading} className={authBtn}>
-          {loading ? 'Signing in…' : 'Sign in'}
+          {loading ? t('auth.signingIn') : t('auth.signIn')}
         </button>
         <Link to="/forgot-email" className="block w-full text-center text-sm text-muted hover:text-primary">
-          Forgot which email you used?
+          {t('auth.forgotEmail')}
         </Link>
       </form>
     </AuthLayout>

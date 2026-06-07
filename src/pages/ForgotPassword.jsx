@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice } from '../components/AuthLayout'
 
 export default function ForgotPassword() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
@@ -23,24 +25,21 @@ export default function ForgotPassword() {
 
   return (
     <AuthLayout
-      title="Reset your password"
-      subtitle="Enter your email and we'll send you a reset link."
-      footer={<Link to="/signin" className="text-primary hover:underline">← Back to sign in</Link>}
+      title={t('auth.resetTitle')}
+      subtitle={t('auth.resetSubtitle')}
+      footer={<Link to="/signin" className="text-primary hover:underline">{t('auth.backToSignIn')}</Link>}
     >
       {sent ? (
-        <AuthNotice>
-          If an account exists for {email}, a password-reset link is on its way. Open it on this
-          device to set a new password.
-        </AuthNotice>
+        <AuthNotice>{t('auth.resetSent', { email })}</AuthNotice>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className={authLabel}>Email</label>
+            <label className={authLabel}>{t('auth.email')}</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} required />
           </div>
           <AuthError>{error}</AuthError>
           <button type="submit" disabled={loading} className={authBtn}>
-            {loading ? 'Sending…' : 'Send reset link'}
+            {loading ? t('auth.sending') : t('auth.sendResetLink')}
           </button>
         </form>
       )}

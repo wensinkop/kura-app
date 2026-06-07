@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice } from '../components/AuthLayout'
@@ -8,6 +9,7 @@ import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice } from
 // it signs them in, and they can confirm the address in Settings. We never
 // reveal whether an account exists (no account enumeration).
 export default function ForgotEmail() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
@@ -31,24 +33,21 @@ export default function ForgotEmail() {
 
   return (
     <AuthLayout
-      title="Find your account"
-      subtitle="Not sure which email you signed up with? Enter one you might have used and we'll send a sign-in link to it."
-      footer={<Link to="/signin" className="text-primary hover:underline">← Back to sign in</Link>}
+      title={t('auth.findTitle')}
+      subtitle={t('auth.findSubtitle')}
+      footer={<Link to="/signin" className="text-primary hover:underline">{t('auth.backToSignIn')}</Link>}
     >
       {sent ? (
-        <AuthNotice>
-          If an account exists for {email}, a sign-in link is on its way. Open it to sign in — that
-          confirms this is your email. If nothing arrives, try another address.
-        </AuthNotice>
+        <AuthNotice>{t('auth.findSent', { email })}</AuthNotice>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className={authLabel}>Email to try</label>
+            <label className={authLabel}>{t('auth.emailToTry')}</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={authInput} required />
           </div>
           <AuthError>{error}</AuthError>
           <button type="submit" disabled={loading} className={authBtn}>
-            {loading ? 'Sending…' : 'Send sign-in link'}
+            {loading ? t('auth.sending') : t('auth.sendSignInLink')}
           </button>
         </form>
       )}
