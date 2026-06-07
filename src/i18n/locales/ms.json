@@ -181,6 +181,7 @@
     "type": { "cash": "Tunai", "debit": "Debit", "credit_card": "Kad kredit" }
   },
   "stats": {
+    "trend": "Trend",
     "mode": { "week": "Minggu", "month": "Bulan", "year": "Tahun", "period": "Tempoh tersuai" },
     "pickDates": "Pilih tarikh mula dan tamat untuk melihat statistik.",
     "missingRate_one": "{{list}} tiada kadar tukaran dan dikecualikan.",

@@ -181,6 +181,7 @@
     "type": { "cash": "Cash", "debit": "Debit", "credit_card": "Credit card" }
   },
   "stats": {
+    "trend": "Trend",
     "mode": { "week": "Linggo", "month": "Buwan", "year": "Taon", "period": "Custom na panahon" },
     "pickDates": "Pumili ng petsa ng simula at wakas para makita ang stats.",
     "missingRate_one": "Walang exchange rate ang {{list}} kaya hindi kasama.",

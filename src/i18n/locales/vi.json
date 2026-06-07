@@ -181,6 +181,7 @@
     "type": { "cash": "Tiền mặt", "debit": "Ghi nợ", "credit_card": "Thẻ tín dụng" }
   },
   "stats": {
+    "trend": "Xu hướng",
     "mode": { "week": "Tuần", "month": "Tháng", "year": "Năm", "period": "Khoảng tùy chỉnh" },
     "pickDates": "Chọn ngày bắt đầu và kết thúc để xem thống kê.",
     "missingRate_one": "{{list}} chưa có tỷ giá và bị loại trừ.",

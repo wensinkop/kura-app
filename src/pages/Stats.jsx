@@ -6,7 +6,7 @@ import { useMonth } from '../MonthContext'
 import SwipePager from '../components/SwipePager'
 import { listTransactionsInRange, listCategories, listRates } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
-import { formatMoney, dayLabel, monthYearLabel } from '../lib/format'
+import { formatMoney, formatSigned, amountColor, dayLabel, monthYearLabel } from '../lib/format'
 import { toBase } from '../lib/balances'
 import { Field } from '../components/ui'
 import DatePicker from '../components/DatePicker'
@@ -51,6 +51,48 @@ function rangeFor(mode, anchor, periodStart, periodEnd) {
   const y = anchor.getFullYear()
   const m = anchor.getMonth()
   return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label: monthYearLabel(y, m) }
+}
+
+// Sub-period buckets for the trend chart, derived from the current mode+anchor:
+//   • week  → the last 8 weeks (Mon-start)
+//   • month → the last 6 months
+//   • year  → the 12 months of the anchor's year
+// Each bucket carries its own [start,end) range, a short label, and the anchor to
+// jump to when tapped. `windowStart/End` spans them all (one fetch covers them).
+function trendConfig(mode, anchor) {
+  const lang = i18n.language || 'en'
+  const now = new Date()
+  if (mode === 'week') {
+    const curr = weekStart(anchor)
+    const buckets = []
+    for (let i = 7; i >= 0; i--) {
+      const s = addDays(curr, -7 * i)
+      const e = addDays(s, 7)
+      buckets.push({ key: isoOfDate(s), label: `${s.getDate()}/${s.getMonth() + 1}`, start: isoOfDate(s), end: isoOfDate(e), anchor: isoOfDate(s), mode: 'week', current: i === 0 })
+    }
+    return { buckets, windowStart: buckets[0].start, windowEnd: buckets[buckets.length - 1].end }
+  }
+  if (mode === 'year') {
+    const y = anchor.getFullYear()
+    const buckets = []
+    for (let m = 0; m < 12; m++) {
+      const s = iso(y, m, 1)
+      const e = m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1)
+      buckets.push({ key: `${y}-${pad(m + 1)}`, label: new Date(y, m, 1).toLocaleDateString(lang, { month: 'narrow' }), start: s, end: e, anchor: s, mode: 'month', current: y === now.getFullYear() && m === now.getMonth() })
+    }
+    return { buckets, windowStart: iso(y, 0, 1), windowEnd: iso(y + 1, 0, 1) }
+  }
+  // month → last 6 months
+  const y = anchor.getFullYear(), m = anchor.getMonth()
+  const buckets = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(y, m - i, 1)
+    const yy = d.getFullYear(), mm = d.getMonth()
+    const s = iso(yy, mm, 1)
+    const e = mm === 11 ? iso(yy + 1, 0, 1) : iso(yy, mm + 1, 1)
+    buckets.push({ key: `${yy}-${pad(mm + 1)}`, label: d.toLocaleDateString(lang, { month: 'short' }), start: s, end: e, anchor: s, mode: 'month', current: i === 0 })
+  }
+  return { buckets, windowStart: buckets[0].start, windowEnd: buckets[buckets.length - 1].end }
 }
 
 export default function Stats() {
@@ -138,7 +180,7 @@ export default function Stats() {
     const bucket = (map, t, v) => {
       const c = t.category
       let pid, pname
-      if (!c) { pid = '__none'; pname = 'Uncategorised' }
+      if (!c) { pid = '__none'; pname = t('common.uncategorised') }
       else if (c.parent_id) { pid = c.parent_id; pname = catMap.get(c.parent_id)?.name ?? '…' }
       else { pid = c.id; pname = c.name }
       if (!map.has(pid)) map.set(pid, { id: pid, name: pname, total: 0, txns: [] })
@@ -159,7 +201,7 @@ export default function Stats() {
 
   const drillGroups = drillKind === 'income' ? agg.incomeGroups : agg.expenseGroups
   const drillGroup = drillCat ? drillGroups.find((g) => g.id === drillCat) || null : null
-  const drillName = drillGroup?.name ?? catMap.get(drillCat)?.name ?? (drillCat === '__none' ? 'Uncategorised' : '…')
+  const drillName = drillGroup?.name ?? catMap.get(drillCat)?.name ?? (drillCat === '__none' ? t('common.uncategorised') : '…')
 
   function shift(delta) {
     const d = new Date(anchor)
@@ -233,15 +275,26 @@ export default function Stats() {
           <button onClick={() => update({ v: null })}
             className={`flex-1 px-3 py-2 text-left border-r border-border relative ${view === 'expense' ? '' : 'opacity-50'}`}>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('home.expenses')}</div>
-            <div className="text-[14px] font-extrabold tabular text-expense leading-tight mt-0.5">{formatMoney(agg.expense, base)}</div>
+            <div className="text-[19px] font-extrabold tabular text-expense leading-tight mt-0.5">{formatMoney(agg.expense, base)}</div>
             {view === 'expense' && <span className="absolute left-0 right-0 bottom-0 h-[2.5px] bg-expense" />}
           </button>
           <button onClick={() => update({ v: 'income' })}
             className={`flex-1 px-3 py-2 text-left relative ${view === 'income' ? '' : 'opacity-50'}`}>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('home.income')}</div>
-            <div className="text-[14px] font-extrabold tabular text-income leading-tight mt-0.5">{formatMoney(agg.income, base)}</div>
+            <div className="text-[19px] font-extrabold tabular text-income leading-tight mt-0.5">{formatMoney(agg.income, base)}</div>
             {view === 'income' && <span className="absolute left-0 right-0 bottom-0 h-[2.5px] bg-income" />}
           </button>
+        </div>
+      )}
+
+      {/* Net (income − expense) for the period — a real headline a finance user
+          wants, with an explicit sign (never colour-only). */}
+      {!loading && !drillCat && range && (
+        <div className="text-center mt-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('home.net')}</span>{' '}
+          <span className={`text-[13px] font-extrabold tabular ${amountColor(agg.income - agg.expense)}`}>
+            {formatSigned(agg.income - agg.expense, base)}
+          </span>
         </div>
       )}
       </div>
@@ -259,11 +312,17 @@ export default function Stats() {
         <>
           {agg.missing.length > 0 && (
             <button onClick={() => navigate('/settings/rates')}
-              className="w-full text-left text-[12px] text-muted bg-surface-2 border border-border rounded-xl px-3.5 py-2.5 mt-2.5">
-              {t('stats.missingRate', { list: agg.missing.join(', '), count: agg.missing.length })}
-              <span className="text-primary font-semibold"> {t('stats.setRateCta')}</span>
+              className="w-full text-left text-[12px] text-expense bg-expense/5 border border-expense/30 rounded-xl px-3.5 py-2.5 mt-2.5">
+              ⚠ {t('stats.missingRate', { list: agg.missing.join(', '), count: agg.missing.length })}
+              <span className="font-bold"> {t('stats.setRateCta')}</span>
             </button>
           )}
+
+          {mode !== 'period' && (
+            <TrendChart mode={mode} anchor={anchor} view={view} base={base} rates={rates}
+              onPick={(b) => update(b.mode === mode ? { a: b.anchor } : { mode: b.mode === 'month' ? null : b.mode, a: b.anchor })} />
+          )}
+
 
           {view === 'expense' ? (
             <CategoryList title={t('stats.expensesByCategory')} noneText={t('stats.noneExpensesPeriod')} groups={agg.expenseGroups} total={agg.expense} base={base}
@@ -275,6 +334,68 @@ export default function Stats() {
         </>
       )}
       </SwipePager>
+    </div>
+  )
+}
+
+// Trend across recent sub-periods (last 8 weeks / 6 months / the year's months),
+// following the active view (expense or income). One wider fetch covers the whole
+// window; bars are tappable to jump to that period. Hidden when there's no data.
+function TrendChart({ mode, anchor, view, base, rates, onPick }) {
+  const { t } = useTranslation()
+  const { buckets, windowStart, windowEnd } = useMemo(() => trendConfig(mode, anchor), [mode, anchor])
+  const key = `range:${windowStart}:${windowEnd}`
+  const [txns, setTxns] = useState(() => cacheGet(key) ?? [])
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const cached = cacheGet(key)
+      if (cached !== undefined) setTxns(cached)
+      listTransactionsInRange(windowStart, windowEnd).then(({ data, error }) => {
+        if (!error) { setTxns(data ?? []); cacheSet(key, data ?? []) }
+      })
+    }, 0)
+    return () => clearTimeout(id)
+  }, [key, windowStart, windowEnd])
+
+  const values = useMemo(() => {
+    const sums = new Map(buckets.map((b) => [b.key, 0]))
+    for (const tx of txns) {
+      if (tx.kind !== view) continue // skips transfers and the other kind
+      const v = toBase(Number(tx.amount) || 0, tx.currency, rates, base)
+      if (v == null) continue
+      const b = buckets.find((bk) => tx.date >= bk.start && tx.date < bk.end)
+      if (b) sums.set(b.key, sums.get(b.key) + v)
+    }
+    return sums
+  }, [txns, buckets, view, rates, base])
+
+  const max = Math.max(1, ...buckets.map((b) => values.get(b.key) || 0))
+  if (!buckets.some((b) => (values.get(b.key) || 0) > 0)) return null
+  const barColor = view === 'income' ? 'var(--income)' : 'var(--expense)'
+
+  return (
+    <div className="bg-surface border border-border rounded-[14px] px-3.5 pt-3 pb-2 mt-2.5">
+      <div className="text-[10px] font-bold uppercase tracking-wide text-faint mb-2">{t('stats.trend')}</div>
+      <div className="flex items-end gap-1.5 h-[72px]">
+        {buckets.map((b) => {
+          const v = values.get(b.key) || 0
+          const h = Math.round((v / max) * 100)
+          return (
+            <button key={b.key} onClick={() => onPick(b)} title={formatMoney(v, base)}
+              aria-label={`${b.label}: ${formatMoney(v, base)}`}
+              className="flex-1 flex flex-col justify-end h-full group">
+              <div className="w-full rounded-t-[4px] transition-all group-hover:brightness-110"
+                style={{ height: `${Math.max(h, 2)}%`, background: barColor, opacity: b.current ? 1 : 0.4 }} />
+            </button>
+          )
+        })}
+      </div>
+      <div className="flex gap-1.5 mt-1">
+        {buckets.map((b) => (
+          <div key={b.key} className={`flex-1 text-center text-[9px] truncate ${b.current ? 'text-text font-bold' : 'text-faint'}`}>{b.label}</div>
+        ))}
+      </div>
     </div>
   )
 }

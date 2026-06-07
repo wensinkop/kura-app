@@ -182,6 +182,7 @@
     "type": { "cash": "Cash", "debit": "Debit", "credit_card": "Credit card" }
   },
   "stats": {
+    "trend": "Trend",
     "mode": { "week": "Week", "month": "Month", "year": "Year", "period": "Custom period" },
     "pickDates": "Pick a start and end date to see your stats.",
     "missingRate_one": "{{list}} has no exchange rate and is excluded.",
