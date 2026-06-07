@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { listAccounts, listGroups, listCategories, createTransactions, recentNotes, getAccountBalances } from '../lib/data'
+import { listAccounts, listGroups, listCategories, createTransactions, recentNotes, getAccountBalances, createImportBatch, setImportBatchCount, undoImport } from '../lib/data'
 import {
   parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint, detectNumberFormat,
 } from '../lib/statement'
@@ -122,6 +122,9 @@ export default function BankStatement() {
   const [saving, setSaving] = useState(false)
   const [savedStats, setSavedStats] = useState({ count: 0, income: 0, expense: 0 }) // accumulated across batched saves
   const [doneBalance, setDoneBalance] = useState(null) // account balance shown on the done step
+  const [batchId, setBatchId] = useState(null) // import batch tag (so the save can be undone as a unit)
+  const [undoing, setUndoing] = useState(false)
+  const [undone, setUndone] = useState(false)
 
   const fileInput = useRef(null)
 
@@ -387,7 +390,17 @@ export default function BankStatement() {
     if (!rows.length) return
     if (!rows.every(rowValid)) { setError(badMsg); return }
     setSaving(true)
-    const { error: err } = await createTransactions(user.id, rows.map(rowPayload))
+
+    // Open a batch on the first save of this session so every row (across
+    // batched saves) is tagged and the whole import can be undone as a unit.
+    let bid = batchId
+    if (!bid) {
+      const { data, error: bErr } = await createImportBatch(user.id, { source: 'bank-statement', label: fileName })
+      if (bErr) { setError(bErr.message); setSaving(false); return }
+      bid = data.id; setBatchId(bid)
+    }
+
+    const { error: err } = await createTransactions(user.id, rows.map((r) => ({ ...rowPayload(r), import_batch_id: bid })))
     if (err) { setError(err.message); setSaving(false); return }
     const savedIds = new Set(rows.map((r) => r.tempId))
     const remaining = reviewRows.filter((r) => !savedIds.has(r.tempId))
@@ -400,6 +413,7 @@ export default function BankStatement() {
     setSelected(new Set())
     setSaving(false)
     if (remaining.length === 0) {
+      await setImportBatchCount(bid, stats.count)
       const bal = await getAccountBalances()
       const b = (bal.data ?? []).find((x) => x.account_id === accountId)
       setDoneBalance(b ? Number(b.balance) : null)
@@ -407,6 +421,15 @@ export default function BankStatement() {
       return
     }
     setReviewRows(remaining)
+  }
+
+  async function handleUndo() {
+    if (!batchId) return
+    setUndoing(true)
+    const { error: err } = await undoImport(batchId)
+    setUndoing(false)
+    if (err) { setError(err.message); return }
+    setUndone(true)
   }
   const saveAll = () => saveRows(reviewRows, 'Every row needs a date and an amount; transfers need a second account.')
   const saveSelected = () => saveRows(selectedRows, 'Selected rows need a date and an amount; transfers need a second account.')
@@ -871,6 +894,15 @@ export default function BankStatement() {
 
   // ---- Done: confirmation + resulting balance after saving ------------------
   function renderDone() {
+    if (undone) {
+      return (
+        <div className="max-w-md mx-auto text-center py-12 space-y-4">
+          <div className="text-[15px] font-semibold text-text">Import undone.</div>
+          <p className="text-[13px] text-muted">The {savedStats.count.toLocaleString()} transaction{savedStats.count === 1 ? '' : 's'} from this statement have been removed.</p>
+          <Button onClick={() => navigate('/')} className="w-full">Done</Button>
+        </div>
+      )
+    }
     return (
       <div className="max-w-md mx-auto py-8 space-y-5">
         <div className="text-center space-y-2">
@@ -900,7 +932,12 @@ export default function BankStatement() {
           </div>
         )}
 
-        <Button onClick={() => navigate('/')} className="w-full">Done</Button>
+        <div className="flex flex-col gap-2.5">
+          <Button onClick={() => navigate('/')} className="w-full">Looks good — done</Button>
+          <Button variant="ghost" onClick={handleUndo} disabled={undoing} className="w-full">
+            {undoing ? 'Undoing…' : 'Undo this import'}
+          </Button>
+        </div>
       </div>
     )
   }

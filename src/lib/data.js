@@ -580,6 +580,20 @@ export function listImportBatches() {
   return supabase.from('import_batches').select('*').order('created_at', { ascending: false })
 }
 
+// Open an empty batch (for importers that insert rows themselves, e.g. the bank-
+// statement converter, so their inserts can be tagged + undone as a unit).
+export function createImportBatch(userId, meta = {}) {
+  return supabase
+    .from('import_batches')
+    .insert({ user_id: userId, source: meta.source ?? null, label: meta.label ?? null, count: 0 })
+    .select()
+    .single()
+}
+
+export function setImportBatchCount(batchId, count) {
+  return supabase.from('import_batches').update({ count }).eq('id', batchId)
+}
+
 // Undo an import: delete its tagged transactions (RLS scopes to the owner),
 // then the batch record. Returns { error }.
 export async function undoImport(batchId) {
