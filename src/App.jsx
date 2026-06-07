@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './AuthContext'
 import { ThemeProvider } from './ThemeContext'
+import { LanguageProvider } from './LanguageContext'
 import { MonthProvider } from './MonthContext'
 import { FilterProvider } from './FilterContext'
 import AppShell from './components/AppShell'
@@ -76,6 +77,7 @@ export default function App() {
       <NativeBackButton />
       <AuthProvider>
         <ThemeProvider>
+          <LanguageProvider>
           <MonthProvider>
           <FilterProvider>
           <Routes>
@@ -139,6 +141,7 @@ export default function App() {
           </Routes>
           </FilterProvider>
           </MonthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

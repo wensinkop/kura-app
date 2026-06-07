@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useMonth } from '../MonthContext'
@@ -24,6 +25,7 @@ function dayHeading(dateStr) {
 }
 
 export default function Home() {
+  const { t } = useTranslation()
   const { year, monthIndex, prev, next } = useMonth()
   const { accountIds } = useAccountFilter()
   const { profile } = useAuth()
@@ -141,7 +143,7 @@ export default function Home() {
     return { rows: [...byCur.values()], over }
   }, [profile?.budgets_enabled, budgets, txns])
 
-  if (loading) return <p className="text-muted text-sm py-8 text-center">Loading…</p>
+  if (loading) return <p className="text-muted text-sm py-8 text-center">{t('common.loading')}</p>
 
   return (
     <div className="flex flex-col desk:grid desk:grid-cols-[1fr_330px] desk:gap-[22px] desk:items-start">
@@ -155,9 +157,9 @@ export default function Home() {
           const fmt = (v) => (cur ? formatMoney(v, cur) : '—')
           return (
             <div key={cur ?? 'none'} className="flex bg-surface border border-border rounded-xl overflow-hidden text-center">
-              <CompactCell label="Income" value={fmt(s.income)} color="text-income" />
-              <CompactCell label="Expenses" value={fmt(s.expense)} color="text-expense" border />
-              <CompactCell label="Net" value={cur ? formatMoney(Math.abs(net), cur) : '—'} color={amountColor(net)} border />
+              <CompactCell label={t('home.income')} value={fmt(s.income)} color="text-income" />
+              <CompactCell label={t('home.expenses')} value={fmt(s.expense)} color="text-expense" border />
+              <CompactCell label={t('home.net')} value={cur ? formatMoney(Math.abs(net), cur) : '—'} color={amountColor(net)} border />
             </div>
           )
         })}
@@ -172,9 +174,9 @@ export default function Home() {
       <SwipePager enabled={!selectMode} onPrev={prev} onNext={next} className="min-w-0">
         {days.length === 0 ? (
           <div className="bg-surface border border-border rounded-[14px] p-8 text-center mt-0">
-            <p className="text-sm text-muted mb-4">No transactions this month yet.</p>
+            <p className="text-sm text-muted mb-4">{t('home.noTransactions')}</p>
             <Button onClick={() => navigate('/new')}>
-              <PlusIcon className="w-[18px] h-[18px]" /> Add a transaction
+              <PlusIcon className="w-[18px] h-[18px]" /> {t('home.addTransaction')}
             </Button>
           </div>
         ) : (
@@ -211,16 +213,16 @@ export default function Home() {
       {/* Summary rail — desktop only (mobile uses the compact sticky bar above) */}
       <aside className="hidden desk:flex desk:sticky desk:top-[84px] flex-col gap-3.5">
         {summaryCurs.length === 0 ? (
-          <SummaryCard label="This month" rows={[['Income', '—', ''], ['Expenses', '—', ''], ['Net', '—', '']]} />
+          <SummaryCard label={t('home.thisMonth')} rows={[[t('home.income'), '—', ''], [t('home.expenses'), '—', ''], [t('home.net'), '—', '']]} />
         ) : (
           summaryCurs.map((cur) => {
             const s = summary[cur]
             const net = s.income - s.expense
             return (
-              <SummaryCard key={cur} label={summaryCurs.length > 1 ? cur : 'This month'} rows={[
-                ['Income', formatMoney(s.income, cur), 'text-income'],
-                ['Expenses', formatMoney(s.expense, cur), 'text-expense'],
-                ['Net', formatMoney(Math.abs(net), cur), amountColor(net)],
+              <SummaryCard key={cur} label={summaryCurs.length > 1 ? cur : t('home.thisMonth')} rows={[
+                [t('home.income'), formatMoney(s.income, cur), 'text-income'],
+                [t('home.expenses'), formatMoney(s.expense, cur), 'text-expense'],
+                [t('home.net'), formatMoney(Math.abs(net), cur), amountColor(net)],
               ]} />
             )
           })
@@ -231,23 +233,23 @@ export default function Home() {
       {/* Floating selection action bar */}
       {selectMode && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-[76px] desk:bottom-6 z-40 bg-surface border border-border rounded-full shadow-lg flex items-center gap-1.5 pl-2 pr-2 py-1.5">
-          <button onClick={exitSelect} aria-label="Cancel selection"
+          <button onClick={exitSelect} aria-label={t('home.cancelSelection')}
             className="w-9 h-9 grid place-items-center rounded-full text-muted hover:bg-surface-2">
             <CloseIcon className="w-[18px] h-[18px]" />
           </button>
-          <span className="text-sm font-semibold px-1 tabular">{selected.size} selected</span>
+          <span className="text-sm font-semibold px-1 tabular">{t('home.selected', { count: selected.size })}</span>
           <button onClick={() => setConfirmBulk(true)} disabled={selected.size === 0}
             className="flex items-center gap-1.5 bg-expense text-white font-bold text-sm rounded-full px-4 py-2 disabled:opacity-50">
-            <TrashIcon className="w-4 h-4" /> Delete
+            <TrashIcon className="w-4 h-4" /> {t('home.delete')}
           </button>
         </div>
       )}
 
       {confirmBulk && (
         <ConfirmDialog
-          title={`Delete ${selected.size} transaction${selected.size === 1 ? '' : 's'}?`}
-          message="They will be permanently removed and balances will update."
-          confirmLabel="Delete"
+          title={t('home.deleteTitle', { count: selected.size })}
+          message={t('home.deleteMessage')}
+          confirmLabel={t('home.delete')}
           busy={deleting}
           onConfirm={deleteSelected}
           onClose={() => setConfirmBulk(false)}

@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useTheme } from '../ThemeContext'
+import { useLanguage } from '../LanguageContext'
+import { LANGUAGES } from '../i18n'
 import { Modal } from '../components/ui'
 import { formatDate, DATE_FORMAT_LABELS } from '../lib/format'
 
@@ -52,21 +55,30 @@ function Switch({ on, onClick }) {
 }
 
 const Chevron = <span className="text-faint">›</span>
-function Premium() {
-  return <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-1.5 py-0.5">Premium</span>
+function Premium({ label }) {
+  return <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-1.5 py-0.5">{label}</span>
 }
 
 export default function Settings() {
+  const { t } = useTranslation()
   const { user, profile, role, signOut, updateProfile } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { lang, setLanguage } = useLanguage()
   const navigate = useNavigate()
   const [dateOpen, setDateOpen] = useState(false)
+  const [langOpen, setLangOpen] = useState(false)
   const dateFmt = profile?.date_format ?? 'dmy'
   const budgetsOn = profile?.budgets_enabled ?? false
+  const currentLang = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0]
 
   async function pickDateFormat(f) {
     setDateOpen(false)
     if (f !== dateFmt) await updateProfile({ date_format: f })
+  }
+
+  async function pickLanguage(code) {
+    setLangOpen(false)
+    if (code !== lang) await setLanguage(code)
   }
 
   function toggleBudgets() {
@@ -75,90 +87,121 @@ export default function Settings() {
 
   return (
     <div className="max-w-[640px] mx-auto">
-      <SectionTitle>Account</SectionTitle>
+      <SectionTitle>{t('settings.account')}</SectionTitle>
       <Group>
-        <Row title={profile?.full_name || 'Your name'} sub={user?.email} />
-        <Row title="Email & password" sub="Edit your sign-in details" right={Chevron} onClick={() => navigate('/settings/account')} />
+        <Row title={profile?.full_name || t('settings.yourName')} sub={user?.email} />
+        <Row title={t('settings.emailPassword')} sub={t('settings.emailPasswordSub')} right={Chevron} onClick={() => navigate('/settings/account')} />
       </Group>
 
-      <SectionTitle>Appearance</SectionTitle>
+      <SectionTitle>{t('settings.appearance')}</SectionTitle>
       <Group>
         <Row
-          title="Dark mode"
-          sub="Switch between light and dark"
+          title={t('settings.darkMode')}
+          sub={t('settings.darkModeSub')}
           right={<Switch on={theme === 'dark'} onClick={toggleTheme} />}
         />
       </Group>
 
-      <SectionTitle>Preferences</SectionTitle>
+      <SectionTitle>{t('settings.preferences')}</SectionTitle>
       <Group>
         <Row
-          title="Base currency"
-          sub="Used for combined totals across currencies"
+          title={t('settings.language')}
+          sub={t('settings.languageSub')}
+          right={<span className="flex items-center gap-1.5"><span className="text-faint font-semibold">{currentLang.label}</span>{Chevron}</span>}
+          onClick={() => setLangOpen(true)}
+        />
+        <Row
+          title={t('settings.baseCurrency')}
+          sub={t('settings.baseCurrencySub')}
           right={<span className="text-faint font-semibold">{profile?.base_currency ?? 'IDR'}</span>}
         />
         <Row
-          title="Date format"
-          sub="How dates show in entry, editing & filters"
+          title={t('settings.dateFormat')}
+          sub={t('settings.dateFormatSub')}
           right={<span className="flex items-center gap-1.5"><span className="text-faint font-semibold tabular">{formatDate(DATE_SAMPLE, dateFmt)}</span>{Chevron}</span>}
           onClick={() => setDateOpen(true)}
         />
         <Row
-          title="Exchange rates"
-          sub="Convert foreign-currency balances to net worth"
+          title={t('settings.exchangeRates')}
+          sub={t('settings.exchangeRatesSub')}
           right={Chevron}
           onClick={() => navigate('/settings/rates')}
         />
         <Row
-          title="Budgets"
-          sub="Set spending caps per category"
+          title={t('settings.budgets')}
+          sub={t('settings.budgetsSub')}
           right={<Switch on={budgetsOn} onClick={toggleBudgets} />}
         />
         {budgetsOn && (
-          <Row title="Open budgets" sub="View and edit your budgets" right={Chevron} onClick={() => navigate('/budget')} />
+          <Row title={t('settings.openBudgets')} sub={t('settings.openBudgetsSub')} right={Chevron} onClick={() => navigate('/budget')} />
         )}
       </Group>
 
-      <SectionTitle>Structure</SectionTitle>
+      <SectionTitle>{t('settings.structure')}</SectionTitle>
       <Group>
-        <Row title="Categories" sub="Income & expense, sub-categories" right={Chevron} onClick={() => navigate('/settings/categories')} />
-        <Row title="Accounts & groups" sub="Create, edit, group your accounts" right={Chevron} onClick={() => navigate('/settings/accounts')} />
+        <Row title={t('settings.categories')} sub={t('settings.categoriesSub')} right={Chevron} onClick={() => navigate('/settings/categories')} />
+        <Row title={t('settings.accountsGroups')} sub={t('settings.accountsGroupsSub')} right={Chevron} onClick={() => navigate('/settings/accounts')} />
       </Group>
 
-      <SectionTitle>Data</SectionTitle>
+      <SectionTitle>{t('settings.data')}</SectionTitle>
       <Group>
-        <Row title="Backup & data" sub="Export / import CSV · backup · restore · reset" right={Chevron} onClick={() => navigate('/settings/data')} />
-        <Row title="Bank statement upload" sub="PDF / CSV → pre-filled rows · Premium" right={<span className="flex items-center gap-1.5"><Premium />{Chevron}</span>} onClick={() => navigate('/import/statement')} />
+        <Row title={t('settings.backupData')} sub={t('settings.backupDataSub')} right={Chevron} onClick={() => navigate('/settings/data')} />
+        <Row title={t('settings.bankStatement')} sub={t('settings.bankStatementSub')} right={<span className="flex items-center gap-1.5"><Premium label={t('common.premium')} />{Chevron}</span>} onClick={() => navigate('/import/statement')} />
       </Group>
 
-      <SectionTitle>About & legal</SectionTitle>
+      <SectionTitle>{t('settings.aboutLegal')}</SectionTitle>
       <Group>
-        <Row title="Help & FAQ" sub="Answers to common questions" right={Chevron} onClick={() => navigate('/help')} />
-        <Row title="Privacy Policy" sub="How your data is handled" right={Chevron} onClick={() => navigate('/legal/privacy')} />
-        <Row title="Terms & Conditions" sub="The terms of using Kura" right={Chevron} onClick={() => navigate('/legal/terms')} />
+        <Row title={t('settings.help')} sub={t('settings.helpSub')} right={Chevron} onClick={() => navigate('/help')} />
+        <Row title={t('settings.privacy')} sub={t('settings.privacySub')} right={Chevron} onClick={() => navigate('/legal/privacy')} />
+        <Row title={t('settings.terms')} sub={t('settings.termsSub')} right={Chevron} onClick={() => navigate('/legal/terms')} />
       </Group>
 
       {role === 'admin' && (
         <>
-          <SectionTitle>Admin</SectionTitle>
+          <SectionTitle>{t('settings.admin')}</SectionTitle>
           <Group>
-            <Row title="Users" sub="Manage subscriptions & roles" right={Chevron} onClick={() => navigate('/admin')} />
-            <Row title="Legal & help content" sub="Edit Privacy, Terms & FAQ pages" right={Chevron} onClick={() => navigate('/admin/content')} />
+            <Row title={t('settings.users')} sub={t('settings.usersSub')} right={Chevron} onClick={() => navigate('/admin')} />
+            <Row title={t('settings.legalContent')} sub={t('settings.legalContentSub')} right={Chevron} onClick={() => navigate('/admin/content')} />
           </Group>
         </>
       )}
 
       <div className="mt-5">
         <Group>
-          <Row title="Sign out" onClick={signOut} right={Chevron} />
+          <Row title={t('settings.signOut')} onClick={signOut} right={Chevron} />
         </Group>
       </div>
 
-      <p className="text-center text-xs text-faint pt-6 pb-1.5">Kura · steady, patient, protected 🐢</p>
+      <p className="text-center text-xs text-faint pt-6 pb-1.5">Kura · {t('settings.tagline')} 🐢</p>
       <p className="text-center text-[11px] text-faint pb-6">v1.0.0 · build {import.meta.env.VITE_BUILD_ID}</p>
 
+      {langOpen && (
+        <Modal title={t('settings.languageModalTitle')} onClose={() => setLangOpen(false)}>
+          <div className="space-y-2">
+            {LANGUAGES.map((l) => {
+              const active = l.code === lang
+              return (
+                <button
+                  key={l.code}
+                  onClick={() => pickLanguage(l.code)}
+                  className={`w-full flex items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left ${
+                    active ? 'border-primary bg-primary-soft' : 'border-border hover:bg-surface-2'
+                  }`}
+                >
+                  <span className="font-semibold text-[14.5px] text-text flex items-center gap-2">
+                    {l.label}
+                    {l.beta && <span className="text-[10px] font-bold uppercase tracking-wide text-muted border border-border rounded-full px-1.5 py-0.5">{t('common.beta')}</span>}
+                  </span>
+                  {active && <span className="text-primary font-bold shrink-0">✓</span>}
+                </button>
+              )
+            })}
+          </div>
+        </Modal>
+      )}
+
       {dateOpen && (
-        <Modal title="Date format" onClose={() => setDateOpen(false)}>
+        <Modal title={t('settings.dateFormatModalTitle')} onClose={() => setDateOpen(false)}>
           <div className="space-y-2">
             {DATE_FORMAT_KEYS.map((k) => {
               const active = k === dateFmt

@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../AuthContext'
 import { HomeIcon, StatsIcon, BudgetIcon, AccountsIcon, SettingsIcon, PlusIcon } from '../lib/icons'
 import Logo from './Logo'
@@ -7,15 +8,16 @@ import Logo from './Logo'
 // AppShell and the full-page New Transaction screen so the nav persists beside
 // the entry register on desktop (matches the locked mockup).
 export default function Sidebar() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user, profile } = useAuth()
 
   const nav = [
-    { to: '/', label: 'Home', Icon: HomeIcon, end: true },
-    { to: '/stats', label: 'Stats', Icon: StatsIcon },
-    ...(profile?.budgets_enabled ? [{ to: '/budget', label: 'Budget', Icon: BudgetIcon }] : []),
-    { to: '/accounts', label: 'Accounts', Icon: AccountsIcon },
-    { to: '/settings', label: 'Settings', Icon: SettingsIcon },
+    { to: '/', label: t('nav.home'), Icon: HomeIcon, end: true },
+    { to: '/stats', label: t('nav.stats'), Icon: StatsIcon },
+    ...(profile?.budgets_enabled ? [{ to: '/budget', label: t('nav.budget'), Icon: BudgetIcon }] : []),
+    { to: '/accounts', label: t('nav.accounts'), Icon: AccountsIcon },
+    { to: '/settings', label: t('nav.settings'), Icon: SettingsIcon },
   ]
 
   const sidebarLink = ({ isActive }) =>
@@ -29,7 +31,7 @@ export default function Sidebar() {
       </div>
       <button onClick={() => navigate('/new')}
         className="flex items-center justify-center gap-2 bg-primary text-on-primary font-bold text-sm py-2.5 rounded-[11px] mb-3.5 hover:bg-primary-press">
-        <PlusIcon className="w-[18px] h-[18px]" /> New transaction
+        <PlusIcon className="w-[18px] h-[18px]" /> {t('nav.newTransaction')}
       </button>
       {nav.map(({ to, label, Icon, end }) => (
         <NavLink key={to} to={to} end={end} className={sidebarLink}>
@@ -38,7 +40,7 @@ export default function Sidebar() {
       ))}
       <div className="mt-auto border-t border-border pt-3 text-xs text-faint break-all">
         {user?.email}
-        <br />Base currency · {profile?.base_currency ?? 'IDR'}
+        <br />{t('settings.baseCurrency')} · {profile?.base_currency ?? 'IDR'}
       </div>
     </aside>
   )

@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
 import { useAccountFilter } from '../FilterContext'
@@ -10,18 +11,19 @@ import {
   PlusIcon, SearchIcon, FilterIcon, ChevronLeft, ChevronRight,
 } from '../lib/icons'
 
-function titleFor(pathname) {
-  if (pathname === '/') return 'Home'
-  if (pathname.startsWith('/stats')) return 'Statistics'
-  if (pathname === '/budget') return 'Budget'
-  if (pathname.startsWith('/accounts')) return 'Accounts'
-  if (pathname === '/settings/categories') return 'Categories'
-  if (pathname === '/settings/accounts') return 'Accounts & groups'
-  if (pathname === '/settings/rates') return 'Exchange rates'
-  if (pathname === '/settings/data') return 'Backup & data'
-  if (pathname === '/settings/account') return 'Email & password'
-  if (pathname.startsWith('/settings')) return 'Settings'
-  return 'Kura'
+// Returns the i18n key for the page title; resolved with t() at render.
+function titleKeyFor(pathname) {
+  if (pathname === '/') return 'title.home'
+  if (pathname.startsWith('/stats')) return 'title.statistics'
+  if (pathname === '/budget') return 'title.budget'
+  if (pathname.startsWith('/accounts')) return 'title.accounts'
+  if (pathname === '/settings/categories') return 'title.categories'
+  if (pathname === '/settings/accounts') return 'title.accountsGroups'
+  if (pathname === '/settings/rates') return 'title.exchangeRates'
+  if (pathname === '/settings/data') return 'title.backupData'
+  if (pathname === '/settings/account') return 'title.emailPassword'
+  if (pathname.startsWith('/settings')) return 'title.settings'
+  return 'title.kura'
 }
 
 // Settings sub-pages get a back arrow that returns to the Settings index.
@@ -40,10 +42,11 @@ const restoresScroll = (pathname) => !pathname.startsWith('/settings/')
 
 // Selected-month control in the Home top bar; reads/writes the shared MonthContext.
 function MonthNav() {
+  const { t } = useTranslation()
   const { label, prev, next, today, isCurrent } = useMonth()
   return (
     <div className="flex items-center gap-1 flex-1 justify-center desk:flex-initial">
-      <button onClick={prev} aria-label="Previous month"
+      <button onClick={prev} aria-label={t('month.previous')}
         className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
         <ChevronLeft />
       </button>
@@ -53,15 +56,15 @@ function MonthNav() {
       <button
         onClick={isCurrent ? undefined : today}
         disabled={isCurrent}
-        aria-label={isCurrent ? undefined : 'Back to this month'}
-        title={isCurrent ? undefined : 'Back to this month'}
+        aria-label={isCurrent ? undefined : t('month.backToThis')}
+        title={isCurrent ? undefined : t('month.backToThis')}
         className={`font-bold text-base px-2.5 py-1.5 rounded-full whitespace-nowrap transition-colors ${
           isCurrent ? 'cursor-default' : 'text-primary bg-primary-soft hover:brightness-95'
         }`}
       >
         {label}
       </button>
-      <button onClick={next} aria-label="Next month"
+      <button onClick={next} aria-label={t('month.next')}
         className="w-[34px] h-[34px] rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
         <ChevronRight />
       </button>
@@ -70,6 +73,7 @@ function MonthNav() {
 }
 
 export default function AppShell() {
+  const { t } = useTranslation()
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { isFiltered } = useAccountFilter()
@@ -109,7 +113,7 @@ export default function AppShell() {
     }
   }, [pathname])
 
-  const title = titleFor(pathname)
+  const title = t(titleKeyFor(pathname))
   const backTarget = backTargetFor(pathname)
   // The bottom nav / sidebar already names the top-level pages, so they show no
   // header. Home keeps its month/search/filter bar; settings sub-pages keep a
@@ -141,7 +145,7 @@ export default function AppShell() {
               ) : (
                 <div className="flex items-center gap-1.5 flex-1 min-w-0">
                   {backTarget && (
-                    <button onClick={() => navigate(backTarget)} aria-label="Back"
+                    <button onClick={() => navigate(backTarget)} aria-label={t('common.back')}
                       className="w-9 h-9 -ml-1.5 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2 shrink-0">
                       <ChevronLeft />
                     </button>
@@ -154,11 +158,11 @@ export default function AppShell() {
 
               {isHome && (
                 <>
-                  <button onClick={() => navigate('/search')} title="Search" aria-label="Search"
+                  <button onClick={() => navigate('/search')} title={t('nav.search')} aria-label={t('nav.search')}
                     className="w-[38px] h-[38px] rounded-[11px] grid place-items-center text-muted hover:bg-surface-2">
                     <SearchIcon />
                   </button>
-                  <button onClick={() => setFilterOpen(true)} title="Filter by account" aria-label="Filter"
+                  <button onClick={() => setFilterOpen(true)} title={t('nav.filter')} aria-label={t('nav.filter')}
                     className={`relative w-[38px] h-[38px] rounded-[11px] grid place-items-center hover:bg-surface-2 ${
                       isFiltered ? 'text-primary bg-primary-soft' : 'text-muted'
                     }`}>
@@ -180,20 +184,20 @@ export default function AppShell() {
               above the keyboard. */}
           <nav data-hide-on-keyboard className="desk:hidden sticky bottom-0 z-20 bg-surface border-t border-border grid grid-cols-5 items-center px-1.5 pt-2 pb-[calc(0.5rem_+_env(safe-area-inset-bottom))]">
             <NavLink to="/" end className={bottomLink}>
-              <HomeIcon className="w-[18px] h-[18px]" />Home
+              <HomeIcon className="w-[18px] h-[18px]" />{t('nav.home')}
             </NavLink>
             <NavLink to="/stats" className={bottomLink}>
-              <StatsIcon className="w-[18px] h-[18px]" />Stats
+              <StatsIcon className="w-[18px] h-[18px]" />{t('nav.stats')}
             </NavLink>
-            <button onClick={() => navigate('/new')} aria-label="New transaction"
+            <button onClick={() => navigate('/new')} aria-label={t('nav.newTransaction')}
               className="w-[54px] h-[54px] rounded-full bg-primary text-on-primary grid place-items-center justify-self-center -mt-[26px] shadow-[0_6px_16px_rgba(4,120,87,.4)]">
               <PlusIcon className="w-[26px] h-[26px]" />
             </button>
             <NavLink to="/accounts" className={bottomLink}>
-              <AccountsIcon className="w-[18px] h-[18px]" />Accounts
+              <AccountsIcon className="w-[18px] h-[18px]" />{t('nav.accounts')}
             </NavLink>
             <NavLink to="/settings" className={bottomLink}>
-              <SettingsIcon className="w-[18px] h-[18px]" />Settings
+              <SettingsIcon className="w-[18px] h-[18px]" />{t('nav.settings')}
             </NavLink>
           </nav>
         </div>
