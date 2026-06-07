@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { listAccounts, importMigration, undoImport } from '../lib/data'
+import { listAccounts, importMigration, undoImport, getAccountBalances } from '../lib/data'
 import {
   detectSource, parseMoneyManager, analyzeGeneric, buildGenericRows,
   collectAccounts, summarize,
@@ -88,6 +88,8 @@ export default function Migrate() {
   // Import progress + result
   const [progress, setProgress] = useState({ done: 0, total: 0 })
   const [result, setResult] = useState(null)
+  const [totals, setTotals] = useState([]) // [{ currency, income, expense }]
+  const [balances, setBalances] = useState([]) // [{ name, currency, balance }]
   const [undoing, setUndoing] = useState(false)
   const [undone, setUndone] = useState(false)
 
@@ -243,11 +245,29 @@ export default function Migrate() {
         { source, label: fileName },
         (done, total) => setProgress({ done, total }),
       )
+
+      // Income/expense totals per currency (using each row's resolved account
+      // currency) — a quick sanity figure for the user to compare.
+      const byCur = new Map()
+      for (const r of toImport) {
+        if (r.type === 'transfer') continue
+        const cur = currencyForAccount(r.account)
+        if (!byCur.has(cur)) byCur.set(cur, { currency: cur, income: 0, expense: 0 })
+        byCur.get(cur)[r.type] += Number(r.amount) || 0
+      }
+      setTotals([...byCur.values()])
+
+      // Resulting balance of each touched account (server-computed), for the
+      // user to check against their old app.
+      const bal = await getAccountBalances()
+      const balById = new Map((bal.data ?? []).map((b) => [b.account_id, Number(b.balance)]))
+      setBalances((res.accounts ?? []).map((a) => ({ name: a.name, currency: a.currency, balance: balById.get(a.id) ?? 0 })))
+
       setResult(res)
       setStep('done')
     } catch (e) {
       setError(e?.message ?? 'Import failed.')
-      setStep(small ? 'review' : 'review')
+      setStep('review')
     }
   }
 
@@ -481,13 +501,14 @@ export default function Migrate() {
     return renderSummary()
   }
 
-  // Large import: summary + sample, no per-row editing.
+  // Large import: aggregate overview, no per-row list (a list of thousands of
+  // rows is noise — the post-import summary + balances are the real check).
   function renderSummary() {
-    const sampleCur = currencyForAccount(rows[0]?.account)
+    const usedAccounts = foundAccounts.filter((f) => plan[f.name]?.action !== 'skip').length
     return (
       <div className="space-y-4">
         <p className="text-[13px] text-muted leading-relaxed">
-          That’s a big import, so here’s the overview. Everything is tagged so you can undo the whole thing in one tap afterwards if it doesn’t look right.
+          Ready to import. Everything is tagged, so right after this you’ll see the totals and resulting balances — and you can undo the whole thing in one tap if anything looks off.
         </p>
         <div className="grid grid-cols-3 gap-2.5">
           <Stat label="Expenses" value={summary.byType.expense} />
@@ -495,27 +516,8 @@ export default function Migrate() {
           <Stat label="Transfers" value={summary.byType.transfer} />
         </div>
         <div className="bg-surface border border-border rounded-[14px] p-4 text-[13px] text-muted space-y-1.5">
-          <div><span className="text-text font-semibold">{summary.count}</span> transactions{summary.dateMin && <> from <span className="text-text font-semibold">{dayLabel(summary.dateMin)}</span> to <span className="text-text font-semibold">{dayLabel(summary.dateMax)}</span></>}.</div>
-          <div>Into {foundAccounts.filter((f) => plan[f.name]?.action !== 'skip').length} account{foundAccounts.filter((f) => plan[f.name]?.action !== 'skip').length === 1 ? '' : 's'}. Missing categories are created automatically.</div>
-        </div>
-        <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
-          <div className="text-xs font-bold uppercase tracking-wide text-faint px-4 pt-3.5 pb-2">First few rows</div>
-          <table className="w-full text-[12.5px]">
-            <thead><tr className="text-faint text-left border-b border-border">
-              <th className="font-semibold px-4 py-1.5">Date</th><th className="font-semibold px-2 py-1.5">Type</th>
-              <th className="font-semibold px-2 py-1.5 text-right">Amount</th><th className="font-semibold px-4 py-1.5">Account</th>
-            </tr></thead>
-            <tbody>
-              {rows.slice(0, 8).map((r, i) => (
-                <tr key={i} className="border-b border-border/60 last:border-0">
-                  <td className="px-4 py-1.5 tabular whitespace-nowrap">{r.date}</td>
-                  <td className={`px-2 py-1.5 capitalize ${r.type === 'expense' ? 'text-expense' : r.type === 'income' ? 'text-income' : 'text-transfer'}`}>{r.type}</td>
-                  <td className="px-2 py-1.5 text-right tabular whitespace-nowrap">{formatMoney(r.amount, sampleCur)}</td>
-                  <td className="px-4 py-1.5 text-muted truncate max-w-[1px]">{r.account}{r.type === 'transfer' && r.toAccount ? ` → ${r.toAccount}` : ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div><span className="text-text font-semibold">{summary.count.toLocaleString()}</span> transactions{summary.dateMin && <> from <span className="text-text font-semibold">{dayLabel(summary.dateMin)}</span> to <span className="text-text font-semibold">{dayLabel(summary.dateMax)}</span></>}.</div>
+          <div>Into {usedAccounts} account{usedAccounts === 1 ? '' : 's'}. Missing categories are created automatically.</div>
         </div>
       </div>
     )
@@ -597,27 +599,62 @@ export default function Migrate() {
       )
     }
     const r = result ?? {}
+    const clean = !r.skipped?.length
     return (
-      <div className="max-w-md mx-auto text-center py-10 space-y-4">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-income/15 text-income grid place-items-center text-2xl">✓</div>
-        <div>
+      <div className="max-w-md mx-auto py-8 space-y-5">
+        <div className="text-center space-y-2">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-income/15 text-income grid place-items-center text-2xl">✓</div>
           <div className="text-[18px] font-extrabold text-text">Welcome to Kura 🐢</div>
-          <p className="text-[13.5px] text-muted mt-1">
-            Imported <span className="font-semibold text-text">{r.inserted?.toLocaleString()}</span> transactions
+          <p className="text-[13.5px] text-muted">
+            <span className="font-semibold text-text">{r.inserted?.toLocaleString()}</span> transactions imported
             {r.accountsCreated ? <>, {r.accountsCreated} new account{r.accountsCreated === 1 ? '' : 's'}</> : null}
             {r.categoriesCreated ? <>, {r.categoriesCreated} categor{r.categoriesCreated === 1 ? 'y' : 'ies'}</> : null}.
-            {r.skipped?.length ? <> {r.skipped.length} row{r.skipped.length === 1 ? '' : 's'} skipped.</> : null}
           </p>
+          <div className={`inline-flex items-center gap-1.5 text-[12.5px] font-semibold rounded-full px-3 py-1 ${clean ? 'bg-income/10 text-income' : 'bg-transfer/10 text-transfer'}`}>
+            {clean ? '✓ Balances checked — nothing skipped' : `${r.skipped.length} row${r.skipped.length === 1 ? '' : 's'} couldn’t be read and were skipped`}
+          </div>
         </div>
+
+        {/* Totals imported — a quick figure to recognise. */}
+        {totals.length > 0 && (
+          <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+            <div className="text-[10.5px] font-bold uppercase tracking-wide text-faint px-4 pt-3 pb-1">Totals imported</div>
+            {totals.map((t) => (
+              <div key={t.currency} className="px-4 py-2.5 border-t border-border first:border-t-0">
+                {totals.length > 1 && <div className="text-[11px] font-semibold text-faint mb-1">{t.currency}</div>}
+                <div className="flex justify-between text-[13.5px]">
+                  <span className="text-muted">Income</span><span className="font-semibold text-income tabular">{formatMoney(t.income, t.currency)}</span>
+                </div>
+                <div className="flex justify-between text-[13.5px] mt-0.5">
+                  <span className="text-muted">Expenses</span><span className="font-semibold text-expense tabular">{formatMoney(t.expense, t.currency)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Resulting account balances — compare against the old app. */}
+        {balances.length > 0 && (
+          <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+            <div className="text-[10.5px] font-bold uppercase tracking-wide text-faint px-4 pt-3 pb-1">Account balances now</div>
+            {balances.map((b) => (
+              <div key={b.name} className="flex justify-between items-baseline px-4 py-2.5 border-t border-border first:border-t-0">
+                <span className="text-[13.5px] text-muted truncate pr-3">{b.name}</span>
+                <span className="text-[14px] font-extrabold text-text tabular shrink-0">{formatMoney(b.balance, b.currency)}</span>
+              </div>
+            ))}
+            <p className="text-[11.5px] text-faint leading-relaxed px-4 py-2.5 border-t border-border">
+              Check these match your old app. If anything’s off, undo and try again.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-2.5">
-          <Button onClick={() => navigate('/')} className="w-full">See my transactions</Button>
+          <Button onClick={() => navigate('/')} className="w-full">Looks good — see my transactions</Button>
           <Button variant="ghost" onClick={handleUndo} disabled={undoing} className="w-full">
             {undoing ? 'Undoing…' : 'Undo this import'}
           </Button>
         </div>
-        <p className="text-[11.5px] text-faint leading-relaxed">
-          Changed your mind? “Undo this import” removes every transaction it added.
-        </p>
       </div>
     )
   }

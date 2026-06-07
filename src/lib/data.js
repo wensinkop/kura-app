@@ -682,7 +682,14 @@ export async function importMigration(userId, rows, accountPlan, meta = {}, onPr
     if (ins.error) throw ins.error
     await supabase.from('import_batches').update({ count: ins.inserted }).eq('id', batchId)
 
-    return { batchId, inserted: ins.inserted, skipped, accountsCreated, categoriesCreated }
+    // The accounts this import touched (created or merged into), so the caller
+    // can show each one's resulting balance for the user to sanity-check.
+    const touchedIds = new Set([...nameToId.values()].filter(Boolean))
+    const accounts = exAccounts
+      .filter((a) => touchedIds.has(a.id))
+      .map((a) => ({ id: a.id, name: a.name, currency: a.currency }))
+
+    return { batchId, inserted: ins.inserted, skipped, accountsCreated, categoriesCreated, accounts }
   } catch (e) {
     // Roll the batch back so a failed import doesn't leave a phantom record or
     // a half-inserted set the user can't find to undo.

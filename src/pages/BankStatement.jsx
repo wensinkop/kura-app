@@ -505,42 +505,6 @@ export default function BankStatement() {
     )
   }
 
-  // Shared preview of the first few parsed rows.
-  function previewTable() {
-    return (
-      <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
-        <div className="text-xs font-bold uppercase tracking-wide text-faint px-4 pt-3.5 pb-2">Preview</div>
-        {previewRows.length === 0 ? (
-          <p className="text-[13px] text-muted px-4 pb-4">
-            {source === 'pdf'
-              ? 'Couldn’t pick out transactions from this PDF. It may use an unusual layout — try the CSV export from your bank instead.'
-              : 'No rows could be read with these settings — check the column choices above.'}
-          </p>
-        ) : (
-          <table className="w-full text-[12.5px]">
-            <thead>
-              <tr className="text-faint text-left border-b border-border">
-                <th className="font-semibold px-4 py-1.5">Date</th>
-                <th className="font-semibold px-2 py-1.5 text-right">Amount</th>
-                <th className="font-semibold px-4 py-1.5">Note</th>
-              </tr>
-            </thead>
-            <tbody>
-              {previewRows.slice(0, 8).map((r, i) => (
-                <tr key={i} className="border-b border-border/60 last:border-0">
-                  <td className="px-4 py-1.5 tabular whitespace-nowrap">{r.date}</td>
-                  <td className={`px-2 py-1.5 text-right tabular whitespace-nowrap ${r.kind === 'expense' ? 'text-expense' : 'text-income'}`}>{formatMoney(r.amount, currency)}</td>
-                  <td className="px-4 py-1.5 text-muted truncate max-w-[1px]">{r.note}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {previewRows.length > 8 && <p className="text-[11.5px] text-faint px-4 py-2">…and {previewRows.length - 8} more.</p>}
-      </div>
-    )
-  }
-
   function renderPassword() {
     return (
       <div className="space-y-4 max-w-md mx-auto">
@@ -619,11 +583,9 @@ export default function BankStatement() {
             </Field>
           </div>
           <p className="text-[11.5px] text-faint leading-relaxed">
-            Kura read each transaction’s date, amount and whether it’s money in or out. Check a few below — you can fix anything, including the type, on the next screen.
+            Kura read each transaction’s date, amount and whether it’s money in or out. You can check and fix everything, including the type, on the next screen.
           </p>
         </div>
-
-        {previewTable()}
 
         {/* Always offer teaching when some rows were read — the auto-parse may be
             wrong (missed rows, wrong column) even when the count isn't zero. */}
@@ -776,8 +738,6 @@ export default function BankStatement() {
             <ResponsiveSelect title="Description column" value={String(mapping.description)} onChange={(v) => setMap({ description: Number(v) })} options={colOptionsNone} />
           </Field>
         </div>
-
-        {previewTable()}
 
         <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
           Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
