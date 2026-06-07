@@ -471,10 +471,11 @@ function oneOffSubtitle(b, catMap, multiCurrency, dateFmt) {
 }
 
 function Bar({ status }) {
+  const pct = Math.min(100, Math.round(status.ratio * 100))
   return (
-    <div className="h-2 rounded-full bg-surface-2 mt-2 overflow-hidden">
-      <div className="h-full rounded-full transition-all"
-        style={{ width: `${Math.min(100, Math.round(status.ratio * 100))}%`, background: status.color }} />
+    <div className="h-2 rounded-full bg-surface-2 mt-2 overflow-hidden"
+      role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: status.color }} />
     </div>
   )
 }

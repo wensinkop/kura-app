@@ -218,7 +218,7 @@ export default function EditTransaction() {
           <div className="text-[11px] text-faint mt-2 px-0.5">{t('tx.rate', { cur: toCur, amount: formatMoney(form.amount / form.toAmount, fromCur) })}</div>
         )}
 
-        {error && <p className="text-sm text-expense mt-3">{error}</p>}
+        {error && <p role="alert" className="text-sm text-expense mt-3">{error}</p>}
 
         <div className="flex gap-2.5 mt-5">
           <Button variant="ghost" onClick={() => setConfirmDel(true)} disabled={busy}>

@@ -313,7 +313,8 @@ function BudgetCard({ view, onClick }) {
               <span className="text-muted font-semibold">{view.rows.length > 1 ? s.currency : t('home.spent')}</span>
               <span className="text-muted">{formatMoney(s.spent, s.currency)} <span className="text-faint">{t('budget.of')}</span> {formatMoney(s.budgeted, s.currency)}</span>
             </div>
-            <div className="h-1.5 rounded-full bg-surface-2 mt-1 overflow-hidden">
+            <div className="h-1.5 rounded-full bg-surface-2 mt-1 overflow-hidden"
+              role="progressbar" aria-valuenow={Math.min(100, Math.round(st.ratio * 100))} aria-valuemin={0} aria-valuemax={100}>
               <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.round(st.ratio * 100))}%`, background: st.color }} />
             </div>
           </div>
@@ -351,12 +352,14 @@ function TxRow({ t, catMap, selectMode, selected, onActivate, onLongPress }) {
       onContextMenu={(e) => { e.preventDefault(); onLongPress(t) }}
       onTouchStart={startPress} onTouchEnd={cancelPress} onTouchMove={cancelPress}
       onMouseDown={startPress} onMouseUp={cancelPress} onMouseLeave={cancelPress}
+      role={selectMode ? 'checkbox' : undefined}
+      aria-checked={selectMode ? selected : undefined}
       className={`flex gap-3 px-3.5 py-2.5 border-t border-border first:border-t-0 cursor-pointer select-none ${
         selected ? 'bg-primary-soft' : 'hover:bg-surface-2'
       }`}
     >
       {selectMode && (
-        <span className={`mt-0.5 w-5 h-5 rounded-full border grid place-items-center shrink-0 text-[11px] font-bold ${
+        <span aria-hidden="true" className={`mt-0.5 w-5 h-5 rounded-full border grid place-items-center shrink-0 text-[11px] font-bold ${
           selected ? 'bg-primary border-primary text-on-primary' : 'border-border text-transparent'
         }`}>✓</span>
       )}

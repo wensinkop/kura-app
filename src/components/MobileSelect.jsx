@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Button, inputClass } from './ui'
@@ -24,11 +24,26 @@ const MobileSelect = forwardRef(function MobileSelect(
   const [creating, setCreating] = useState(false)
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
+  const sheetRef = useRef(null)
+  const triggerRef = useRef(null)
   useImperativeHandle(ref, () => ({ open: () => setOpen(true) }), [])
 
   const selected = options.find((o) => o.value === value) || null
 
   function close() { setOpen(false); setCreating(false); setDraft('') }
+
+  // Esc to close + move focus into the sheet on open / back to the trigger on close.
+  useEffect(() => {
+    if (!open) return
+    const trigger = triggerRef.current
+    const onKey = (e) => { if (e.key === 'Escape') close() }
+    document.addEventListener('keydown', onKey)
+    sheetRef.current?.focus()
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      trigger?.focus()
+    }
+  }, [open])
 
   async function doCreate() {
     const name = draft.trim()
@@ -58,7 +73,8 @@ const MobileSelect = forwardRef(function MobileSelect(
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)}
+      <button ref={triggerRef} type="button" onClick={() => setOpen(true)}
+        aria-haspopup="listbox" aria-expanded={open}
         className={`${inputClass} flex items-center justify-between text-left`}>
         <span className={`truncate ${selected ? '' : 'text-faint'}`}>{selected?.label ?? ph}</span>
         <ChevronDown className="w-4 h-4 text-faint shrink-0 ml-2" />
@@ -67,7 +83,8 @@ const MobileSelect = forwardRef(function MobileSelect(
       {open && createPortal(
         <div className="fixed inset-0 z-50 flex items-end bg-black/45"
           onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}>
-          <div className="bg-surface w-full rounded-t-2xl border-t border-border max-h-[70vh] flex flex-col">
+          <div ref={sheetRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}
+            className="bg-surface w-full rounded-t-2xl border-t border-border max-h-[70vh] flex flex-col outline-none">
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
               <div className="font-bold text-[15px] flex-1">{creating ? t('select.newTitle', { title: title?.toLowerCase() ?? '' }) : title}</div>
               <button onClick={close} aria-label={t('common.close')}
@@ -87,7 +104,7 @@ const MobileSelect = forwardRef(function MobileSelect(
                   </div>
                 </div>
               ) : (
-                <>
+                <div role="listbox" aria-label={title}>
                   {noneLabel != null && <Item label={noneLabel} active={!value} onClick={() => pick('')} muted />}
                   {options.length === 0 && !onCreate && (
                     <div className="px-4 py-3 text-sm text-faint italic">{t('select.noOptions')}</div>
@@ -106,7 +123,7 @@ const MobileSelect = forwardRef(function MobileSelect(
                       ＋ {t('select.createNew')}
                     </button>
                   )}
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -119,7 +136,7 @@ const MobileSelect = forwardRef(function MobileSelect(
 
 function Item({ label, active, onClick, muted }) {
   return (
-    <button type="button" onClick={onClick}
+    <button type="button" onClick={onClick} role="option" aria-selected={!!active}
       className={`w-full text-left px-4 py-3 text-[15px] flex items-center justify-between gap-2 hover:bg-surface-2 ${
         active ? 'text-primary font-semibold' : muted ? 'text-faint' : 'text-text'
       }`}>

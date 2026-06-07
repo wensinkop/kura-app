@@ -41,12 +41,13 @@ function Row({ title, sub, right, onClick, disabled }) {
   )
 }
 
-function Switch({ on, onClick }) {
+function Switch({ on, onClick, label }) {
   return (
     <button
       onClick={onClick}
       role="switch"
       aria-checked={on}
+      aria-label={label}
       className={`relative w-[46px] h-[27px] rounded-full shrink-0 transition-colors ${on ? 'bg-primary' : 'bg-border'}`}
     >
       <span className={`absolute top-[3px] w-[21px] h-[21px] rounded-full bg-white transition-all ${on ? 'left-[22px]' : 'left-[3px]'}`} />
@@ -98,7 +99,7 @@ export default function Settings() {
         <Row
           title={t('settings.darkMode')}
           sub={t('settings.darkModeSub')}
-          right={<Switch on={theme === 'dark'} onClick={toggleTheme} />}
+          right={<Switch on={theme === 'dark'} onClick={toggleTheme} label={t('settings.darkMode')} />}
         />
       </Group>
 
@@ -130,7 +131,7 @@ export default function Settings() {
         <Row
           title={t('settings.budgets')}
           sub={t('settings.budgetsSub')}
-          right={<Switch on={budgetsOn} onClick={toggleBudgets} />}
+          right={<Switch on={budgetsOn} onClick={toggleBudgets} label={t('settings.budgets')} />}
         />
         {budgetsOn && (
           <Row title={t('settings.openBudgets')} sub={t('settings.openBudgetsSub')} right={Chevron} onClick={() => navigate('/budget')} />

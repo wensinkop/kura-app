@@ -2,7 +2,7 @@
 // Kept deliberately lightweight (no dependencies) — Modal, Button, Field,
 // TextInput, Segmented, IconButton, ConfirmDialog.
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CloseIcon } from '../lib/icons'
 
@@ -10,17 +10,32 @@ import { CloseIcon } from '../lib/icons'
 // card. Closes on Esc and backdrop click. `footer` pins actions to the bottom.
 export function Modal({ title, onClose, children, footer }) {
   const { t } = useTranslation()
+  const panelRef = useRef(null)
   useEffect(() => {
+    const prevFocus = document.activeElement
     function onKey(e) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') { onClose(); return }
+      // Trap Tab within the dialog so focus can't wander behind the backdrop.
+      if (e.key === 'Tab' && panelRef.current) {
+        const f = panelRef.current.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+        if (!f.length) return
+        const first = f[0], last = f[f.length - 1]
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      }
     }
     document.addEventListener('keydown', onKey)
     // Lock background scroll while the modal is open.
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    // Move focus into the dialog on open; restore it to the trigger on close.
+    panelRef.current?.focus()
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
+      if (prevFocus instanceof HTMLElement) prevFocus.focus()
     }
   }, [onClose])
 
@@ -31,7 +46,14 @@ export function Modal({ title, onClose, children, footer }) {
         if (e.target === e.currentTarget) onClose()
       }}
     >
-      <div className="bg-surface w-full desk:max-w-[460px] rounded-t-2xl desk:rounded-2xl border border-border shadow-lg max-h-[92dvh] flex flex-col">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={typeof title === 'string' ? title : undefined}
+        tabIndex={-1}
+        className="bg-surface w-full desk:max-w-[460px] rounded-t-2xl desk:rounded-2xl border border-border shadow-lg max-h-[92dvh] flex flex-col outline-none"
+      >
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
           <div className="font-bold text-[16px] flex-1">{title}</div>
           <button

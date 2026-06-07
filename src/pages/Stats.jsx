@@ -223,7 +223,7 @@ export default function Stats() {
       <div className="relative flex items-center justify-center gap-1">
         {mode !== 'period' && (
           <button onClick={() => shift(-1)} aria-label={t('month.previous')}
-            className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
+            className="w-9 h-9 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
         )}
@@ -234,7 +234,7 @@ export default function Stats() {
         </button>
         {mode !== 'period' && (
           <button onClick={() => shift(1)} aria-label={t('month.next')}
-            className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
+            className="w-9 h-9 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
             <ChevronRight />
           </button>
         )}

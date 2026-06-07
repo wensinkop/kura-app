@@ -407,7 +407,7 @@ export default function NewTransaction() {
                         {t('tx.rate', { cur: toCur, amount: formatMoney(row.amount / row.toAmount, fromCur) })}
                       </div>
                     )}
-                    {err && <p className="text-sm text-expense mt-1.5 px-1">{err}</p>}
+                    {err && <p role="alert" className="text-sm text-expense mt-1.5 px-1">{err}</p>}
                   </div>
                 )
               })}
@@ -418,7 +418,7 @@ export default function NewTransaction() {
               </button>
 
               {saveError && (
-                <div className="bg-expense/10 border border-expense/40 rounded-xl p-3 mt-4">
+                <div role="alert" className="bg-expense/10 border border-expense/40 rounded-xl p-3 mt-4">
                   <p className="text-sm text-expense">{saveError}</p>
                 </div>
               )}

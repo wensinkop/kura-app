@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 // Combobox: type-or-click select with a filtered, optionally grouped dropdown
@@ -20,6 +20,7 @@ export default function SearchableSelect({
 }) {
   const { t } = useTranslation()
   const ph = placeholder ?? t('select.placeholder')
+  const listId = useId()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [highlight, setHighlight] = useState(0)
@@ -115,16 +116,21 @@ export default function SearchableSelect({
         placeholder={ph}
         className={className}
         autoComplete="off"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && filtered[highlight] ? `${listId}-opt-${highlight}` : undefined}
       />
       {open && (
-        <ul className="absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg max-h-60 overflow-auto">
+        <ul id={listId} role="listbox" className="absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg max-h-60 overflow-auto">
           {filtered.length === 0 && !canCreate ? (
             <li className="px-3 py-2 text-sm text-muted italic">{t('select.noMatches')}</li>
           ) : (
             groups.map(([groupKey, items]) => (
               <Fragment key={groupKey || '__nogroup'}>
                 {groupKey && (
-                  <li className="px-3 py-1.5 text-xs font-semibold uppercase text-faint bg-surface-2 tracking-wide">
+                  <li role="presentation" className="px-3 py-1.5 text-xs font-semibold uppercase text-faint bg-surface-2 tracking-wide">
                     {groupKey}
                   </li>
                 )}
@@ -134,6 +140,9 @@ export default function SearchableSelect({
                   return (
                     <li
                       key={o.value}
+                      id={`${listId}-opt-${idx}`}
+                      role="option"
+                      aria-selected={isActive}
                       onMouseDown={(e) => { e.preventDefault(); commit(o.value) }}
                       onMouseEnter={() => setHighlight(idx)}
                       className={`px-3 py-2 text-sm cursor-pointer ${

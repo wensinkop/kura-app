@@ -36,7 +36,7 @@ export const authBtn =
 export function AuthError({ children }) {
   if (!children) return null
   return (
-    <div className="text-sm text-expense bg-expense/10 border border-expense/30 rounded-xl p-3">
+    <div role="alert" className="text-sm text-expense bg-expense/10 border border-expense/30 rounded-xl p-3">
       {children}
     </div>
   )
@@ -45,7 +45,7 @@ export function AuthError({ children }) {
 export function AuthNotice({ children }) {
   if (!children) return null
   return (
-    <div className="text-sm text-primary bg-primary-soft border border-primary/30 rounded-xl p-3">
+    <div role="status" aria-live="polite" className="text-sm text-primary bg-primary-soft border border-primary/30 rounded-xl p-3">
       {children}
     </div>
   )
