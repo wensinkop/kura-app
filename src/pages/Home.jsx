@@ -11,7 +11,7 @@ import { cacheGet, cacheSet } from '../lib/cache'
 import { formatMoney, amountColor } from '../lib/format'
 import { Button, ConfirmDialog } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
-import { PlusIcon, TrashIcon, CloseIcon, BudgetIcon, UploadIcon } from '../lib/icons'
+import { PlusIcon, TrashIcon, CloseIcon, BudgetIcon } from '../lib/icons'
 
 // "2026-06-25" -> { num: "25", rest: "June 2026 · Wednesday" }, parsed in local
 // time from the date parts (avoids UTC off-by-one).
@@ -190,15 +190,9 @@ export default function Home() {
         {days.length === 0 ? (
           <div className="bg-surface border border-border rounded-[14px] p-8 text-center mt-0">
             <p className="text-sm text-muted mb-4">{t('home.noTransactions')}</p>
-            <div className="flex flex-col items-center gap-2.5">
-              <Button onClick={() => navigate('/new')}>
-                <PlusIcon className="w-[18px] h-[18px]" /> {t('home.addTransaction')}
-              </Button>
-              <button onClick={() => navigate('/import/migrate')}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
-                <UploadIcon className="w-4 h-4" /> {t('home.importCta')}
-              </button>
-            </div>
+            <Button onClick={() => navigate('/new')}>
+              <PlusIcon className="w-[18px] h-[18px]" /> {t('home.addTransaction')}
+            </Button>
           </div>
         ) : (
           days.map((date, di) => {

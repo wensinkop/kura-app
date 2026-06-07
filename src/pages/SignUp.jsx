@@ -55,7 +55,7 @@ export default function SignUp() {
   async function handleVerify(e) {
     e.preventDefault()
     setError('')
-    if (!/^\d{6}$/.test(code.trim())) { setError(t('auth.errCode')); return }
+    if (!/^\d{6,8}$/.test(code.trim())) { setError(t('auth.errCode')); return }
 
     setLoading(true)
     const { error } = await supabase.auth.verifyOtp({
@@ -93,10 +93,10 @@ export default function SignUp() {
             <label className={authLabel}>{t('auth.code6')}</label>
             <input
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="123456"
+              placeholder="12345678"
               className={`${authInput} tracking-[0.5em] text-center text-lg font-bold`}
               required
             />
