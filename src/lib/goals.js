@@ -16,6 +16,18 @@ export function presetEmoji(key) {
   return GOAL_PRESETS.find((p) => p.key === key)?.emoji ?? '🎯'
 }
 
+// Matches a single pictographic emoji codepoint. Kept deliberately simple (no
+// skin-tone / ZWJ handling) so the source stays ASCII; it accepts emoji and
+// rejects letters/digits, which is all the custom-icon field needs.
+const EMOJI_RE = /\p{Extended_Pictographic}/gu
+
+// Returns the last emoji found in `str`, or '' if there's none — so typing a
+// letter is ignored and pasting/typing an emoji keeps just that one emoji.
+export function extractEmoji(str) {
+  const m = (str || '').match(EMOJI_RE)
+  return m ? m[m.length - 1] : ''
+}
+
 // Progress of `saved` toward `target`. ratio can exceed 1 (over-funded); pct is
 // clamped 0–100 for the ring fill.
 export function goalProgress(saved, target) {

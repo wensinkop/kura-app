@@ -5,7 +5,7 @@ import {
   listGoals, listAccounts, getAccountBalances,
   createGoal, updateGoal, deleteGoal, addToGoal,
 } from '../lib/data'
-import { goalProgress, goalPacing, presetEmoji, GOAL_PRESETS } from '../lib/goals'
+import { goalProgress, goalPacing, presetEmoji, GOAL_PRESETS, extractEmoji } from '../lib/goals'
 import { formatMoney } from '../lib/format'
 import { currencyOptions, localeFor, currencyDecimals } from '../lib/currencies'
 import { Button, Field, TextInput, Modal, ConfirmDialog } from '../components/ui'
@@ -219,7 +219,9 @@ function GoalForm({ t, mode, goal, base, accounts, onClose, onSaved, userId }) {
         <div className="flex gap-2.5 items-start">
           <div className="flex flex-col gap-1.5">
             <span className="text-[11px] font-semibold text-muted pl-0.5">{t('goals.icon')}</span>
-            <TextInput value={emoji} onChange={(e) => { setEmojiTouched(true); setEmoji(e.target.value) }} className="w-14 text-center text-lg" maxLength={8} />
+            <TextInput value={emoji} inputMode="text"
+              onChange={(e) => { setEmojiTouched(true); const v = extractEmoji(e.target.value); if (v || e.target.value === '') setEmoji(v) }}
+              className="w-14 text-center text-lg" />
           </div>
           <Field label={t('goals.name')} className="flex-1">
             <TextInput value={name} onChange={(e) => { setNameTouched(true); setName(e.target.value) }} placeholder={t('goals.namePlaceholder')} maxLength={60} />
