@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { listAccounts, listAccountTransactionsFull, listCategories } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
-import { formatAbs, formatSigned, amountColor, dayLabel, monthYearLabel } from '../lib/format'
+import { formatMoney, formatSigned, amountColor, dayLabel, monthYearLabel } from '../lib/format'
 import { Segmented } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
 import Sidebar from '../components/Sidebar'
@@ -174,10 +174,17 @@ export default function AccountDetail() {
     return key
   }
 
-  // Credit-card billing-cycle totals: charges (money out / new spending) and any
-  // payments (money in) within the cycle currently in view.
-  const cycleSpent = isCC ? inScope.reduce((s, e) => { const d = delta(e.t); return d < 0 ? s - d : s }, 0) : 0
-  const cyclePaid = isCC ? inScope.reduce((s, e) => { const d = delta(e.t); return d > 0 ? s + d : s }, 0) : 0
+  // Per-period totals shown above the ledger (every account, every period):
+  // money in (income + transfers in), money out (expenses + transfers out), and
+  // the running balance at the end of the period.
+  const periodIn = inScope.reduce((s, e) => { const d = delta(e.t); return d > 0 ? s + d : s }, 0)
+  const periodOut = inScope.reduce((s, e) => { const d = delta(e.t); return d < 0 ? s - d : s }, 0)
+  const periodEndBalance = (() => {
+    if (!scope.end) return currentBalance // "all years" has no upper bound
+    let bal = Number(account?.opening_balance) || 0
+    for (const e of ascWithBalance) { if (e.t.date < scope.end) bal = e.balance; else break }
+    return bal
+  })()
 
   return (
     <div className="flex h-[100dvh] overflow-hidden bg-bg">
@@ -227,22 +234,22 @@ export default function AccountDetail() {
                 </div>
 
                 <SwipePager enabled={canNavigate} onPrev={() => shift(-1)} onNext={() => shift(1)}>
-                {/* Credit-card billing-cycle totals (the header already shows the
-                    outstanding across all cycles). */}
-                {isCC && (
-                  <div className="bg-surface border border-border rounded-[14px] mb-3 flex overflow-hidden text-center">
-                    <div className="flex-1 py-2.5 px-3">
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('accountDetail.spentCycle')}</div>
-                      <div className="text-[15px] font-extrabold tabular text-expense leading-tight mt-0.5">{formatAbs(cycleSpent, currency)}</div>
-                    </div>
-                    {cyclePaid > 0 && (
-                      <div className="flex-1 py-2.5 px-3 border-l border-border">
-                        <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('accountDetail.paidCycle')}</div>
-                        <div className="text-[15px] font-extrabold tabular text-income leading-tight mt-0.5">{formatAbs(cyclePaid, currency)}</div>
-                      </div>
-                    )}
+                {/* Per-period summary: income in, expenses out, ending balance.
+                    (The header shows the current balance across all time.) */}
+                <div className="bg-surface border border-border rounded-[14px] mb-3 flex overflow-hidden text-center">
+                  <div className="flex-1 py-2.5 px-2 min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('home.income')}</div>
+                    <div className="text-[12.5px] font-extrabold tabular text-income leading-tight mt-0.5 truncate">{formatMoney(periodIn, currency)}</div>
                   </div>
-                )}
+                  <div className="flex-1 py-2.5 px-2 min-w-0 border-l border-border">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('home.expenses')}</div>
+                    <div className="text-[12.5px] font-extrabold tabular text-expense leading-tight mt-0.5 truncate">{formatMoney(periodOut, currency)}</div>
+                  </div>
+                  <div className="flex-1 py-2.5 px-2 min-w-0 border-l border-border">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('accountDetail.endBalance')}</div>
+                    <div className={`text-[12.5px] font-extrabold tabular leading-tight mt-0.5 truncate ${amountColor(periodEndBalance)}`}>{formatSigned(periodEndBalance, currency)}</div>
+                  </div>
+                </div>
 
                 {groups.length === 0 ? (
                   <p className="text-muted text-sm py-10 text-center">{t('accountDetail.noneInPeriod')}</p>
