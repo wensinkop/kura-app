@@ -216,14 +216,14 @@ function GoalForm({ t, mode, goal, base, accounts, onClose, onSaved, userId }) {
           </div>
         </div>
 
-        <div className="flex gap-2.5 items-start">
-          <div className="flex flex-col gap-1.5">
+        <div className="flex gap-2.5 items-end">
+          <div className="flex flex-col gap-1.5 shrink-0 w-[46px]">
             <span className="text-[11px] font-semibold text-muted pl-0.5">{t('goals.icon')}</span>
             <TextInput value={emoji} inputMode="text"
               onChange={(e) => { setEmojiTouched(true); const v = extractEmoji(e.target.value); if (v || e.target.value === '') setEmoji(v) }}
-              className="w-14 text-center text-lg" />
+              className="h-[46px] px-0 text-center text-2xl" />
           </div>
-          <Field label={t('goals.name')} className="flex-1">
+          <Field label={t('goals.name')} className="flex-1 min-w-0">
             <TextInput value={name} onChange={(e) => { setNameTouched(true); setName(e.target.value) }} placeholder={t('goals.namePlaceholder')} maxLength={60} />
           </Field>
         </div>
