@@ -11,11 +11,27 @@ import { CloseIcon } from '../lib/icons'
 export function Modal({ title, onClose, children, footer }) {
   const { t } = useTranslation()
   const panelRef = useRef(null)
+
+  // Open/close only (runs once): lock background scroll, move focus into the
+  // dialog, and restore focus to the trigger on close. Kept separate from the
+  // keydown effect below so a re-render (e.g. typing in a field, which changes an
+  // inline onClose prop) never re-runs this and steals focus from the input.
   useEffect(() => {
     const prevFocus = document.activeElement
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    // Don't override a child's autofocus — only grab focus if nothing inside has it.
+    if (panelRef.current && !panelRef.current.contains(document.activeElement)) panelRef.current.focus()
+    return () => {
+      document.body.style.overflow = prevOverflow
+      if (prevFocus instanceof HTMLElement) prevFocus.focus()
+    }
+  }, [])
+
+  // Esc to close + Tab focus-trap. Re-binds when onClose changes; never moves focus.
+  useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') { onClose(); return }
-      // Trap Tab within the dialog so focus can't wander behind the backdrop.
       if (e.key === 'Tab' && panelRef.current) {
         const f = panelRef.current.querySelectorAll(
           'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -27,16 +43,7 @@ export function Modal({ title, onClose, children, footer }) {
       }
     }
     document.addEventListener('keydown', onKey)
-    // Lock background scroll while the modal is open.
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    // Move focus into the dialog on open; restore it to the trigger on close.
-    panelRef.current?.focus()
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
-      if (prevFocus instanceof HTMLElement) prevFocus.focus()
-    }
+    return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
   return (

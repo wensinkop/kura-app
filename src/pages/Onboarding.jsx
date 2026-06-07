@@ -96,7 +96,8 @@ export default function Onboarding() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col justify-center w-full max-w-md mx-auto py-6">
+      <div className="flex-1 overflow-y-auto w-full max-w-md mx-auto">
+        <div className="min-h-full flex flex-col justify-center py-6">
         {step === 0 && <Welcome t={t} firstName={firstName} onNext={() => setStep(1)} />}
         {step === 1 && (
           <CurrencyStep t={t} currency={currency} setCurrency={setCurrency}
@@ -110,6 +111,7 @@ export default function Onboarding() {
             busy={busy} onBack={() => setStep(1)} onCreate={createFirstAccount} onSkip={() => setStep(3)} />
         )}
         {step === 3 && <ForkStep t={t} busy={busy} onPick={finish} />}
+        </div>
       </div>
     </div>
   )
@@ -155,10 +157,13 @@ function CurrencyStep({ t, currency, setCurrency, busy, onBack, onNext }) {
   return (
     <div>
       <StepHeading title={t('onboarding.currencyTitle')} body={t('onboarding.currencyBody')} />
-      <Field label={t('onboarding.currencyLabel')}>
+      {/* A plain div, not <Field> — Field renders a <label>, and a label makes
+          clicks anywhere in it (above/below) toggle the picker button inside. */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[11px] font-semibold text-muted pl-0.5">{t('onboarding.currencyLabel')}</span>
         <ResponsiveSelect title={t('onboarding.currencyLabel')} placeholder={t('select.placeholder')}
           value={currency} onChange={setCurrency} options={CURRENCY_OPTS} />
-      </Field>
+      </div>
       <div className="flex gap-2.5 mt-8">
         <Button variant="ghost" onClick={onBack} disabled={busy}>{t('onboarding.back')}</Button>
         <Button className="flex-1" onClick={onNext} disabled={busy || !currency}>
