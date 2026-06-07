@@ -20,7 +20,7 @@ export default function AccountFilterSheet({ onClose }) {
   useEffect(() => {
     Promise.all([listGroups(), listAccounts()]).then(([g, a]) => {
       if (!g.error) setGroups(g.data ?? [])
-      if (!a.error) setAccounts((a.data ?? []).filter((x) => !x.archived))
+      if (!a.error) setAccounts((a.data ?? []).filter((x) => !x.archived && !x.is_goal))
     })
   }, [])
 

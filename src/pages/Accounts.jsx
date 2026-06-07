@@ -52,8 +52,9 @@ export default function Accounts() {
   }, [])
 
   const base = profile?.base_currency ?? 'IDR'
-  const active = accounts.filter((a) => !a.archived)
-  const inGroup = (gid) => active.filter((a) => (a.group_id ?? null) === gid)
+  const active = accounts.filter((a) => !a.archived) // includes goal accounts → net worth counts them
+  const listed = active.filter((a) => !a.is_goal) // goal accounts are managed in Goals, hidden from this list
+  const inGroup = (gid) => listed.filter((a) => (a.group_id ?? null) === gid)
   const ungrouped = inGroup(null)
   const nw = netWorth(active, balances, rates, base)
 
@@ -94,7 +95,7 @@ export default function Accounts() {
         </button>
       )}
 
-      {active.length === 0 ? (
+      {listed.length === 0 ? (
         <div className="bg-surface border border-border rounded-[14px] p-6 mt-3 text-center">
           <p className="text-sm text-muted mb-4">{t('account.empty')}</p>
           <Button onClick={() => navigate('/settings/accounts')}>

@@ -422,7 +422,7 @@
     "newGoal": "Tujuan baru",
     "editGoal": "Edit tujuan",
     "deleteTitle": "Hapus tujuan ini?",
-    "deleteMessage": "Tujuan dihapus. Akun dan uang di dalamnya tetap ada — kelola di Akun.",
+    "deleteMessage": "Menghapus tujuan ini dan akun tabungannya. Uang yang sudah kamu tambahkan kembali ke akun asalnya.",
     "noFunding": "Tambahkan akun dengan mata uang ini untuk menyumbang.",
     "saveFailed": "Gagal menyimpan. Silakan coba lagi.",
     "preset": {

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../AuthContext'
 import {
   listGoals, listAccounts, getAccountBalances,
-  createGoal, updateGoal, deleteGoal, addToGoal,
+  createGoal, updateGoal, deleteGoalAndAccount, addToGoal,
 } from '../lib/data'
 import { goalProgress, goalPacing, presetEmoji, GOAL_PRESETS, extractEmoji } from '../lib/goals'
 import { formatMoney } from '../lib/format'
@@ -88,7 +88,7 @@ export default function Goals() {
           title={t('goals.deleteTitle')}
           message={t('goals.deleteMessage')}
           confirmLabel={t('common.delete')}
-          onConfirm={async () => { await deleteGoal(confirmDel.id); setConfirmDel(null); reload() }}
+          onConfirm={async () => { await deleteGoalAndAccount(confirmDel.id, confirmDel.account_id); setConfirmDel(null); reload() }}
           onClose={() => setConfirmDel(null)}
         />
       )}
@@ -253,7 +253,7 @@ function GoalForm({ t, mode, goal, base, accounts, onClose, onSaved, userId }) {
 
 function ContributeSheet({ t, goal, currency, saved, accounts, userId, onClose, onSaved }) {
   // Funding accounts: active, same currency, not the goal's own account.
-  const funding = accounts.filter((a) => !a.archived && a.currency === currency && a.id !== goal.account_id)
+  const funding = accounts.filter((a) => !a.archived && !a.is_goal && a.currency === currency && a.id !== goal.account_id)
   const [fromId, setFromId] = useState(funding[0]?.id ?? '')
   const [amount, setAmount] = useState(null)
   const [date, setDate] = useState(todayISO())

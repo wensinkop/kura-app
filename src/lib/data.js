@@ -50,7 +50,7 @@ export function createAccount(userId, payload, sortOrder) {
   cacheClear()
   return supabase
     .from('accounts')
-    .insert({ user_id: userId, sort_order: sortOrder, ...normalizeAccount(payload) })
+    .insert({ user_id: userId, sort_order: sortOrder, is_goal: payload.is_goal ?? false, ...normalizeAccount(payload) })
     .select()
     .single()
 }
@@ -205,7 +205,7 @@ export async function createGoal(userId, { name, target_amount, deadline, preset
   const sortOrder = existing.data?.length ?? 0
   const { data: account, error: aerr } = await createAccount(
     userId,
-    { name: name?.trim(), type: 'bank', currency, opening_balance: 0 },
+    { name: name?.trim(), type: 'bank', currency, opening_balance: 0, is_goal: true },
     sortOrder,
   )
   if (aerr || !account) return { data: null, account: null, error: aerr ?? new Error('Could not create the goal account') }
@@ -231,11 +231,19 @@ export function updateGoal(id, patch) {
   return supabase.from('goals').update(patch).eq('id', id)
 }
 
-// Removes the goal row only — its account (and the money in it) is kept so the
-// user can manage it in Accounts. (Deleting the account cascades to the goal.)
-export function deleteGoal(id) {
+// Deletes a goal AND its dedicated account, returning any contributed money to
+// the accounts it came from (deleting a transfer restores the funding account's
+// balance). Goal accounts are hidden from the Accounts list, so we don't leave
+// one behind. Transactions touching the account must go first (FK protects them),
+// then the account delete cascades the goal row.
+export async function deleteGoalAndAccount(goalId, accountId) {
   cacheClear()
-  return supabase.from('goals').delete().eq('id', id)
+  if (accountId) {
+    await supabase.from('transactions').delete().or(`account_id.eq.${accountId},to_account_id.eq.${accountId}`)
+    const { error } = await supabase.from('accounts').delete().eq('id', accountId)
+    if (error) return { error }
+  }
+  return supabase.from('goals').delete().eq('id', goalId)
 }
 
 // Contribute to a goal: a same-currency transfer from a funding account into the

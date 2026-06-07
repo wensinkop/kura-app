@@ -426,7 +426,7 @@
     "newGoal": "New goal",
     "editGoal": "Edit goal",
     "deleteTitle": "Delete this goal?",
-    "deleteMessage": "The goal is removed. Its account and the money in it are kept — you can manage it in Accounts.",
+    "deleteMessage": "Deletes this goal and its savings account. Any money you’ve added goes back to the accounts it came from.",
     "noFunding": "Add an account in this currency to contribute from.",
     "saveFailed": "Couldn’t save. Please try again.",
     "preset": {
