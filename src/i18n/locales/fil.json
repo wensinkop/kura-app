@@ -167,5 +167,24 @@
     "settlesDay": "magsasara sa {{day}}",
     "dueDay": "due sa {{day}}",
     "type": { "cash": "Cash", "debit": "Debit", "credit_card": "Credit card" }
+  },
+  "stats": {
+    "mode": { "week": "Linggo", "month": "Buwan", "year": "Taon", "period": "Custom na panahon" },
+    "pickDates": "Pumili ng petsa ng simula at wakas para makita ang stats.",
+    "missingRate_one": "Walang exchange rate ang {{list}} kaya hindi kasama.",
+    "missingRate_other": "Walang exchange rate ang {{list}} kaya hindi kasama.",
+    "setRateCta": "Magtakda ng rate ›",
+    "expensesByCategory": "Gastos ayon sa kategorya",
+    "incomeByCategory": "Kita ayon sa kategorya",
+    "noneExpensesPeriod": "Walang gastos sa panahong ito.",
+    "noneIncomePeriod": "Walang kita sa panahong ito.",
+    "other": "Iba pa",
+    "clearSub": "I-clear ang filter ng sub-kategorya",
+    "kindExpenses": "gastos",
+    "kindIncome": "kita",
+    "scopeCategory": "kategorya",
+    "scopeSubcategory": "sub-kategorya",
+    "noneInScope": "Walang {{kind}} sa {{scope}} na ito sa panahong ito.",
+    "transactions": "Mga transaksyon"
   }
 }

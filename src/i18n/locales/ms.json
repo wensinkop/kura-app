@@ -167,5 +167,24 @@
     "settlesDay": "tutup pada {{day}}",
     "dueDay": "tarikh akhir {{day}}",
     "type": { "cash": "Tunai", "debit": "Debit", "credit_card": "Kad kredit" }
+  },
+  "stats": {
+    "mode": { "week": "Minggu", "month": "Bulan", "year": "Tahun", "period": "Tempoh tersuai" },
+    "pickDates": "Pilih tarikh mula dan tamat untuk melihat statistik.",
+    "missingRate_one": "{{list}} tiada kadar tukaran dan dikecualikan.",
+    "missingRate_other": "{{list}} tiada kadar tukaran dan dikecualikan.",
+    "setRateCta": "Tetapkan kadar ›",
+    "expensesByCategory": "Perbelanjaan mengikut kategori",
+    "incomeByCategory": "Pendapatan mengikut kategori",
+    "noneExpensesPeriod": "Tiada perbelanjaan dalam tempoh ini.",
+    "noneIncomePeriod": "Tiada pendapatan dalam tempoh ini.",
+    "other": "Lain-lain",
+    "clearSub": "Kosongkan penapis sub-kategori",
+    "kindExpenses": "perbelanjaan",
+    "kindIncome": "pendapatan",
+    "scopeCategory": "kategori",
+    "scopeSubcategory": "sub-kategori",
+    "noneInScope": "Tiada {{kind}} dalam {{scope}} ini bagi tempoh ini.",
+    "transactions": "Transaksi"
   }
 }

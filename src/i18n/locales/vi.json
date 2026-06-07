@@ -167,5 +167,24 @@
     "settlesDay": "chốt ngày {{day}}",
     "dueDay": "đến hạn ngày {{day}}",
     "type": { "cash": "Tiền mặt", "debit": "Ghi nợ", "credit_card": "Thẻ tín dụng" }
+  },
+  "stats": {
+    "mode": { "week": "Tuần", "month": "Tháng", "year": "Năm", "period": "Khoảng tùy chỉnh" },
+    "pickDates": "Chọn ngày bắt đầu và kết thúc để xem thống kê.",
+    "missingRate_one": "{{list}} chưa có tỷ giá và bị loại trừ.",
+    "missingRate_other": "{{list}} chưa có tỷ giá và bị loại trừ.",
+    "setRateCta": "Đặt tỷ giá ›",
+    "expensesByCategory": "Chi tiêu theo danh mục",
+    "incomeByCategory": "Thu nhập theo danh mục",
+    "noneExpensesPeriod": "Không có chi tiêu trong kỳ này.",
+    "noneIncomePeriod": "Không có thu nhập trong kỳ này.",
+    "other": "Khác",
+    "clearSub": "Xóa bộ lọc danh mục con",
+    "kindExpenses": "chi tiêu",
+    "kindIncome": "thu nhập",
+    "scopeCategory": "danh mục",
+    "scopeSubcategory": "danh mục con",
+    "noneInScope": "Không có {{kind}} trong {{scope}} này ở kỳ này.",
+    "transactions": "Giao dịch"
   }
 }

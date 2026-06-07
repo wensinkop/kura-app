@@ -1,27 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useMonth } from '../MonthContext'
 import SwipePager from '../components/SwipePager'
 import { listTransactionsInRange, listCategories, listRates } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
-import { formatMoney, dayLabel } from '../lib/format'
+import { formatMoney, dayLabel, monthYearLabel } from '../lib/format'
 import { toBase } from '../lib/balances'
 import { Field } from '../components/ui'
 import DatePicker from '../components/DatePicker'
 import TxRowContent from '../components/TxRowContent'
+import i18n from '../i18n'
 import { ChevronLeft, ChevronRight, ChevronDown } from '../lib/icons'
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
-const MODES = [
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
-  { value: 'year', label: 'Year' },
-  { value: 'period', label: 'Custom period' },
-]
 
 // Colour palette for the category proportion bars (matches the locked design).
 const PALETTE = ['#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#ef4444', '#3b82f6', '#a3a3a3']
@@ -32,7 +23,7 @@ const isoOfDate = (dt) => iso(dt.getFullYear(), dt.getMonth(), dt.getDate())
 const addDays = (dt, n) => { const d = new Date(dt); d.setDate(d.getDate() + n); return d }
 // Monday-start week containing `dt`.
 const weekStart = (dt) => { const d = new Date(dt); const dow = (d.getDay() + 6) % 7; return addDays(d, -dow) }
-const shortDay = (dt) => `${dt.getDate()} ${dt.toLocaleDateString('en-US', { month: 'short' })}`
+const shortDay = (dt) => `${dt.getDate()} ${dt.toLocaleDateString(i18n.language || 'en', { month: 'short' })}`
 const parseAnchor = (s, fallback) => {
   if (s && /^\d{4}-\d{2}-\d{2}$/.test(s)) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
   return fallback
@@ -59,10 +50,11 @@ function rangeFor(mode, anchor, periodStart, periodEnd) {
   // month
   const y = anchor.getFullYear()
   const m = anchor.getMonth()
-  return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label: `${MONTHS[m]} ${y}` }
+  return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label: monthYearLabel(y, m) }
 }
 
 export default function Stats() {
+  const { t } = useTranslation()
   const { profile } = useAuth()
   const { year, monthIndex } = useMonth()
   const navigate = useNavigate()
@@ -188,18 +180,18 @@ export default function Stats() {
           Week / Month / Year / Custom; arrows page within the current mode. */}
       <div className="relative flex items-center justify-center gap-1">
         {mode !== 'period' && (
-          <button onClick={() => shift(-1)} aria-label="Previous"
+          <button onClick={() => shift(-1)} aria-label={t('month.previous')}
             className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
         )}
         <button onClick={() => setMenuOpen((o) => !o)}
           className="flex items-center gap-1.5 font-bold text-[14px] px-3 py-1 rounded-[10px] hover:bg-surface-2 whitespace-nowrap">
-          {mode === 'period' ? 'Custom period' : range?.label}
+          {mode === 'period' ? t('stats.mode.period') : range?.label}
           <ChevronDown className="w-4 h-4 text-muted" />
         </button>
         {mode !== 'period' && (
-          <button onClick={() => shift(1)} aria-label="Next"
+          <button onClick={() => shift(1)} aria-label={t('month.next')}
             className="w-8 h-8 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
             <ChevronRight />
           </button>
@@ -209,12 +201,12 @@ export default function Stats() {
           <>
             <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
             <div className="absolute top-full mt-1 z-20 bg-surface border border-border rounded-xl shadow-lg overflow-hidden min-w-[150px]">
-              {MODES.map((m) => (
-                <button key={m.value} onClick={() => { update({ mode: m.value === 'month' ? null : m.value }); setMenuOpen(false) }}
+              {['week', 'month', 'year', 'period'].map((mv) => (
+                <button key={mv} onClick={() => { update({ mode: mv === 'month' ? null : mv }); setMenuOpen(false) }}
                   className={`w-full text-left px-4 py-2.5 text-sm font-semibold hover:bg-surface-2 ${
-                    mode === m.value ? 'text-primary' : 'text-text'
+                    mode === mv ? 'text-primary' : 'text-text'
                   }`}>
-                  {m.label}
+                  {t(`stats.mode.${mv}`)}
                 </button>
               ))}
             </div>
@@ -224,11 +216,11 @@ export default function Stats() {
 
       {mode === 'period' && (
         <div className="grid grid-cols-2 gap-2.5 mt-2.5">
-          <Field label="From">
+          <Field label={t('budget.from')}>
             <DatePicker value={periodStart} onChange={(v) => update({ ps: v })} max={periodEnd || undefined}
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-[15px] text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft" />
           </Field>
-          <Field label="To">
+          <Field label={t('budget.to')}>
             <DatePicker value={periodEnd} onChange={(v) => update({ pe: v })} min={periodStart || undefined}
               className="w-full rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-[15px] text-text focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft" />
           </Field>
@@ -240,13 +232,13 @@ export default function Stats() {
         <div className="bg-surface border border-border rounded-xl mt-2.5 flex overflow-hidden">
           <button onClick={() => update({ v: null })}
             className={`flex-1 px-3 py-2 text-left border-r border-border relative ${view === 'expense' ? '' : 'opacity-50'}`}>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">Expenses</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('home.expenses')}</div>
             <div className="text-[14px] font-extrabold tabular text-expense leading-tight mt-0.5">{formatMoney(agg.expense, base)}</div>
             {view === 'expense' && <span className="absolute left-0 right-0 bottom-0 h-[2.5px] bg-expense" />}
           </button>
           <button onClick={() => update({ v: 'income' })}
             className={`flex-1 px-3 py-2 text-left relative ${view === 'income' ? '' : 'opacity-50'}`}>
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">Income</div>
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('home.income')}</div>
             <div className="text-[14px] font-extrabold tabular text-income leading-tight mt-0.5">{formatMoney(agg.income, base)}</div>
             {view === 'income' && <span className="absolute left-0 right-0 bottom-0 h-[2.5px] bg-income" />}
           </button>
@@ -256,9 +248,9 @@ export default function Stats() {
 
       <SwipePager enabled={mode !== 'period'} onPrev={() => shift(-1)} onNext={() => shift(1)}>
       {mode === 'period' && !range ? (
-        <p className="text-sm text-muted text-center py-10">Pick a start and end date to see your stats.</p>
+        <p className="text-sm text-muted text-center py-10">{t('stats.pickDates')}</p>
       ) : loading ? (
-        <p className="text-sm text-muted text-center py-10">Loading…</p>
+        <p className="text-sm text-muted text-center py-10">{t('common.loading')}</p>
       ) : drillCat ? (
         <CategoryDrill name={drillName} kind={drillKind} group={drillGroup} base={base} rates={rates} catMap={catMap}
           sub={drillSub} onSelectSub={(k) => update({ sub: k })}
@@ -268,16 +260,16 @@ export default function Stats() {
           {agg.missing.length > 0 && (
             <button onClick={() => navigate('/settings/rates')}
               className="w-full text-left text-[12px] text-muted bg-surface-2 border border-border rounded-xl px-3.5 py-2.5 mt-2.5">
-              {agg.missing.join(', ')} {agg.missing.length === 1 ? 'has' : 'have'} no exchange rate and {agg.missing.length === 1 ? 'is' : 'are'} excluded.
-              <span className="text-primary font-semibold"> Set a rate ›</span>
+              {t('stats.missingRate', { list: agg.missing.join(', '), count: agg.missing.length })}
+              <span className="text-primary font-semibold"> {t('stats.setRateCta')}</span>
             </button>
           )}
 
           {view === 'expense' ? (
-            <CategoryList title="Expenses by category" kindWord="expenses" groups={agg.expenseGroups} total={agg.expense} base={base}
+            <CategoryList title={t('stats.expensesByCategory')} noneText={t('stats.noneExpensesPeriod')} groups={agg.expenseGroups} total={agg.expense} base={base}
               onOpen={(g) => update({ cat: g.id, kind: 'expense', sub: null }, { push: true })} />
           ) : (
-            <CategoryList title="Income by category" kindWord="income" groups={agg.incomeGroups} total={agg.income} base={base}
+            <CategoryList title={t('stats.incomeByCategory')} noneText={t('stats.noneIncomePeriod')} groups={agg.incomeGroups} total={agg.income} base={base}
               onOpen={(g) => update({ cat: g.id, kind: 'income', sub: null }, { push: true })} />
           )}
         </>
@@ -288,13 +280,13 @@ export default function Stats() {
 }
 
 // A "… by category" list with proportion bars + percentages; tap a row to drill.
-function CategoryList({ title, kindWord, groups, total, base, onOpen }) {
+function CategoryList({ title, noneText, groups, total, base, onOpen }) {
   return (
     <>
       <div className="text-xs font-bold uppercase tracking-wide text-faint mt-5 mb-2 px-1">{title}</div>
       {groups.length === 0 ? (
         <div className="bg-surface border border-border rounded-[14px] p-6 text-center">
-          <p className="text-sm text-muted">No {kindWord} in this period.</p>
+          <p className="text-sm text-muted">{noneText}</p>
         </div>
       ) : (
         <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
@@ -328,7 +320,7 @@ function CategoryList({ title, kindWord, groups, total, base, onOpen }) {
 // current period, grouped by day. Tapping a sub-category filters the list to it.
 // `group` is null when the category has nothing this period.
 function CategoryDrill({ name, kind, group, base, rates, catMap, sub, onSelectSub, onBack, onTx }) {
-  const kindWord = kind === 'income' ? 'income' : 'expenses'
+  const { t } = useTranslation()
   const totalColor = kind === 'income' ? 'text-income' : 'text-expense'
   const total = group?.total ?? 0
   const allTxns = group ? [...group.txns].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)) : []
@@ -348,7 +340,7 @@ function CategoryDrill({ name, kind, group, base, rates, catMap, sub, onSelectSu
     }
   }
   const subList = [...realSubs.values()].sort((a, b) => b.total - a.total)
-  if (subList.length > 0 && directTotal > 0) subList.push({ key: '__other', name: 'Other', total: directTotal })
+  if (subList.length > 0 && directTotal > 0) subList.push({ key: '__other', name: t('stats.other'), total: directTotal })
 
   // Filter the transaction list to the selected sub-category (or the "Other"
   // bucket of direct-on-parent charges).
@@ -367,7 +359,7 @@ function CategoryDrill({ name, kind, group, base, rates, catMap, sub, onSelectSu
   return (
     <>
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-muted mt-4 mb-2 hover:text-text">
-        <ChevronLeft className="w-4 h-4" /> {kind === 'income' ? 'Income' : 'Expenses'} by category
+        <ChevronLeft className="w-4 h-4" /> {kind === 'income' ? t('stats.incomeByCategory') : t('stats.expensesByCategory')}
       </button>
 
       <div className="bg-surface border border-border rounded-[14px] px-4 py-3.5 flex justify-between items-baseline">
@@ -397,15 +389,15 @@ function CategoryDrill({ name, kind, group, base, rates, catMap, sub, onSelectSu
       {sub && (
         <button onClick={() => onSelectSub(null)}
           className="text-[12px] font-semibold text-primary mt-3 hover:underline">
-          ✕ Clear sub-category filter
+          ✕ {t('stats.clearSub')}
         </button>
       )}
 
       {txns.length === 0 ? (
-        <p className="text-sm text-muted text-center py-10">No {kindWord} in this {sub ? 'sub-category' : 'category'} for this period.</p>
+        <p className="text-sm text-muted text-center py-10">{t('stats.noneInScope', { kind: kind === 'income' ? t('stats.kindIncome') : t('stats.kindExpenses'), scope: sub ? t('stats.scopeSubcategory') : t('stats.scopeCategory') })}</p>
       ) : (
         <>
-          <div className="text-xs font-bold uppercase tracking-wide text-faint mt-5 mb-2 px-1">Transactions</div>
+          <div className="text-xs font-bold uppercase tracking-wide text-faint mt-5 mb-2 px-1">{t('stats.transactions')}</div>
           {days.map((date) => (
             <div key={date} className="mb-3">
               <div className="text-[12px] font-bold text-muted px-1 mb-1.5">{dayLabel(date)}</div>

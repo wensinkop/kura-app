@@ -168,5 +168,24 @@
     "settlesDay": "settles {{day}}",
     "dueDay": "due {{day}}",
     "type": { "cash": "Cash", "debit": "Debit", "credit_card": "Credit card" }
+  },
+  "stats": {
+    "mode": { "week": "Week", "month": "Month", "year": "Year", "period": "Custom period" },
+    "pickDates": "Pick a start and end date to see your stats.",
+    "missingRate_one": "{{list}} has no exchange rate and is excluded.",
+    "missingRate_other": "{{list}} have no exchange rate and are excluded.",
+    "setRateCta": "Set a rate ›",
+    "expensesByCategory": "Expenses by category",
+    "incomeByCategory": "Income by category",
+    "noneExpensesPeriod": "No expenses in this period.",
+    "noneIncomePeriod": "No income in this period.",
+    "other": "Other",
+    "clearSub": "Clear sub-category filter",
+    "kindExpenses": "expenses",
+    "kindIncome": "income",
+    "scopeCategory": "category",
+    "scopeSubcategory": "sub-category",
+    "noneInScope": "No {{kind}} in this {{scope}} for this period.",
+    "transactions": "Transactions"
   }
 }

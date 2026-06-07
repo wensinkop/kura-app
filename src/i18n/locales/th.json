@@ -167,5 +167,24 @@
     "settlesDay": "ตัดรอบวันที่ {{day}}",
     "dueDay": "ครบกำหนดวันที่ {{day}}",
     "type": { "cash": "เงินสด", "debit": "เดบิต", "credit_card": "บัตรเครดิต" }
+  },
+  "stats": {
+    "mode": { "week": "สัปดาห์", "month": "เดือน", "year": "ปี", "period": "ช่วงที่กำหนดเอง" },
+    "pickDates": "เลือกวันที่เริ่มและสิ้นสุดเพื่อดูสถิติ",
+    "missingRate_one": "{{list}} ไม่มีอัตราแลกเปลี่ยนและถูกยกเว้น",
+    "missingRate_other": "{{list}} ไม่มีอัตราแลกเปลี่ยนและถูกยกเว้น",
+    "setRateCta": "ตั้งอัตรา ›",
+    "expensesByCategory": "รายจ่ายตามหมวดหมู่",
+    "incomeByCategory": "รายรับตามหมวดหมู่",
+    "noneExpensesPeriod": "ไม่มีรายจ่ายในช่วงนี้",
+    "noneIncomePeriod": "ไม่มีรายรับในช่วงนี้",
+    "other": "อื่น ๆ",
+    "clearSub": "ล้างตัวกรองหมวดหมู่ย่อย",
+    "kindExpenses": "รายจ่าย",
+    "kindIncome": "รายรับ",
+    "scopeCategory": "หมวดหมู่",
+    "scopeSubcategory": "หมวดหมู่ย่อย",
+    "noneInScope": "ไม่มี{{kind}}ใน{{scope}}นี้ในช่วงนี้",
+    "transactions": "ธุรกรรม"
   }
 }
