@@ -17,7 +17,7 @@ export default function Sidebar() {
     { to: '/stats', label: t('nav.stats'), Icon: StatsIcon },
     ...(profile?.budgets_enabled ? [{ to: '/budget', label: t('nav.budget'), Icon: BudgetIcon }] : []),
     { to: '/accounts', label: t('nav.accounts'), Icon: AccountsIcon },
-    { to: '/goals', label: t('nav.goals'), Icon: GoalIcon },
+    ...(profile?.goals_enabled ? [{ to: '/goals', label: t('nav.goals'), Icon: GoalIcon }] : []),
     { to: '/settings', label: t('nav.settings'), Icon: SettingsIcon },
   ]
 

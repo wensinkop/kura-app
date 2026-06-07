@@ -122,7 +122,7 @@ function GoalCard({ t, goal, saved, currency, onAdd, onEdit, onDelete }) {
         <Ring pct={prog.pct} reached={prog.reached} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="shrink-0">{presetEmoji(goal.preset)}</span>
+            <span className="shrink-0">{goal.emoji || presetEmoji(goal.preset)}</span>
             <span className="font-bold text-[15px] truncate">{goal.name}</span>
           </div>
           <div className="text-[13px] text-muted tabular mt-0.5">
@@ -159,6 +159,8 @@ function GoalForm({ t, mode, goal, base, accounts, onClose, onSaved, userId }) {
   const [name, setName] = useState(goal?.name ?? '')
   const [nameTouched, setNameTouched] = useState(isEdit)
   const [preset, setPreset] = useState(goal?.preset ?? 'custom')
+  const [emoji, setEmoji] = useState(goal?.emoji || presetEmoji(goal?.preset ?? 'custom'))
+  const [emojiTouched, setEmojiTouched] = useState(!!goal?.emoji)
   const [target, setTarget] = useState(goal ? Number(goal.target_amount) : null)
   const [currency, setCurrency] = useState(goal ? (accounts.find((a) => a.id === goal.account_id)?.currency ?? base) : base)
   const [deadline, setDeadline] = useState(goal?.deadline ?? '')
@@ -168,6 +170,7 @@ function GoalForm({ t, mode, goal, base, accounts, onClose, onSaved, userId }) {
   function choosePreset(k) {
     setPreset(k)
     if (!nameTouched && k !== 'custom') setName(t(`goals.preset.${k}`))
+    if (!emojiTouched) setEmoji(presetEmoji(k))
   }
 
   const canSave = name.trim().length > 0 && Number(target) > 0 && !busy
@@ -176,11 +179,11 @@ function GoalForm({ t, mode, goal, base, accounts, onClose, onSaved, userId }) {
     if (!canSave) return
     setBusy(true); setErr('')
     if (isEdit) {
-      const { error } = await updateGoal(goal.id, { name: name.trim(), target_amount: Number(target), deadline: deadline || null, preset })
+      const { error } = await updateGoal(goal.id, { name: name.trim(), target_amount: Number(target), deadline: deadline || null, preset, emoji: emoji || null })
       setBusy(false)
       if (error) { setErr(t('goals.saveFailed')); return }
     } else {
-      const { error } = await createGoal(userId, { name: name.trim(), target_amount: Number(target), deadline: deadline || null, preset, currency })
+      const { error } = await createGoal(userId, { name: name.trim(), target_amount: Number(target), deadline: deadline || null, preset, emoji: emoji || null, currency })
       setBusy(false)
       if (error) { setErr(t('goals.saveFailed')); return }
     }
@@ -213,9 +216,15 @@ function GoalForm({ t, mode, goal, base, accounts, onClose, onSaved, userId }) {
           </div>
         </div>
 
-        <Field label={t('goals.name')}>
-          <TextInput value={name} onChange={(e) => { setNameTouched(true); setName(e.target.value) }} placeholder={t('goals.namePlaceholder')} maxLength={60} />
-        </Field>
+        <div className="flex gap-2.5 items-start">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] font-semibold text-muted pl-0.5">{t('goals.icon')}</span>
+            <TextInput value={emoji} onChange={(e) => { setEmojiTouched(true); setEmoji(e.target.value) }} className="w-14 text-center text-lg" maxLength={8} />
+          </div>
+          <Field label={t('goals.name')} className="flex-1">
+            <TextInput value={name} onChange={(e) => { setNameTouched(true); setName(e.target.value) }} placeholder={t('goals.namePlaceholder')} maxLength={60} />
+          </Field>
+        </div>
 
         <Field label={t('goals.target')}>
           <NumberInput value={target} onChange={setTarget} locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />

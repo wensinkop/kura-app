@@ -79,6 +79,14 @@ function BudgetRoute({ children }) {
   return children
 }
 
+// Goals is opt-in too (Settings → Preferences). Off by default → redirects home.
+function GoalsRoute({ children }) {
+  const { profile, loading } = useAuth()
+  if (loading) return <Loading />
+  if (!profile?.goals_enabled) return <Navigate to="/" replace />
+  return children
+}
+
 function PublicOnlyRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <Loading />
@@ -117,7 +125,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/stats" element={<Stats />} />
               <Route path="/budget" element={<BudgetRoute><Budget /></BudgetRoute>} />
-              <Route path="/goals" element={<Goals />} />
+              <Route path="/goals" element={<GoalsRoute><Goals /></GoalsRoute>} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/categories" element={<SettingsCategories />} />

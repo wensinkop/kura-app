@@ -199,7 +199,7 @@ export function listGoals() {
 
 // Creating a goal also creates its dedicated account (the saved money lives
 // there and counts in net worth). Returns { data: goal, account, error }.
-export async function createGoal(userId, { name, target_amount, deadline, preset, currency }) {
+export async function createGoal(userId, { name, target_amount, deadline, preset, emoji, currency }) {
   cacheClear()
   const existing = await listAccounts()
   const sortOrder = existing.data?.length ?? 0
@@ -218,6 +218,7 @@ export async function createGoal(userId, { name, target_amount, deadline, preset
       target_amount,
       deadline: deadline || null,
       preset: preset || null,
+      emoji: emoji || null,
     })
     .select()
     .single()

@@ -70,6 +70,7 @@ export default function Settings() {
   const [langOpen, setLangOpen] = useState(false)
   const dateFmt = profile?.date_format ?? 'dmy'
   const budgetsOn = profile?.budgets_enabled ?? false
+  const goalsOn = profile?.goals_enabled ?? false
   const currentLang = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0]
 
   async function pickDateFormat(f) {
@@ -86,12 +87,15 @@ export default function Settings() {
     updateProfile({ budgets_enabled: !budgetsOn })
   }
 
+  function toggleGoals() {
+    updateProfile({ goals_enabled: !goalsOn })
+  }
+
   return (
     <div className="max-w-[640px] mx-auto">
       <SectionTitle>{t('settings.account')}</SectionTitle>
       <Group>
         <Row title={profile?.full_name || t('settings.yourName')} sub={user?.email} right={Chevron} onClick={() => navigate('/settings/account')} />
-        <Row title={t('settings.emailPassword')} sub={t('settings.emailPasswordSub')} right={Chevron} onClick={() => navigate('/settings/account')} />
       </Group>
 
       <SectionTitle>{t('settings.appearance')}</SectionTitle>
@@ -135,6 +139,14 @@ export default function Settings() {
         />
         {budgetsOn && (
           <Row title={t('settings.openBudgets')} sub={t('settings.openBudgetsSub')} right={Chevron} onClick={() => navigate('/budget')} />
+        )}
+        <Row
+          title={t('settings.goals')}
+          sub={t('settings.goalsSub')}
+          right={<Switch on={goalsOn} onClick={toggleGoals} label={t('settings.goals')} />}
+        />
+        {goalsOn && (
+          <Row title={t('settings.openGoals')} sub={t('settings.openGoalsSub')} right={Chevron} onClick={() => navigate('/goals')} />
         )}
       </Group>
 

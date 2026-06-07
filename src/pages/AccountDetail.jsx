@@ -251,10 +251,10 @@ export default function AccountDetail() {
                     <div key={g.key} className="mb-4">
                       <div className="text-[12px] font-bold text-muted px-1 mb-1.5">{groupLabel(g.key)}</div>
                       <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
-                        {g.rows.map(({ t, balance }) => (
-                          <button key={t.id} onClick={() => navigate(`/tx/${t.id}`)}
+                        {g.rows.map(({ t: tx, balance }) => (
+                          <button key={tx.id} onClick={() => navigate(`/tx/${tx.id}`)}
                             className="w-full px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
-                            <div className="flex"><TxRowContent t={t} catMap={catMap} hideAccount /></div>
+                            <div className="flex"><TxRowContent t={tx} catMap={catMap} hideAccount /></div>
                             <div className="text-[11px] text-faint text-right mt-1 tabular">
                               {t('accountDetail.balance')} <span className="font-semibold text-muted">{formatSigned(balance, currency)}</span>
                             </div>
