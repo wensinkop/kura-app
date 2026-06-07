@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, Link } from 'react-router-dom'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import AuthLayout, { authInput, authLabel, authBtn, AuthError, AuthNotice, PasswordInput } from '../components/AuthLayout'
 import { friendlyAuthError } from '../lib/authErrors'
@@ -8,6 +8,7 @@ import { friendlyAuthError } from '../lib/authErrors'
 export default function SignUp() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const [phase, setPhase] = useState('form') // 'form' | 'otp'
 
   const [name, setName] = useState('')
@@ -19,6 +20,23 @@ export default function SignUp() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Arrived from sign-in for an unverified account ("Finish verifying"): jump
+  // straight to the code step and send a fresh code (the abandoned one may have
+  // expired). Runs once on mount.
+  useEffect(() => {
+    const ve = location.state?.verifyEmail
+    if (!ve) return
+    // Deferred so setState isn't called synchronously in the effect body.
+    const id = setTimeout(() => {
+      setEmail(ve)
+      setPhase('otp')
+      setNotice(t('auth.sentCode', { email: ve }))
+      supabase.auth.resend({ type: 'signup', email: ve })
+    }, 0)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function validate() {
     if (name.trim().length < 2) return t('auth.errName')

@@ -282,6 +282,7 @@
     "createOne": "สร้างบัญชี",
     "forgotPassword": "ลืมรหัสผ่าน?",
     "forgotEmail": "ลืมอีเมลที่ใช้?",
+    "finishVerify": "ยืนยันอีเมลของคุณให้เสร็จ →",
     "createAccountTitle": "สร้างบัญชีของคุณ",
     "createSubtitle": "ติดตามรายรับ รายจ่าย และการโอนในทุกบัญชีของคุณ",
     "haveAccount": "มีบัญชีอยู่แล้ว?",

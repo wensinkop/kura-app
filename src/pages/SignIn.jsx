@@ -11,15 +11,24 @@ export default function SignIn() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [needsVerify, setNeedsVerify] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleSignIn(e) {
     e.preventDefault()
     setError('')
+    setNeedsVerify(false)
     setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (error) { setError(friendlyAuthError(error, t)); return }
+    if (error) {
+      setError(friendlyAuthError(error, t))
+      // An account that was created but never verified (e.g. the app closed
+      // mid-code) can't sign in — offer a path back to the code screen.
+      const msg = (error.message || '').toLowerCase()
+      if (msg.includes('not confirmed') || msg.includes('not verified')) setNeedsVerify(true)
+      return
+    }
     navigate('/')
   }
 
@@ -41,6 +50,12 @@ export default function SignIn() {
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         </div>
         <AuthError>{error}</AuthError>
+        {needsVerify && (
+          <button type="button" onClick={() => navigate('/signup', { state: { verifyEmail: email } })}
+            className="w-full text-sm font-semibold text-primary hover:underline">
+            {t('auth.finishVerify')}
+          </button>
+        )}
         <button type="submit" disabled={loading} className={authBtn}>
           {loading ? t('auth.signingIn') : t('auth.signIn')}
         </button>
