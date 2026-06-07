@@ -29,8 +29,25 @@ function Banner({ msg }) {
 }
 
 export default function SettingsAccount() {
-  const { user, signOut } = useAuth()
+  const { user, profile, signOut, updateProfile } = useAuth()
   const navigate = useNavigate()
+
+  // ---- Change name ---------------------------------------------------------
+  const [name, setName] = useState(profile?.full_name ?? '')
+  const [nameBusy, setNameBusy] = useState(false)
+  const [nameMsg, setNameMsg] = useState(null)
+
+  async function submitName(e) {
+    e.preventDefault()
+    setNameMsg(null)
+    const n = name.trim()
+    if (n.length < 2) { setNameMsg({ tone: 'err', text: 'Please enter your name.' }); return }
+    setNameBusy(true)
+    const { error } = await updateProfile({ full_name: n })
+    setNameBusy(false)
+    if (error) { setNameMsg({ tone: 'err', text: 'Could not save your name.' }); return }
+    setNameMsg({ tone: 'ok', text: 'Name updated.' })
+  }
 
   // ---- Change email --------------------------------------------------------
   const [email, setEmail] = useState('')
@@ -93,7 +110,18 @@ export default function SettingsAccount() {
       <SectionTitle>Signed in as</SectionTitle>
       <Card>
         <div className="text-[14.5px] font-semibold text-text">{user?.email}</div>
-        <div className="text-xs text-muted mt-0.5">Manage your sign-in details below.</div>
+        <div className="text-xs text-muted mt-0.5">Manage your name and sign-in details below.</div>
+      </Card>
+
+      <SectionTitle>Your name</SectionTitle>
+      <Card>
+        <form onSubmit={submitName} className="space-y-3">
+          <Field label="Name">
+            <TextInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoComplete="name" maxLength={60} />
+          </Field>
+          <Button type="submit" disabled={nameBusy}>{nameBusy ? 'Saving…' : 'Save name'}</Button>
+        </form>
+        <Banner msg={nameMsg} />
       </Card>
 
       <SectionTitle>Change email</SectionTitle>

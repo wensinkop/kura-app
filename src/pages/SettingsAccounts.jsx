@@ -308,6 +308,10 @@ function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
 
   function handleFocus(e) {
     if (window.innerWidth >= DESK) return
+    // Only lift for fields that open the keyboard — focusing a button (e.g. the
+    // type chips) must not scroll the page.
+    const tag = e.target.tagName
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA') return
     const fieldEl = e.target.closest('label') ?? e.target
     requestAnimationFrame(() => liftField(fieldEl))
   }

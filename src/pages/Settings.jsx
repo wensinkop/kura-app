@@ -90,7 +90,7 @@ export default function Settings() {
     <div className="max-w-[640px] mx-auto">
       <SectionTitle>{t('settings.account')}</SectionTitle>
       <Group>
-        <Row title={profile?.full_name || t('settings.yourName')} sub={user?.email} />
+        <Row title={profile?.full_name || t('settings.yourName')} sub={user?.email} right={Chevron} onClick={() => navigate('/settings/account')} />
         <Row title={t('settings.emailPassword')} sub={t('settings.emailPasswordSub')} right={Chevron} onClick={() => navigate('/settings/account')} />
       </Group>
 
