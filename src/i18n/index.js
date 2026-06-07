@@ -11,16 +11,14 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import en from './locales/en.json'
 
-// Supported languages. `beta` flags AI-assisted translations awaiting a native
-// review (shown with a "beta" tag in the switcher). English + Indonesian are the
-// reviewed baseline (Indonesian reviewed by the owner).
+// Active languages shown in the switcher. We launch with English + Indonesian
+// only and add more after launch (maintaining 6 locales while the app is still
+// changing was too much churn). The ms/th/vi/fil drafts and their loaders below
+// are kept on disk — re-add an entry here to re-enable one. `beta` flags an
+// AI draft awaiting native review (none active right now).
 export const LANGUAGES = [
   { code: 'en', label: 'English', beta: false },
   { code: 'id', label: 'Bahasa Indonesia', beta: false },
-  { code: 'ms', label: 'Bahasa Melayu', beta: true },
-  { code: 'th', label: 'ไทย', beta: true },
-  { code: 'vi', label: 'Tiếng Việt', beta: true },
-  { code: 'fil', label: 'Filipino', beta: true },
 ]
 export const LANGUAGE_CODES = LANGUAGES.map((l) => l.code)
 export const STORAGE_KEY = 'kura-lang'
