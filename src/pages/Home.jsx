@@ -130,18 +130,33 @@ export default function Home() {
     const monthly = budgets.filter((b) => b.period === 'month')
     if (!monthly.length) return null
     const roll = rollupByParentCurrency(txns)
+    // Group by parent category + currency (Money-Manager-style): a parent's cap
+    // is its own budget if set, else the sum of its sub-budgets; spend is the
+    // whole parent. (Uses base amounts — the Budget page has per-month detail.)
+    const groups = new Map()
+    for (const b of monthly) {
+      const cat = catMap.get(b.category_id)
+      if (!cat) continue
+      const parentId = cat.parent_id || cat.id
+      const key = `${parentId}|${b.currency}`
+      if (!groups.has(key)) groups.set(key, { parentId, currency: b.currency, parentAmount: 0, subsSum: 0 })
+      const g = groups.get(key)
+      if (cat.parent_id) g.subsSum += Number(b.amount)
+      else g.parentAmount = Number(b.amount)
+    }
     const byCur = new Map()
     let over = 0
-    for (const b of monthly) {
-      const spent = roll.get(`${b.category_id}|${b.currency}`)?.spent ?? 0
-      if (!byCur.has(b.currency)) byCur.set(b.currency, { currency: b.currency, budgeted: 0, spent: 0 })
-      const s = byCur.get(b.currency)
-      s.budgeted += Number(b.amount)
+    for (const g of groups.values()) {
+      const cap = g.parentAmount > 0 ? g.parentAmount : g.subsSum
+      const spent = roll.get(`${g.parentId}|${g.currency}`)?.spent ?? 0
+      if (!byCur.has(g.currency)) byCur.set(g.currency, { currency: g.currency, budgeted: 0, spent: 0 })
+      const s = byCur.get(g.currency)
+      s.budgeted += cap
       s.spent += spent
-      if (spent > Number(b.amount)) over++
+      if (spent > cap) over++
     }
     return { rows: [...byCur.values()], over }
-  }, [profile?.budgets_enabled, budgets, txns])
+  }, [profile?.budgets_enabled, budgets, txns, catMap])
 
   if (loading) return <p className="text-muted text-sm py-8 text-center">{t('common.loading')}</p>
 

@@ -328,6 +328,26 @@ export function deleteBudget(id) {
   return supabase.from('budgets').delete().eq('id', id)
 }
 
+// ---- Per-month budget amounts (Budget v2) ----------------------------------
+// Effective-dated schedule: amount(M) = latest from_month <= M, else
+// budgets.amount. from_month is the first day of the month it takes effect.
+
+export function listBudgetAmounts() {
+  return supabase.from('budget_amounts').select('*').order('from_month', { ascending: true })
+}
+
+export function upsertBudgetAmount(userId, budgetId, fromMonth, amount) {
+  cacheClear()
+  return supabase
+    .from('budget_amounts')
+    .upsert({ user_id: userId, budget_id: budgetId, from_month: fromMonth, amount }, { onConflict: 'budget_id,from_month' })
+}
+
+export function deleteBudgetAmount(budgetId, fromMonth) {
+  cacheClear()
+  return supabase.from('budget_amounts').delete().eq('budget_id', budgetId).eq('from_month', fromMonth)
+}
+
 // ---- Exchange rates (manual, value of 1 unit of currency in base currency) --
 
 export function listRates() {
