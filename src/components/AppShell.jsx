@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useMonth } from '../MonthContext'
+import { monthYearLabel } from '../lib/format'
 import { useAccountFilter } from '../FilterContext'
 import Sidebar from './Sidebar'
 import AccountFilterSheet from './AccountFilterSheet'
@@ -43,7 +44,8 @@ const restoresScroll = (pathname) => !pathname.startsWith('/settings/')
 // Selected-month control in the Home top bar; reads/writes the shared MonthContext.
 function MonthNav() {
   const { t } = useTranslation()
-  const { label, prev, next, today, isCurrent } = useMonth()
+  const { year, monthIndex, prev, next, today, isCurrent } = useMonth()
+  const label = monthYearLabel(year, monthIndex)
   return (
     <div className="flex items-center gap-1 flex-1 justify-center desk:flex-initial">
       <button onClick={prev} aria-label={t('month.previous')}

@@ -6,20 +6,17 @@
 // that one currency's expense transactions in the category (and its
 // sub-categories). This sidesteps the (currently empty) exchange-rates table.
 
+import i18n from '../i18n'
+
 const pad = (n) => String(n).padStart(2, '0')
 export const iso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}` // m is 0-based
 const isoOfDate = (dt) => iso(dt.getFullYear(), dt.getMonth(), dt.getDate())
 const addDays = (dt, n) => { const d = new Date(dt); d.setDate(d.getDate() + n); return d }
 // Monday-start week containing `dt` (matches Stats).
 const weekStart = (dt) => { const d = new Date(dt); const dow = (d.getDay() + 6) % 7; return addDays(d, -dow) }
-const shortDay = (dt) => `${dt.getDate()} ${dt.toLocaleDateString('en-US', { month: 'short' })}`
-
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
-
-export const PERIOD_LABEL = { week: 'Week', month: 'Month', year: 'Year', custom: 'One-off' }
+// Month/weekday names follow the UI language (number formatting is unaffected).
+const uiLocale = () => i18n.language || 'en'
+const shortDay = (dt) => `${dt.getDate()} ${dt.toLocaleDateString(uiLocale(), { month: 'short' })}`
 
 // { start, end (exclusive ISO), label } for a recurring period anchored at a Date.
 export function periodRange(period, anchor) {
@@ -36,7 +33,8 @@ export function periodRange(period, anchor) {
   // month
   const y = anchor.getFullYear()
   const m = anchor.getMonth()
-  return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label: `${MONTHS[m]} ${y}` }
+  const label = new Date(y, m, 1).toLocaleDateString(uiLocale(), { month: 'long', year: 'numeric', calendar: 'gregory' })
+  return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label }
 }
 
 // Step the anchor date by `delta` periods (for the ‹ › nav).

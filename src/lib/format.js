@@ -1,6 +1,11 @@
 // Display helpers shared by the Accounts page and the settings screens.
 
 import { localeFor, currencyDecimals } from './currencies'
+import i18n from '../i18n'
+
+// The active UI language, for localising month/weekday names via Intl. Number
+// and currency formatting still use the currency's own locale (localeFor).
+const uiLocale = () => i18n.language || 'en'
 
 // Format a number as money in its currency, e.g. 750000/IDR -> "Rp 750.000",
 // 120/USD -> "$120.00". Decimals come from our catalogue (currencyDecimals),
@@ -44,13 +49,22 @@ export function formatDate(iso, format = 'dmy') {
   return `${d}-${m}-${y}`
 }
 
-// "2026-06-25" -> "Wed, 25 Jun 2026". Parsed from parts in local time to avoid
-// the UTC off-by-one a bare new Date(iso) would introduce.
+// "2026-06-25" -> "Wed, 25 Jun 2026" (weekday + month name in the UI language).
+// Parsed from parts in local time to avoid the UTC off-by-one a bare
+// new Date(iso) would introduce.
 export function dayLabel(iso) {
   if (!iso) return ''
   const [y, m, d] = iso.split('-').map(Number)
   const dt = new Date(y, m - 1, d)
-  return `${dt.toLocaleDateString('en-US', { weekday: 'short' })}, ${d} ${dt.toLocaleDateString('en-US', { month: 'short' })} ${y}`
+  const loc = uiLocale()
+  return `${dt.toLocaleDateString(loc, { weekday: 'short' })}, ${d} ${dt.toLocaleDateString(loc, { month: 'short' })} ${y}`
+}
+
+// "June 2026" in the UI language (e.g. "Juni 2026", "มิถุนายน 2026"). Force the
+// Gregorian calendar so the year stays 2026 everywhere (Thai locale would
+// otherwise show the Buddhist-era year, clashing with the rest of the app).
+export function monthYearLabel(year, monthIndex) {
+  return new Date(year, monthIndex, 1).toLocaleDateString(uiLocale(), { month: 'long', year: 'numeric', calendar: 'gregory' })
 }
 
 export const TYPE_LABEL = {
