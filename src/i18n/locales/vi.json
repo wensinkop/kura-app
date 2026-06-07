@@ -178,7 +178,7 @@
     "dueDate": "đến hạn {{date}}",
     "settlesDay": "chốt ngày {{day}}",
     "dueDay": "đến hạn ngày {{day}}",
-    "type": { "cash": "Tiền mặt", "debit": "Ghi nợ", "credit_card": "Thẻ tín dụng" }
+    "type": { "cash": "Tiền mặt", "bank": "Tài khoản ngân hàng", "ewallet": "Ví điện tử", "debit": "Tài khoản ngân hàng", "credit_card": "Thẻ tín dụng" }
   },
   "stats": {
     "trend": "Xu hướng",
@@ -373,6 +373,12 @@
     "accountNamePlaceholder": "vd. BCA — Chính",
     "openingLabel": "Số dư hiện tại (tùy chọn)",
     "openingHint": "Hiện trong tài khoản này có bao nhiêu.",
+    "statementDay": "Ngày chốt sao kê",
+    "dueDay": "Ngày đến hạn",
+    "dayHint": "Ngày trong tháng (1–31)",
+    "dayExample": "vd. {{day}}",
+    "owedLabel": "Số tiền nợ (tùy chọn)",
+    "owedHint": "Số bạn đang nợ thẻ này.",
     "createAccount": "Tạo tài khoản",
     "forkTitle": "Đã sẵn sàng",
     "forkBody": "Bạn muốn bắt đầu thế nào?",

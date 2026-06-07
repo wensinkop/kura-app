@@ -77,15 +77,20 @@ export function monthYearLabel(year, monthIndex) {
   return new Date(year, monthIndex, 1).toLocaleDateString(uiLocale(), { month: 'long', year: 'numeric', calendar: 'gregory' })
 }
 
-// English fallbacks (still imported by screens not yet localised).
+// English fallbacks (still imported by screens not yet localised). `debit` is a
+// legacy value (pre bank/ewallet split) shown as "Bank account" so old accounts
+// still read cleanly; it is no longer offered as a choice.
 export const TYPE_LABEL = {
   cash: 'Cash',
-  debit: 'Debit',
+  bank: 'Bank account',
+  ewallet: 'E-wallet',
+  debit: 'Bank account',
   credit_card: 'Credit card',
 }
 export const TYPE_OPTIONS = [
   { value: 'cash', label: 'Cash' },
-  { value: 'debit', label: 'Debit' },
+  { value: 'bank', label: 'Bank account' },
+  { value: 'ewallet', label: 'E-wallet' },
   { value: 'credit_card', label: 'Credit card' },
 ]
 
@@ -93,9 +98,10 @@ export const TYPE_OPTIONS = [
 export function typeLabel(type) {
   return i18n.t(`account.type.${type}`, { defaultValue: TYPE_LABEL[type] ?? type })
 }
-// For <select> options (resolved at call time so it follows the language).
+// Selectable account kinds (resolved at call time so it follows the language).
+// `debit` is intentionally excluded — it's legacy-display-only.
 export function typeOptions() {
-  return ['cash', 'debit', 'credit_card'].map((value) => ({ value, label: typeLabel(value) }))
+  return ['cash', 'bank', 'ewallet', 'credit_card'].map((value) => ({ value, label: typeLabel(value) }))
 }
 
 // 1 -> "1st", 18 -> "18th", etc.

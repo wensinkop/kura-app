@@ -178,7 +178,7 @@
     "dueDate": "jatuh tempo {{date}}",
     "settlesDay": "tutup buku tgl {{day}}",
     "dueDay": "jatuh tempo tgl {{day}}",
-    "type": { "cash": "Tunai", "debit": "Debit", "credit_card": "Kartu kredit" }
+    "type": { "cash": "Tunai", "bank": "Rekening bank", "ewallet": "E-wallet", "debit": "Rekening bank", "credit_card": "Kartu kredit" }
   },
   "stats": {
     "trend": "Tren",
@@ -373,6 +373,12 @@
     "accountNamePlaceholder": "mis. BCA — Utama",
     "openingLabel": "Saldo saat ini (opsional)",
     "openingHint": "Berapa saldo di akun ini sekarang.",
+    "statementDay": "Tanggal tutup buku",
+    "dueDay": "Tanggal jatuh tempo",
+    "dayHint": "Tanggal dalam bulan (1–31)",
+    "dayExample": "mis. {{day}}",
+    "owedLabel": "Jumlah tagihan (opsional)",
+    "owedHint": "Berapa tagihan kartu ini sekarang.",
     "createAccount": "Buat akun",
     "forkTitle": "Semua siap",
     "forkBody": "Mau mulai dari mana?",

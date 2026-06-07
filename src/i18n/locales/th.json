@@ -178,7 +178,7 @@
     "dueDate": "ครบกำหนด {{date}}",
     "settlesDay": "ตัดรอบวันที่ {{day}}",
     "dueDay": "ครบกำหนดวันที่ {{day}}",
-    "type": { "cash": "เงินสด", "debit": "เดบิต", "credit_card": "บัตรเครดิต" }
+    "type": { "cash": "เงินสด", "bank": "บัญชีธนาคาร", "ewallet": "อีวอลเล็ต", "debit": "บัญชีธนาคาร", "credit_card": "บัตรเครดิต" }
   },
   "stats": {
     "trend": "แนวโน้ม",
@@ -373,6 +373,12 @@
     "accountNamePlaceholder": "เช่น BCA — หลัก",
     "openingLabel": "ยอดคงเหลือปัจจุบัน (ไม่บังคับ)",
     "openingHint": "ตอนนี้ในบัญชีนี้มีเท่าไร",
+    "statementDay": "วันตัดรอบ",
+    "dueDay": "วันครบกำหนด",
+    "dayHint": "วันที่ในเดือน (1–31)",
+    "dayExample": "เช่น {{day}}",
+    "owedLabel": "ยอดค้างชำระ (ไม่บังคับ)",
+    "owedHint": "ยอดที่ค้างบัตรนี้ตอนนี้",
     "createAccount": "สร้างบัญชี",
     "forkTitle": "พร้อมแล้ว",
     "forkBody": "อยากเริ่มแบบไหน?",

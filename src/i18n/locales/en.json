@@ -179,7 +179,7 @@
     "dueDate": "due {{date}}",
     "settlesDay": "settles {{day}}",
     "dueDay": "due {{day}}",
-    "type": { "cash": "Cash", "debit": "Debit", "credit_card": "Credit card" }
+    "type": { "cash": "Cash", "bank": "Bank account", "ewallet": "E-wallet", "debit": "Bank account", "credit_card": "Credit card" }
   },
   "stats": {
     "trend": "Trend",
@@ -376,6 +376,12 @@
     "accountNamePlaceholder": "e.g. BCA — Main",
     "openingLabel": "Current balance (optional)",
     "openingHint": "How much is in this account right now.",
+    "statementDay": "Statement day",
+    "dueDay": "Due day",
+    "dayHint": "Day of the month (1–31)",
+    "dayExample": "e.g. {{day}}",
+    "owedLabel": "Amount owed (optional)",
+    "owedHint": "What you currently owe on this card.",
     "createAccount": "Create account",
     "forkTitle": "You’re all set",
     "forkBody": "How would you like to start?",

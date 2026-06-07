@@ -10,7 +10,7 @@ import { TYPE_OPTIONS, accountSubtitle } from '../lib/format'
 import SearchableSelect from '../components/SearchableSelect'
 import NumberInput from '../components/NumberInput'
 import Sidebar from '../components/Sidebar'
-import { Button, Field, TextInput, Segmented, IconButton, Modal, ConfirmDialog, inputClass } from '../components/ui'
+import { Button, Field, TextInput, IconButton, Modal, ConfirmDialog, inputClass } from '../components/ui'
 import { PlusIcon, PencilIcon, TrashIcon, ArchiveIcon, ChevronUp, ChevronDown, ChevronLeft } from '../lib/icons'
 
 const CURRENCY_OPTS = currencyOptions()
@@ -269,7 +269,9 @@ const DESK = 768 // --breakpoint-desk
 function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
   const isEdit = mode === 'edit'
   const [name, setName] = useState(target?.name ?? '')
-  const [type, setType] = useState(target?.type ?? 'cash')
+  // Legacy 'debit' accounts surface as 'bank' in the picker (and convert to bank
+  // if the user saves); untouched ones keep 'debit' in the DB.
+  const [type, setType] = useState(target?.type === 'debit' ? 'bank' : (target?.type ?? 'cash'))
   const [currency, setCurrency] = useState(target?.currency ?? 'IDR')
   const [groupId, setGroupId] = useState(target?.group_id ?? '')
   const [opening, setOpening] = useState(target?.opening_balance != null ? Number(target.opening_balance) : null)
@@ -343,7 +345,16 @@ function AccountForm({ mode, target, groupOptions, busy, onSubmit, onClose }) {
             </Field>
 
             <Field label="Type">
-              <Segmented value={type} onChange={setType} options={TYPE_OPTIONS} />
+              <div className="grid grid-cols-2 gap-2">
+                {TYPE_OPTIONS.map((o) => (
+                  <button key={o.value} type="button" onClick={() => setType(o.value)}
+                    className={`py-2.5 rounded-xl border text-sm font-bold transition-colors ${
+                      type === o.value ? 'border-primary bg-primary-soft text-primary' : 'border-border text-muted hover:bg-surface-2'
+                    }`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </Field>
 
             <Field

@@ -178,7 +178,7 @@
     "dueDate": "tarikh akhir {{date}}",
     "settlesDay": "tutup pada {{day}}",
     "dueDay": "tarikh akhir {{day}}",
-    "type": { "cash": "Tunai", "debit": "Debit", "credit_card": "Kad kredit" }
+    "type": { "cash": "Tunai", "bank": "Akaun bank", "ewallet": "E-dompet", "debit": "Akaun bank", "credit_card": "Kad kredit" }
   },
   "stats": {
     "trend": "Trend",
@@ -373,6 +373,12 @@
     "accountNamePlaceholder": "cth. BCA — Utama",
     "openingLabel": "Baki semasa (pilihan)",
     "openingHint": "Berapa baki dalam akaun ini sekarang.",
+    "statementDay": "Hari penyata",
+    "dueDay": "Hari bayaran",
+    "dayHint": "Hari dalam bulan (1–31)",
+    "dayExample": "cth. {{day}}",
+    "owedLabel": "Jumlah terhutang (pilihan)",
+    "owedHint": "Berapa hutang kad ini sekarang.",
     "createAccount": "Cipta akaun",
     "forkTitle": "Semua sedia",
     "forkBody": "Bagaimana anda mahu mula?",

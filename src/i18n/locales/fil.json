@@ -178,7 +178,7 @@
     "dueDate": "due {{date}}",
     "settlesDay": "magsasara sa {{day}}",
     "dueDay": "due sa {{day}}",
-    "type": { "cash": "Cash", "debit": "Debit", "credit_card": "Credit card" }
+    "type": { "cash": "Cash", "bank": "Bank account", "ewallet": "E-wallet", "debit": "Bank account", "credit_card": "Credit card" }
   },
   "stats": {
     "trend": "Trend",
@@ -373,6 +373,12 @@
     "accountNamePlaceholder": "hal. BCA — Pangunahin",
     "openingLabel": "Kasalukuyang balanse (opsyonal)",
     "openingHint": "Magkano ang nasa account na ito ngayon.",
+    "statementDay": "Araw ng statement",
+    "dueDay": "Araw ng bayaran",
+    "dayHint": "Araw ng buwan (1–31)",
+    "dayExample": "hal. {{day}}",
+    "owedLabel": "Halagang utang (opsyonal)",
+    "owedHint": "Magkano ang utang mo sa card na ito ngayon.",
     "createAccount": "Gumawa ng account",
     "forkTitle": "Handa na ang lahat",
     "forkBody": "Paano mo gustong magsimula?",

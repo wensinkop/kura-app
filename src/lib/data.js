@@ -656,7 +656,7 @@ export async function importMigration(userId, rows, accountPlan, meta = {}, onPr
         userId,
         {
           name: p.name ?? p.source,
-          type: p.type ?? 'debit',
+          type: p.type ?? 'bank',
           currency: p.currency ?? 'IDR',
           group_id: p.groupId ?? null,
           opening_balance: 0,
