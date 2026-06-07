@@ -5,8 +5,9 @@ import { useAuth } from '../AuthContext'
 import { useMonth } from '../MonthContext'
 import SwipePager from '../components/SwipePager'
 import { useAccountFilter, matchesAccountFilter } from '../FilterContext'
-import { listTransactionsForMonth, listCategories, listBudgets, deleteTransactions } from '../lib/data'
+import { listTransactionsForMonth, listCategories, listBudgets, deleteTransactions, listGoals, getAccountBalances } from '../lib/data'
 import { rollupByParentCurrency, budgetStatus } from '../lib/budgets'
+import { goalProgress, presetEmoji } from '../lib/goals'
 import { cacheGet, cacheSet } from '../lib/cache'
 import { formatMoney, amountColor } from '../lib/format'
 import { Button, ConfirmDialog } from '../components/ui'
@@ -59,6 +60,23 @@ export default function Home() {
     listCategories().then(({ data, error }) => {
       if (!error) { setCatMap(new Map((data ?? []).map((c) => [c.id, c]))); cacheSet('categories', data ?? []) }
     })
+  }, [])
+
+  // Goals for the Home card (top active goal + count). Cheap: list + one balance
+  // aggregate. Only the goal whose progress is shown needs its account balance.
+  const [goalCard, setGoalCard] = useState(null)
+  useEffect(() => {
+    const tid = setTimeout(() => {
+      Promise.all([listGoals(), getAccountBalances()]).then(([g, b]) => {
+        if (g.error) return
+        const active = (g.data ?? []).filter((x) => x.status !== 'archived')
+        if (!active.length) { setGoalCard(null); return }
+        const bal = new Map((b.data ?? []).map((x) => [x.account_id, Number(x.balance)]))
+        const top = active[0]
+        setGoalCard({ count: active.length, goal: top, saved: bal.get(top.account_id) ?? 0 })
+      })
+    }, 0)
+    return () => clearTimeout(tid)
   }, [])
 
   useEffect(() => {
@@ -186,6 +204,12 @@ export default function Home() {
         </div>
       )}
 
+      {goalCard && (
+        <div className="desk:hidden mb-3.5">
+          <GoalsHomeCard card={goalCard} onClick={() => navigate('/goals')} />
+        </div>
+      )}
+
       <SwipePager enabled={!selectMode} onPrev={prev} onNext={next} className="min-w-0">
         {days.length === 0 ? (
           <div className="bg-surface border border-border rounded-[14px] p-8 text-center mt-0">
@@ -243,6 +267,7 @@ export default function Home() {
           })
         )}
         {budgetView && <BudgetCard view={budgetView} onClick={() => navigate('/budget')} />}
+        {goalCard && <GoalsHomeCard card={goalCard} onClick={() => navigate('/goals')} />}
       </aside>
 
       {/* Floating selection action bar */}
@@ -314,6 +339,38 @@ function BudgetCard({ view, onClick }) {
           </div>
         )
       })}
+    </button>
+  )
+}
+
+// Compact ring for the Home goals card (no money — the ratio is currency-free).
+function MiniRing({ pct, reached }) {
+  const size = 40, stroke = 5, r = (size - stroke) / 2, c = 2 * Math.PI * r
+  const off = c * (1 - Math.min(100, pct) / 100)
+  return (
+    <span className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--surface-2)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={reached ? 'var(--income)' : 'var(--primary)'}
+          strokeWidth={stroke} strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round" />
+      </svg>
+      <span className="absolute inset-0 grid place-items-center text-[10px] font-extrabold tabular">{pct}</span>
+    </span>
+  )
+}
+
+function GoalsHomeCard({ card, onClick }) {
+  const { t } = useTranslation()
+  const prog = goalProgress(card.saved, Number(card.goal.target_amount))
+  return (
+    <button onClick={onClick} className="w-full bg-surface border border-border rounded-[14px] px-4 py-3 text-left hover:bg-surface-2 flex items-center gap-3">
+      <MiniRing pct={prog.pct} reached={prog.reached} />
+      <span className="flex-1 min-w-0">
+        <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-faint">🎯 {t('goals.section')}</span>
+        <span className="block font-bold text-[14px] truncate mt-0.5">{presetEmoji(card.goal.preset)} {card.goal.name}</span>
+        <span className="block text-[11px] text-muted">{t('goals.activeCount', { count: card.count })}</span>
+      </span>
+      <span className="text-[11px] font-semibold text-muted shrink-0">›</span>
     </button>
   )
 }

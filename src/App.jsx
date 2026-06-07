@@ -14,6 +14,7 @@ import ForgotEmail from './pages/ForgotEmail'
 import Home from './pages/Home'
 import Stats from './pages/Stats'
 import Budget from './pages/Budget'
+import Goals from './pages/Goals'
 import Accounts from './pages/Accounts'
 import Settings from './pages/Settings'
 import SettingsCategories from './pages/SettingsCategories'
@@ -116,6 +117,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/stats" element={<Stats />} />
               <Route path="/budget" element={<BudgetRoute><Budget /></BudgetRoute>} />
+              <Route path="/goals" element={<Goals />} />
               <Route path="/accounts" element={<Accounts />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/categories" element={<SettingsCategories />} />

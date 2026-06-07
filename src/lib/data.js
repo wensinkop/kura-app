@@ -191,6 +191,68 @@ export function createTransactions(userId, rows) {
     .select()
 }
 
+// ---- Goals -----------------------------------------------------------------
+
+export function listGoals() {
+  return supabase.from('goals').select('*').order('created_at', { ascending: true })
+}
+
+// Creating a goal also creates its dedicated account (the saved money lives
+// there and counts in net worth). Returns { data: goal, account, error }.
+export async function createGoal(userId, { name, target_amount, deadline, preset, currency }) {
+  cacheClear()
+  const existing = await listAccounts()
+  const sortOrder = existing.data?.length ?? 0
+  const { data: account, error: aerr } = await createAccount(
+    userId,
+    { name: name?.trim(), type: 'bank', currency, opening_balance: 0 },
+    sortOrder,
+  )
+  if (aerr || !account) return { data: null, account: null, error: aerr ?? new Error('Could not create the goal account') }
+  const { data, error } = await supabase
+    .from('goals')
+    .insert({
+      user_id: userId,
+      account_id: account.id,
+      name: name?.trim(),
+      target_amount,
+      deadline: deadline || null,
+      preset: preset || null,
+    })
+    .select()
+    .single()
+  return { data, account, error }
+}
+
+// Only name / target / deadline / status are editable (currency + account are fixed).
+export function updateGoal(id, patch) {
+  cacheClear()
+  return supabase.from('goals').update(patch).eq('id', id)
+}
+
+// Removes the goal row only — its account (and the money in it) is kept so the
+// user can manage it in Accounts. (Deleting the account cascades to the goal.)
+export function deleteGoal(id) {
+  cacheClear()
+  return supabase.from('goals').delete().eq('id', id)
+}
+
+// Contribute to a goal: a same-currency transfer from a funding account into the
+// goal's account.
+export function addToGoal(userId, { fromAccountId, goalAccountId, amount, date }) {
+  return createTransactions(userId, [{
+    kind: 'transfer',
+    date,
+    amount,
+    account_id: fromAccountId,
+    to_account_id: goalAccountId,
+    to_amount: amount,
+    exchange_rate: null,
+    category_id: null,
+    note: null,
+  }])
+}
+
 // Transactions whose date falls in the half-open [startISO, endExclusiveISO)
 // range, richest select (for the Stats page). Newest first.
 export function listTransactionsInRange(startISO, endExclusiveISO) {

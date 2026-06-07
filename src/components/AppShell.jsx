@@ -17,6 +17,7 @@ function titleKeyFor(pathname) {
   if (pathname === '/') return 'title.home'
   if (pathname.startsWith('/stats')) return 'title.statistics'
   if (pathname === '/budget') return 'title.budget'
+  if (pathname === '/goals') return 'title.goals'
   if (pathname.startsWith('/accounts')) return 'title.accounts'
   if (pathname === '/settings/categories') return 'title.categories'
   if (pathname === '/settings/accounts') return 'title.accountsGroups'
@@ -31,6 +32,7 @@ function titleKeyFor(pathname) {
 function backTargetFor(pathname) {
   if (pathname.startsWith('/settings/')) return '/settings'
   if (pathname === '/budget') return '/' // reached from the Home card / Settings, not the bottom nav
+  if (pathname === '/goals') return '/accounts' // lives under Accounts (+ a Home card)
   return null
 }
 

@@ -7,7 +7,7 @@ import { cacheGet, cacheSet } from '../lib/cache'
 import { accountSubtitle, formatAbs, formatSigned, amountColor } from '../lib/format'
 import { toBase, netWorth, creditCardBilling } from '../lib/balances'
 import { Button } from '../components/ui'
-import { PlusIcon } from '../lib/icons'
+import { PlusIcon, ChevronRight } from '../lib/icons'
 
 import i18n from '../i18n'
 // "2026-07-05" -> "5 Jul" (month name in the UI language).
@@ -79,6 +79,17 @@ export default function Accounts() {
           </button>
         )}
       </div>
+
+      {/* Goals entry — lives under Accounts (a savings target backed by an account) */}
+      <button onClick={() => navigate('/goals')}
+        className="w-full mt-3 bg-surface border border-border rounded-[14px] px-4 py-3.5 flex items-center gap-3 text-left hover:bg-surface-2">
+        <span className="w-9 h-9 rounded-full bg-primary-soft grid place-items-center shrink-0 text-lg">🎯</span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-bold text-[14.5px]">{t('goals.section')}</span>
+          <span className="block text-xs text-muted">{t('goals.accountsSub')}</span>
+        </span>
+        <ChevronRight className="w-4 h-4 text-faint shrink-0" />
+      </button>
 
       {active.length === 0 ? (
         <div className="bg-surface border border-border rounded-[14px] p-6 mt-3 text-center">
