@@ -18,7 +18,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { listAccounts, listGroups, listCategories, createTransactions, recentNotes } from '../lib/data'
+import { listAccounts, listGroups, listCategories, createTransactions, recentNotes, getAccountBalances } from '../lib/data'
 import {
   parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint, detectNumberFormat,
 } from '../lib/statement'
@@ -120,6 +120,8 @@ export default function BankStatement() {
   const [reviewRows, setReviewRows] = useState([])
   const [selected, setSelected] = useState(() => new Set()) // tempIds ticked for bulk save/remove
   const [saving, setSaving] = useState(false)
+  const [savedStats, setSavedStats] = useState({ count: 0, income: 0, expense: 0 }) // accumulated across batched saves
+  const [doneBalance, setDoneBalance] = useState(null) // account balance shown on the done step
 
   const fileInput = useRef(null)
 
@@ -377,7 +379,9 @@ export default function BankStatement() {
   }
 
   // Save the given rows; on success drop them from the list (and leave the rest
-  // to keep reviewing). When nothing is left, head Home.
+  // to keep reviewing). When nothing is left, show a confirmation with the
+  // account's resulting balance (rows may be saved over several batches, so the
+  // saved totals accumulate).
   async function saveRows(rows, badMsg) {
     setError('')
     if (!rows.length) return
@@ -387,9 +391,21 @@ export default function BankStatement() {
     if (err) { setError(err.message); setSaving(false); return }
     const savedIds = new Set(rows.map((r) => r.tempId))
     const remaining = reviewRows.filter((r) => !savedIds.has(r.tempId))
+    const stats = {
+      count: savedStats.count + rows.length,
+      income: savedStats.income + rows.filter((r) => r.kind === 'income').reduce((s, r) => s + (Number(r.amount) || 0), 0),
+      expense: savedStats.expense + rows.filter((r) => r.kind === 'expense').reduce((s, r) => s + (Number(r.amount) || 0), 0),
+    }
+    setSavedStats(stats)
     setSelected(new Set())
     setSaving(false)
-    if (remaining.length === 0) { navigate('/'); return }
+    if (remaining.length === 0) {
+      const bal = await getAccountBalances()
+      const b = (bal.data ?? []).find((x) => x.account_id === accountId)
+      setDoneBalance(b ? Number(b.balance) : null)
+      setStep('done')
+      return
+    }
     setReviewRows(remaining)
   }
   const saveAll = () => saveRows(reviewRows, 'Every row needs a date and an amount; transfers need a second account.')
@@ -439,6 +455,8 @@ export default function BankStatement() {
               renderTeach()
             ) : step === 'map' ? (
               renderMap()
+            ) : step === 'done' ? (
+              renderDone()
             ) : (
               renderReview()
             )}
@@ -473,6 +491,7 @@ export default function BankStatement() {
 
   // ---- Back navigation between steps ---------------------------------------
   function onBack() {
+    if (step === 'done') { navigate('/'); return }
     if (step === 'review') { setStep('map'); return }
     if (step === 'teach') { setTeachStep(null); setStep('map'); return }
     if (step === 'map' || step === 'password') {
@@ -846,6 +865,42 @@ export default function BankStatement() {
           )
         })}
         <div aria-hidden="true" className="h-[20dvh]" />
+      </div>
+    )
+  }
+
+  // ---- Done: confirmation + resulting balance after saving ------------------
+  function renderDone() {
+    return (
+      <div className="max-w-md mx-auto py-8 space-y-5">
+        <div className="text-center space-y-2">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-income/15 text-income grid place-items-center text-2xl">✓</div>
+          <div className="text-[18px] font-extrabold text-text">All saved</div>
+          <p className="text-[13.5px] text-muted">
+            <span className="font-semibold text-text">{savedStats.count.toLocaleString()}</span> transaction{savedStats.count === 1 ? '' : 's'} added to {account?.name}.
+          </p>
+        </div>
+
+        <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
+          <div className="text-[10.5px] font-bold uppercase tracking-wide text-faint px-4 pt-3 pb-1">Totals added</div>
+          <div className="px-4 py-2.5">
+            <div className="flex justify-between text-[13.5px]">
+              <span className="text-muted">Income</span><span className="font-semibold text-income tabular">{formatMoney(savedStats.income, currency)}</span>
+            </div>
+            <div className="flex justify-between text-[13.5px] mt-0.5">
+              <span className="text-muted">Expenses</span><span className="font-semibold text-expense tabular">{formatMoney(savedStats.expense, currency)}</span>
+            </div>
+          </div>
+        </div>
+
+        {doneBalance != null && (
+          <div className="bg-surface border border-border rounded-[14px] px-4 py-3 flex justify-between items-baseline">
+            <span className="text-[13.5px] text-muted truncate pr-3">{account?.name} balance now</span>
+            <span className="text-[15px] font-extrabold text-text tabular shrink-0">{formatMoney(doneBalance, currency)}</span>
+          </div>
+        )}
+
+        <Button onClick={() => navigate('/')} className="w-full">Done</Button>
       </div>
     )
   }
