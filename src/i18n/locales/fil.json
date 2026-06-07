@@ -153,5 +153,19 @@
       "forgiving": "Ang hindi nagamit na badyet ay dadalhin sa susunod na panahon. Kung lalampas ka, patatawarin — magsisimula pa rin nang buo ang susunod.",
       "strict": "Ang hindi nagamit ay dadalhin, at ang labis ay dadalhin din — ang susunod na panahon ay babawasan ng nalampasan mo (istilong YNAB)."
     }
+  },
+  "account": {
+    "netWorth": "Net worth · sa pangunahing pera ({{base}})",
+    "setRate_one": "Magtakda ng rate para sa {{list}} para maisama.",
+    "setRate_other": "Magtakda ng rate para sa {{list}} para maisama.",
+    "empty": "Wala pang account. Gumawa ng unang account para makita ito dito.",
+    "addAccount": "Magdagdag ng account",
+    "ungrouped": "Walang grupo",
+    "manage": "Pamahalaan ang mga account at grupo",
+    "payable": "Babayaran {{amount}}",
+    "dueDate": "due {{date}}",
+    "settlesDay": "magsasara sa {{day}}",
+    "dueDay": "due sa {{day}}",
+    "type": { "cash": "Cash", "debit": "Debit", "credit_card": "Credit card" }
   }
 }

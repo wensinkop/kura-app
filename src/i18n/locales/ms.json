@@ -153,5 +153,19 @@
       "forgiving": "Baki bajet dibawa ke tempoh berikutnya. Jika anda terlebih belanja, ia dimaafkan — tempoh berikutnya tetap bermula penuh.",
       "strict": "Baki bajet dibawa ke hadapan, dan lebihan turut dibawa — tempoh berikutnya dikurangkan sebanyak lebihan anda (gaya YNAB)."
     }
+  },
+  "account": {
+    "netWorth": "Nilai bersih · dalam mata wang asas ({{base}})",
+    "setRate_one": "Tetapkan kadar untuk {{list}} supaya disertakan.",
+    "setRate_other": "Tetapkan kadar untuk {{list}} supaya disertakan.",
+    "empty": "Belum ada akaun. Cipta akaun pertama anda untuk melihatnya di sini.",
+    "addAccount": "Tambah akaun",
+    "ungrouped": "Tanpa kumpulan",
+    "manage": "Urus akaun & kumpulan",
+    "payable": "Perlu dibayar {{amount}}",
+    "dueDate": "tarikh akhir {{date}}",
+    "settlesDay": "tutup pada {{day}}",
+    "dueDay": "tarikh akhir {{day}}",
+    "type": { "cash": "Tunai", "debit": "Debit", "credit_card": "Kad kredit" }
   }
 }

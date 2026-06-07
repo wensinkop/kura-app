@@ -67,17 +67,26 @@ export function monthYearLabel(year, monthIndex) {
   return new Date(year, monthIndex, 1).toLocaleDateString(uiLocale(), { month: 'long', year: 'numeric', calendar: 'gregory' })
 }
 
+// English fallbacks (still imported by screens not yet localised).
 export const TYPE_LABEL = {
   cash: 'Cash',
   debit: 'Debit',
   credit_card: 'Credit card',
 }
-
 export const TYPE_OPTIONS = [
   { value: 'cash', label: 'Cash' },
   { value: 'debit', label: 'Debit' },
   { value: 'credit_card', label: 'Credit card' },
 ]
+
+// Account-type label in the UI language (falls back to the English constant).
+export function typeLabel(type) {
+  return i18n.t(`account.type.${type}`, { defaultValue: TYPE_LABEL[type] ?? type })
+}
+// For <select> options (resolved at call time so it follows the language).
+export function typeOptions() {
+  return ['cash', 'debit', 'credit_card'].map((value) => ({ value, label: typeLabel(value) }))
+}
 
 // 1 -> "1st", 18 -> "18th", etc.
 export function ordinal(n) {
@@ -87,13 +96,14 @@ export function ordinal(n) {
   return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
-// "Cash · IDR" / "Credit card · IDR · settles 18th, due 5th"
+// "Cash · IDR" / "Credit card · IDR · settles 18th, due 5th" (type + labels in
+// the UI language; the day ordinal stays as-is).
 export function accountSubtitle(a) {
-  const base = `${TYPE_LABEL[a.type] ?? a.type} · ${a.currency}`
+  const base = `${typeLabel(a.type)} · ${a.currency}`
   if (a.type === 'credit_card' && (a.settlement_day || a.payment_day)) {
     const bits = []
-    if (a.settlement_day) bits.push(`settles ${ordinal(a.settlement_day)}`)
-    if (a.payment_day) bits.push(`due ${ordinal(a.payment_day)}`)
+    if (a.settlement_day) bits.push(i18n.t('account.settlesDay', { day: ordinal(a.settlement_day) }))
+    if (a.payment_day) bits.push(i18n.t('account.dueDay', { day: ordinal(a.payment_day) }))
     return `${base} · ${bits.join(', ')}`
   }
   return base

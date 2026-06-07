@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listGroups, listAccounts, getAccountBalances, listTransactionsForAccounts, listRates } from '../lib/data'
@@ -8,14 +9,16 @@ import { toBase, netWorth, creditCardBilling } from '../lib/balances'
 import { Button } from '../components/ui'
 import { PlusIcon } from '../lib/icons'
 
-// "2026-07-05" -> "5 Jul"
+import i18n from '../i18n'
+// "2026-07-05" -> "5 Jul" (month name in the UI language).
 function shortDate(iso) {
   if (!iso) return ''
   const [y, m, d] = iso.split('-').map(Number)
-  return `${d} ${new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short' })}`
+  return `${d} ${new Date(y, m - 1, d).toLocaleDateString(i18n.language || 'en', { month: 'short' })}`
 }
 
 export default function Accounts() {
+  const { t } = useTranslation()
   const { profile } = useAuth()
   const navigate = useNavigate()
   // Seed from the session cache so revisiting Accounts is instant; the effect
@@ -58,13 +61,13 @@ export default function Accounts() {
   const rollup = (accts) =>
     accts.reduce((s, a) => s + (toBase(balances.get(a.id) ?? 0, a.currency, rates, base) ?? 0), 0)
 
-  if (loading) return <p className="text-muted text-sm py-8 text-center">Loading…</p>
+  if (loading) return <p className="text-muted text-sm py-8 text-center">{t('common.loading')}</p>
 
   return (
     <div className="max-w-[760px] mx-auto">
       {/* Net worth */}
       <div className="bg-surface border border-border rounded-[14px] p-[18px]">
-        <div className="text-xs font-semibold text-muted">Net worth · in base currency ({base})</div>
+        <div className="text-xs font-semibold text-muted">{t('account.netWorth', { base })}</div>
         <div className={`text-[27px] font-extrabold mt-1.5 tracking-[-.5px] tabular ${
           active.length === 0 ? 'text-primary' : nw.total < 0 ? 'text-expense' : 'text-primary'
         }`}>
@@ -72,16 +75,16 @@ export default function Accounts() {
         </div>
         {nw.missing.length > 0 && (
           <button onClick={() => navigate('/settings/rates')} className="text-[11px] text-expense mt-1 hover:underline">
-            Set a rate for {nw.missing.join(', ')} to include {nw.missing.length > 1 ? 'them' : 'it'}.
+            {t('account.setRate', { list: nw.missing.join(', '), count: nw.missing.length })}
           </button>
         )}
       </div>
 
       {active.length === 0 ? (
         <div className="bg-surface border border-border rounded-[14px] p-6 mt-3 text-center">
-          <p className="text-sm text-muted mb-4">No accounts yet. Create your first account to see it here.</p>
+          <p className="text-sm text-muted mb-4">{t('account.empty')}</p>
           <Button onClick={() => navigate('/settings/accounts')}>
-            <PlusIcon className="w-[18px] h-[18px]" /> Add an account
+            <PlusIcon className="w-[18px] h-[18px]" /> {t('account.addAccount')}
           </Button>
         </div>
       ) : (
@@ -93,14 +96,14 @@ export default function Accounts() {
             ) : null
           )}
           {ungrouped.length > 0 && (
-            <AccountGroup title={groups.length > 0 ? 'Ungrouped' : 'Accounts'}
+            <AccountGroup title={groups.length > 0 ? t('account.ungrouped') : t('nav.accounts')}
               rollupValue={groups.length > 0 ? rollup(ungrouped) : null}
               accounts={ungrouped} balances={balances} txns={ccTxns} rates={rates} base={base} />
           )}
 
           <div className="text-center mt-5">
             <button onClick={() => navigate('/settings/accounts')} className="text-xs font-semibold text-faint hover:text-muted">
-              Manage accounts & groups
+              {t('account.manage')}
             </button>
           </div>
         </>
@@ -124,6 +127,7 @@ function AccountGroup({ title, rollupValue, accounts, balances, txns, rates, bas
 }
 
 function AccountRow({ a, balance, txns, rates, base }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const isCC = a.type === 'credit_card'
   const billing = isCC ? creditCardBilling(a, txns, balance) : null
@@ -148,8 +152,8 @@ function AccountRow({ a, balance, txns, rates, base }) {
       {/* Credit-card billing on its own full-width line so it never clips on mobile. */}
       {isCC && billing.outstanding > 0 && (
         <div className="text-[11px] text-muted mt-1.5 pt-1.5 border-t border-border/60 flex justify-between gap-2">
-          <span>Payable {formatAbs(billing.payable, a.currency)}</span>
-          {billing.nextDue && <span className="text-faint">due {shortDate(billing.nextDue)}</span>}
+          <span>{t('account.payable', { amount: formatAbs(billing.payable, a.currency) })}</span>
+          {billing.nextDue && <span className="text-faint">{t('account.dueDate', { date: shortDate(billing.nextDue) })}</span>}
         </div>
       )}
     </button>

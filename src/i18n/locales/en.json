@@ -154,5 +154,19 @@
       "forgiving": "Unused budget carries to the next period. If you overspend, it's forgiven — the next period still starts at the full amount.",
       "strict": "Unused budget carries forward, and overspending carries too — the next period is reduced by what you went over (YNAB-style)."
     }
+  },
+  "account": {
+    "netWorth": "Net worth · in base currency ({{base}})",
+    "setRate_one": "Set a rate for {{list}} to include it.",
+    "setRate_other": "Set a rate for {{list}} to include them.",
+    "empty": "No accounts yet. Create your first account to see it here.",
+    "addAccount": "Add an account",
+    "ungrouped": "Ungrouped",
+    "manage": "Manage accounts & groups",
+    "payable": "Payable {{amount}}",
+    "dueDate": "due {{date}}",
+    "settlesDay": "settles {{day}}",
+    "dueDay": "due {{day}}",
+    "type": { "cash": "Cash", "debit": "Debit", "credit_card": "Credit card" }
   }
 }

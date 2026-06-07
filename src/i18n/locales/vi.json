@@ -153,5 +153,19 @@
       "forgiving": "Ngân sách dư chuyển sang kỳ sau. Nếu chi vượt, được bỏ qua — kỳ sau vẫn bắt đầu đầy đủ.",
       "strict": "Ngân sách dư chuyển tiếp, và phần chi vượt cũng chuyển — kỳ sau bị giảm đúng phần bạn đã vượt (kiểu YNAB)."
     }
+  },
+  "account": {
+    "netWorth": "Giá trị ròng · theo tiền tệ cơ sở ({{base}})",
+    "setRate_one": "Đặt tỷ giá cho {{list}} để tính vào.",
+    "setRate_other": "Đặt tỷ giá cho {{list}} để tính vào.",
+    "empty": "Chưa có tài khoản. Tạo tài khoản đầu tiên để xem ở đây.",
+    "addAccount": "Thêm tài khoản",
+    "ungrouped": "Chưa nhóm",
+    "manage": "Quản lý tài khoản & nhóm",
+    "payable": "Phải trả {{amount}}",
+    "dueDate": "đến hạn {{date}}",
+    "settlesDay": "chốt ngày {{day}}",
+    "dueDay": "đến hạn ngày {{day}}",
+    "type": { "cash": "Tiền mặt", "debit": "Ghi nợ", "credit_card": "Thẻ tín dụng" }
   }
 }

@@ -153,5 +153,19 @@
       "forgiving": "Sisa anggaran dibawa ke periode berikutnya. Jika kamu kelebihan, dimaafkan — periode berikutnya tetap mulai penuh.",
       "strict": "Sisa anggaran dibawa ke depan, dan kelebihan juga ikut — periode berikutnya dikurangi sebesar kelebihanmu (gaya YNAB)."
     }
+  },
+  "account": {
+    "netWorth": "Kekayaan bersih · dalam mata uang utama ({{base}})",
+    "setRate_one": "Atur nilai tukar untuk {{list}} agar ikut dihitung.",
+    "setRate_other": "Atur nilai tukar untuk {{list}} agar ikut dihitung.",
+    "empty": "Belum ada akun. Buat akun pertamamu untuk melihatnya di sini.",
+    "addAccount": "Tambah akun",
+    "ungrouped": "Tanpa grup",
+    "manage": "Kelola akun & grup",
+    "payable": "Harus dibayar {{amount}}",
+    "dueDate": "jatuh tempo {{date}}",
+    "settlesDay": "tutup buku tgl {{day}}",
+    "dueDay": "jatuh tempo tgl {{day}}",
+    "type": { "cash": "Tunai", "debit": "Debit", "credit_card": "Kartu kredit" }
   }
 }
