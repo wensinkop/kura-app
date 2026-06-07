@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { listAccounts, listGroups, listCategories, recentNotes, createTransactions, createCategory } from '../lib/data'
@@ -11,14 +12,6 @@ import DatePicker from '../components/DatePicker'
 import Sidebar from '../components/Sidebar'
 import { Button, inputClass } from '../components/ui'
 import { ChevronLeft } from '../lib/icons'
-
-// Each row picks its own type (the next row inherits it). Shown via the same
-// adaptive picker as account/category — bottom-sheet on mobile, type on desktop.
-const KIND_OPTIONS = [
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-  { value: 'transfer', label: 'Transfer' },
-]
 
 const DESK = 768 // --breakpoint-desk; below this we run the mobile keyboard-aware scrolling
 
@@ -56,8 +49,14 @@ function scrollTargetEl(card, field) {
 }
 
 export default function NewTransaction() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const KIND_OPTIONS = [
+    { value: 'expense', label: t('tx.kind.expense') },
+    { value: 'income', label: t('tx.kind.income') },
+    { value: 'transfer', label: t('tx.kind.transfer') },
+  ]
 
   const [accounts, setAccounts] = useState([])
   const [groups, setGroups] = useState([])
@@ -122,7 +121,7 @@ export default function NewTransaction() {
     const sortOrder = categories.filter((c) => c.kind === kind && !c.parent_id).length
     const { data, error } = await createCategory(user.id, { kind, name, parent_id: null }, sortOrder)
     if (error || !data) {
-      setSaveError(error?.message || 'Could not create the category.')
+      setSaveError(error?.message || t('tx.errCreateCat'))
       return null
     }
     setCategories((prev) => [...prev, data])
@@ -243,15 +242,15 @@ export default function NewTransaction() {
   function validate() {
     const errs = {}
     for (const r of rows) {
-      if (!r.date) { errs[r.tempId] = 'Pick a date.'; continue }
+      if (!r.date) { errs[r.tempId] = t('tx.errDate'); continue }
       if (r.kind === 'transfer') {
-        if (!r.accountId || !r.toAccountId) errs[r.tempId] = 'Choose both the From and To accounts.'
-        else if (r.accountId === r.toAccountId) errs[r.tempId] = 'From and To must be different accounts.'
-        else if (!r.amount || r.amount <= 0) errs[r.tempId] = 'Enter an amount greater than zero.'
-        else if (isCross(r) && (!r.toAmount || r.toAmount <= 0)) errs[r.tempId] = 'Enter the received amount.'
+        if (!r.accountId || !r.toAccountId) errs[r.tempId] = t('tx.errBothAccounts')
+        else if (r.accountId === r.toAccountId) errs[r.tempId] = t('tx.errSameAccount')
+        else if (!r.amount || r.amount <= 0) errs[r.tempId] = t('tx.errAmount')
+        else if (isCross(r) && (!r.toAmount || r.toAmount <= 0)) errs[r.tempId] = t('tx.errReceived')
       } else {
-        if (!r.accountId) errs[r.tempId] = 'Choose an account.'
-        else if (!r.amount || r.amount <= 0) errs[r.tempId] = 'Enter an amount greater than zero.'
+        if (!r.accountId) errs[r.tempId] = t('tx.errAccount')
+        else if (!r.amount || r.amount <= 0) errs[r.tempId] = t('tx.errAmount')
       }
     }
     setRowErrors(errs)
@@ -299,20 +298,20 @@ export default function NewTransaction() {
 
       <div className="flex-1 flex flex-col h-[100dvh] min-w-0">
         <header className="shrink-0 bg-surface border-b border-border px-4 pt-[calc(0.625rem_+_env(safe-area-inset-top))] pb-2.5 flex items-center gap-2">
-          <button onClick={() => navigate(-1)} aria-label="Back"
+          <button onClick={() => navigate(-1)} aria-label={t('common.back')}
             className="w-8 h-8 -ml-1 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
-          <div className="font-bold text-[15px]">New transactions</div>
+          <div className="font-bold text-[15px]">{t('tx.newTitle')}</div>
         </header>
 
         <main ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3.5 desk:px-8 desk:py-5 w-full">
           {loading ? (
-            <p className="text-muted text-sm py-8 text-center">Loading…</p>
+            <p className="text-muted text-sm py-8 text-center">{t('common.loading')}</p>
           ) : noAccounts ? (
             <div className="bg-surface border border-border rounded-[14px] p-6 text-center max-w-md mx-auto mt-6">
-              <p className="text-sm text-muted mb-4">You need an account before adding transactions.</p>
-              <Button onClick={() => navigate('/settings/accounts')}>Add an account</Button>
+              <p className="text-sm text-muted mb-4">{t('tx.needAccount')}</p>
+              <Button onClick={() => navigate('/settings/accounts')}>{t('account.addAccount')}</Button>
             </div>
           ) : (
             <div className="desk:max-w-[1100px] desk:mx-auto">
@@ -331,36 +330,36 @@ export default function NewTransaction() {
                     onFocusCapture={(e) => handleCardFocus(e, row.tempId)}
                     className={`bg-surface border rounded-[14px] p-3 mt-2.5 first:mt-0 desk:mt-2 ${err ? 'border-expense' : 'border-border'} ${enteringIds.has(row.tempId) ? 'animate-row-in' : ''}`}>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
-                      <button type="button" onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
+                      <span className="text-[11px] font-bold uppercase tracking-wide text-faint">{t('tx.row', { n: idx + 1 })}</span>
+                      <button type="button" onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ {t('tx.remove')}</button>
                     </div>
 
                     {/* 2-up on mobile, a single labelled row on desktop */}
                     <div className="grid grid-cols-2 gap-2.5 desk:flex desk:flex-wrap desk:items-end desk:gap-2.5">
-                      <MField label="Type" field="type" deskW="desk:w-[118px] desk:flex-none">
-                        <ResponsiveSelect title="Type" placeholder="Type…" value={row.kind}
+                      <MField label={t('tx.type')} field="type" deskW="desk:w-[118px] desk:flex-none">
+                        <ResponsiveSelect title={t('tx.type')} placeholder={t('tx.type')} value={row.kind}
                           onChange={(v) => setRowKind(row.tempId, v)} options={KIND_OPTIONS} />
                       </MField>
-                      <MField label="Date" field="date" deskW="desk:w-[158px] desk:flex-none">
+                      <MField label={t('tx.date')} field="date" deskW="desk:w-[158px] desk:flex-none">
                         <DatePicker value={row.date} onChange={(v) => update(row.tempId, { date: v })} className={inputClass} />
                       </MField>
-                      <MField label={cross ? 'Amount sent' : 'Amount'} field="amount" deskW="desk:w-[200px] desk:flex-none">
+                      <MField label={cross ? t('tx.amountSent') : t('tx.amount')} field="amount" deskW="desk:w-[200px] desk:flex-none">
                         <NumberInput value={row.amount} onChange={(v) => update(row.tempId, { amount: v })}
                           locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
                       </MField>
 
                       {isTransfer ? (
                         <>
-                          <MField label="From account" field="from" full>
-                            <ResponsiveSelect title="From account" placeholder="From…" value={row.accountId}
+                          <MField label={t('tx.fromAccount')} field="from" full>
+                            <ResponsiveSelect title={t('tx.fromAccount')} placeholder={t('tx.fromAccount')} value={row.accountId}
                               onChange={(v) => update(row.tempId, { accountId: v })} options={accountOptions} />
                           </MField>
-                          <MField label="To account" field="to" full>
-                            <ResponsiveSelect title="To account" placeholder="To…" value={row.toAccountId}
+                          <MField label={t('tx.toAccount')} field="to" full>
+                            <ResponsiveSelect title={t('tx.toAccount')} placeholder={t('tx.toAccount')} value={row.toAccountId}
                               onChange={(v) => update(row.tempId, { toAccountId: v })} options={accountOptions} />
                           </MField>
                           {cross && (
-                            <MField label={`Received (${toCur})`} field="received" full>
+                            <MField label={t('tx.received', { cur: toCur })} field="received" full>
                               <NumberInput value={row.toAmount} onChange={(v) => update(row.tempId, { toAmount: v })}
                                 locale={localeFor(toCur)} currency={toCur} decimals={currencyDecimals(toCur)} placeholder="0" />
                             </MField>
@@ -368,18 +367,18 @@ export default function NewTransaction() {
                         </>
                       ) : (
                         <>
-                          <MField label="Category" field="category" full={subs.length === 0} deskW="desk:flex-1 desk:max-w-[162px] desk:min-w-[140px]">
-                            <ResponsiveSelect title="Category" placeholder="— Category —" value={row.categoryId}
+                          <MField label={t('tx.category')} field="category" full={subs.length === 0} deskW="desk:flex-1 desk:max-w-[162px] desk:min-w-[140px]">
+                            <ResponsiveSelect title={t('tx.category')} placeholder={t('tx.categoryPlaceholder')} value={row.categoryId}
                               onChange={(v) => onPickCat(row.tempId, v)} options={catOptionsFor(row.kind)}
                               onCreate={(name) => createCat(row.kind, name)} />
                           </MField>
                           {/* Sub-category is a stable column on desktop (kept even when the
                               chosen category has none, so rows don't reflow); on mobile it
                               only appears when there's something to pick. */}
-                          <MField label="Sub-category" field="subcategory" deskW="desk:flex-1 desk:max-w-[162px] desk:min-w-[140px]" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
+                          <MField label={t('tx.subcategory')} field="subcategory" deskW="desk:flex-1 desk:max-w-[162px] desk:min-w-[140px]" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
                             {subs.length > 0 ? (
                               <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }}
-                                title="Sub-category" placeholder="— none —" noneLabel="— none —"
+                                title={t('tx.subcategory')} placeholder={t('common.none')} noneLabel={t('common.none')}
                                 value={row.subId} onChange={(v) => update(row.tempId, { subId: v })}
                                 options={subs.map((s) => ({ value: s.id, label: s.name }))} />
                             ) : (
@@ -390,22 +389,22 @@ export default function NewTransaction() {
                               leaving the first line (type/date/amount/category/sub)
                               roomier. */}
                           <div aria-hidden="true" className="hidden desk:block desk:basis-full" />
-                          <MField label="Account" field="account" full>
-                            <ResponsiveSelect title="Account" placeholder="Choose…" value={row.accountId}
+                          <MField label={t('tx.account')} field="account" full>
+                            <ResponsiveSelect title={t('tx.account')} placeholder={t('tx.choose')} value={row.accountId}
                               onChange={(v) => update(row.tempId, { accountId: v })} options={accountOptions} />
                           </MField>
                         </>
                       )}
 
-                      <MField label="Note" field="note" full deskW="desk:flex-1 desk:min-w-[160px]">
+                      <MField label={t('tx.note')} field="note" full deskW="desk:flex-1 desk:min-w-[160px]">
                         <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
-                          suggestions={notes} placeholder="e.g. Monthly groceries" className={inputClass} />
+                          suggestions={notes} placeholder={t('tx.notePlaceholder')} className={inputClass} />
                       </MField>
                     </div>
 
                     {cross && row.amount > 0 && row.toAmount > 0 && (
                       <div className="text-[11px] text-faint mt-2 px-0.5">
-                        Rate · 1 {toCur} ≈ {formatMoney(row.amount / row.toAmount, fromCur)}
+                        {t('tx.rate', { cur: toCur, amount: formatMoney(row.amount / row.toAmount, fromCur) })}
                       </div>
                     )}
                     {err && <p className="text-sm text-expense mt-1.5 px-1">{err}</p>}
@@ -415,7 +414,7 @@ export default function NewTransaction() {
 
               <button onClick={addRow}
                 className="w-full mt-2.5 desk:mt-3 py-3 border-[1.5px] border-dashed border-border rounded-[14px] text-muted font-semibold text-sm hover:border-primary hover:text-primary">
-                ＋ Add another row
+                ＋ {t('tx.addRow')}
               </button>
 
               {saveError && (
@@ -435,15 +434,15 @@ export default function NewTransaction() {
         {!loading && !noAccounts && (
           <div data-hide-on-keyboard className="shrink-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-3">
             <div className="flex-1 text-[13px] text-muted">
-              Total · {rows.length} row{rows.length === 1 ? '' : 's'}
+              {t('tx.totalRows', { count: rows.length })}
               <div className="text-[17px] font-extrabold text-text tabular">
                 {totals.length === 0 ? '—' : totals.map(([c, v]) => formatMoney(v, c)).join(' · ')}
               </div>
             </div>
             <Button variant="ghost" onClick={() => { setRows([newRow()]); setRowErrors({}); setSaveError('') }} disabled={saving}>
-              Reset
+              {t('tx.reset')}
             </Button>
-            <Button onClick={saveAll} disabled={saving}>{saving ? 'Saving…' : `Save all (${rows.length})`}</Button>
+            <Button onClick={saveAll} disabled={saving}>{saving ? t('tx.saving') : t('tx.saveAll', { count: rows.length })}</Button>
           </div>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import {
@@ -15,16 +16,16 @@ import Sidebar from '../components/Sidebar'
 import { Button, ConfirmDialog, inputClass } from '../components/ui'
 import { ChevronLeft, TrashIcon } from '../lib/icons'
 
-const KIND_OPTIONS = [
-  { value: 'expense', label: 'Expense' },
-  { value: 'income', label: 'Income' },
-  { value: 'transfer', label: 'Transfer' },
-]
-
 export default function EditTransaction() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const KIND_OPTIONS = [
+    { value: 'expense', label: t('tx.kind.expense') },
+    { value: 'income', label: t('tx.kind.income') },
+    { value: 'transfer', label: t('tx.kind.transfer') },
+  ]
 
   const [tx, setTx] = useState(null)
   const [accounts, setAccounts] = useState([])
@@ -90,10 +91,10 @@ export default function EditTransaction() {
   // Changing the type clears category/sub (they're kind-specific).
   function setKind(k) { set({ kind: k, categoryId: '', subId: '' }) }
 
-  if (loading) return <Shell><p className="text-muted text-sm py-8 text-center">Loading…</p></Shell>
+  if (loading) return <Shell title={t('tx.editTitle')}><p className="text-muted text-sm py-8 text-center">{t('common.loading')}</p></Shell>
   if (notFound) return (
-    <Shell onBack={() => navigate('/')}>
-      <p className="text-muted text-sm py-8 text-center">This transaction no longer exists.</p>
+    <Shell title={t('tx.editTitle')} onBack={() => navigate('/')}>
+      <p className="text-muted text-sm py-8 text-center">{t('tx.notFound')}</p>
     </Shell>
   )
 
@@ -106,19 +107,19 @@ export default function EditTransaction() {
   async function createCat(name) {
     const sortOrder = categories.filter((c) => c.kind === kind && !c.parent_id).length
     const { data, error } = await createCategory(user.id, { kind, name, parent_id: null }, sortOrder)
-    if (error || !data) { setError(error?.message || 'Could not create the category.'); return null }
+    if (error || !data) { setError(error?.message || t('tx.errCreateCat')); return null }
     setCategories((prev) => [...prev, data])
     return data.id
   }
 
   function validate() {
-    if (!form.date) return 'Pick a date.'
-    if (!form.amount || form.amount <= 0) return 'Enter an amount greater than zero.'
+    if (!form.date) return t('tx.errDate')
+    if (!form.amount || form.amount <= 0) return t('tx.errAmount')
     if (kind === 'transfer') {
-      if (!form.accountId || !form.toAccountId) return 'Choose both accounts.'
-      if (form.accountId === form.toAccountId) return 'From and To must differ.'
-      if (cross && (!form.toAmount || form.toAmount <= 0)) return 'Enter the received amount.'
-    } else if (!form.accountId) return 'Choose an account.'
+      if (!form.accountId || !form.toAccountId) return t('tx.errBothAccounts')
+      if (form.accountId === form.toAccountId) return t('tx.errSameAccount')
+      if (cross && (!form.toAmount || form.toAmount <= 0)) return t('tx.errReceived')
+    } else if (!form.accountId) return t('tx.errAccount')
     return ''
   }
 
@@ -155,32 +156,32 @@ export default function EditTransaction() {
   }
 
   return (
-    <Shell onBack={() => navigate(-1)} title="Edit transaction">
+    <Shell onBack={() => navigate(-1)} title={t('tx.editTitle')}>
       <div className="max-w-[560px] mx-auto">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Type" full>
-            <ResponsiveSelect title="Type" value={kind} onChange={setKind} options={KIND_OPTIONS} />
+          <Field label={t('tx.type')} full>
+            <ResponsiveSelect title={t('tx.type')} value={kind} onChange={setKind} options={KIND_OPTIONS} />
           </Field>
-          <Field label="Date">
+          <Field label={t('tx.date')}>
             <DatePicker value={form.date} onChange={(v) => set({ date: v })} className={inputClass} />
           </Field>
-          <Field label={cross ? 'Amount sent' : 'Amount'}>
+          <Field label={cross ? t('tx.amountSent') : t('tx.amount')}>
             <NumberInput value={form.amount} onChange={(v) => set({ amount: v })}
               locale={localeFor(fromCur)} currency={fromCur} decimals={currencyDecimals(fromCur)} placeholder="0" />
           </Field>
 
           {kind === 'transfer' ? (
             <>
-              <Field label="From account" full>
-                <ResponsiveSelect title="From account" placeholder="From…" value={form.accountId}
+              <Field label={t('tx.fromAccount')} full>
+                <ResponsiveSelect title={t('tx.fromAccount')} placeholder={t('tx.fromAccount')} value={form.accountId}
                   onChange={(v) => set({ accountId: v })} options={accountOptions} />
               </Field>
-              <Field label="To account" full>
-                <ResponsiveSelect title="To account" placeholder="To…" value={form.toAccountId}
+              <Field label={t('tx.toAccount')} full>
+                <ResponsiveSelect title={t('tx.toAccount')} placeholder={t('tx.toAccount')} value={form.toAccountId}
                   onChange={(v) => set({ toAccountId: v })} options={accountOptions} />
               </Field>
               {cross && (
-                <Field label={`Received (${toCur})`} full>
+                <Field label={t('tx.received', { cur: toCur })} full>
                   <NumberInput value={form.toAmount} onChange={(v) => set({ toAmount: v })}
                     locale={localeFor(toCur)} currency={toCur} decimals={currencyDecimals(toCur)} placeholder="0" />
                 </Field>
@@ -188,50 +189,50 @@ export default function EditTransaction() {
             </>
           ) : (
             <>
-              <Field label="Category" full={subs.length === 0}>
-                <ResponsiveSelect title="Category" placeholder="— Category —" value={form.categoryId}
+              <Field label={t('tx.category')} full={subs.length === 0}>
+                <ResponsiveSelect title={t('tx.category')} placeholder={t('tx.categoryPlaceholder')} value={form.categoryId}
                   onChange={(v) => set({ categoryId: v, subId: '' })}
                   options={topCats.map((c) => ({ value: c.id, label: c.name }))}
                   onCreate={createCat} />
               </Field>
               {subs.length > 0 && (
-                <Field label="Sub-category">
-                  <ResponsiveSelect title="Sub-category" placeholder="— none —" noneLabel="— none —" value={form.subId}
+                <Field label={t('tx.subcategory')}>
+                  <ResponsiveSelect title={t('tx.subcategory')} placeholder={t('common.none')} noneLabel={t('common.none')} value={form.subId}
                     onChange={(v) => set({ subId: v })} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
                 </Field>
               )}
-              <Field label="Account" full>
-                <ResponsiveSelect title="Account" placeholder="Choose account…" value={form.accountId}
+              <Field label={t('tx.account')} full>
+                <ResponsiveSelect title={t('tx.account')} placeholder={t('tx.choose')} value={form.accountId}
                   onChange={(v) => set({ accountId: v })} options={accountOptions} />
               </Field>
             </>
           )}
 
-          <Field label="Note" full>
+          <Field label={t('tx.note')} full>
             <AutocompleteInput value={form.note} onChange={(v) => set({ note: v })}
-              suggestions={notes} placeholder="e.g. Monthly groceries" className={inputClass} />
+              suggestions={notes} placeholder={t('tx.notePlaceholder')} className={inputClass} />
           </Field>
         </div>
 
         {cross && form.amount > 0 && form.toAmount > 0 && (
-          <div className="text-[11px] text-faint mt-2 px-0.5">Rate · 1 {toCur} ≈ {formatMoney(form.amount / form.toAmount, fromCur)}</div>
+          <div className="text-[11px] text-faint mt-2 px-0.5">{t('tx.rate', { cur: toCur, amount: formatMoney(form.amount / form.toAmount, fromCur) })}</div>
         )}
 
         {error && <p className="text-sm text-expense mt-3">{error}</p>}
 
         <div className="flex gap-2.5 mt-5">
           <Button variant="ghost" onClick={() => setConfirmDel(true)} disabled={busy}>
-            <TrashIcon className="w-[17px] h-[17px] text-expense" /> Delete
+            <TrashIcon className="w-[17px] h-[17px] text-expense" /> {t('common.delete')}
           </Button>
-          <Button className="flex-1" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</Button>
+          <Button className="flex-1" onClick={save} disabled={busy}>{busy ? t('tx.saving') : t('tx.saveChanges')}</Button>
         </div>
       </div>
 
       {confirmDel && (
         <ConfirmDialog
-          title="Delete this transaction?"
-          message="It will be permanently removed and balances will update."
-          confirmLabel="Delete"
+          title={t('tx.deleteTxTitle')}
+          message={t('tx.deleteTxMessage')}
+          confirmLabel={t('common.delete')}
           busy={busy}
           onConfirm={doDelete}
           onClose={() => setConfirmDel(false)}
