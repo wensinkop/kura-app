@@ -226,5 +226,28 @@
     "errReceived": "ใส่จำนวนที่ได้รับ",
     "errAccount": "เลือกบัญชี",
     "errCreateCat": "สร้างหมวดหมู่ไม่ได้"
+  },
+  "search": {
+    "placeholder": "ค้นหาบันทึก…",
+    "clear": "ล้าง",
+    "hint": "พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหาธุรกรรม",
+    "searching": "กำลังค้นหา…",
+    "noMatch": "ไม่มีธุรกรรมที่ตรงกับ “{{term}}”"
+  },
+  "accountDetail": {
+    "notFound": "ไม่พบบัญชี",
+    "daily": "รายวัน",
+    "monthly": "รายเดือน",
+    "yearly": "รายปี",
+    "billingCycle": "รอบบิล",
+    "allYears": "ทุกปี",
+    "jumpToday": "ไปวันนี้",
+    "spentCycle": "ใช้ไปรอบนี้",
+    "paidCycle": "ชำระรอบนี้",
+    "noneInPeriod": "ไม่มีธุรกรรมในช่วงนี้",
+    "balance": "ยอดคงเหลือ",
+    "txnsNet_other": "{{count}} ธุรกรรม · สุทธิ {{net}}",
+    "endBalance": "ยอดสิ้นสุด",
+    "tapToEdit": "แตะธุรกรรมเพื่อแก้ไข"
   }
 }

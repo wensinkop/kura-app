@@ -226,5 +226,28 @@
     "errReceived": "Masukkan jumlah diterima.",
     "errAccount": "Pilih akaun.",
     "errCreateCat": "Tidak dapat mencipta kategori."
+  },
+  "search": {
+    "placeholder": "Cari nota…",
+    "clear": "Kosongkan",
+    "hint": "Taip sekurang-kurangnya 2 aksara untuk mencari transaksi.",
+    "searching": "Mencari…",
+    "noMatch": "Tiada transaksi sepadan dengan “{{term}}”."
+  },
+  "accountDetail": {
+    "notFound": "Akaun tidak dijumpai.",
+    "daily": "Harian",
+    "monthly": "Bulanan",
+    "yearly": "Tahunan",
+    "billingCycle": "Kitaran bil",
+    "allYears": "Semua tahun",
+    "jumpToday": "Ke hari ini",
+    "spentCycle": "Dibelanja kitaran ini",
+    "paidCycle": "Dibayar kitaran ini",
+    "noneInPeriod": "Tiada transaksi dalam tempoh ini.",
+    "balance": "Baki",
+    "txnsNet_other": "{{count}} transaksi · bersih {{net}}",
+    "endBalance": "Baki akhir",
+    "tapToEdit": "Ketik transaksi untuk menyuntingnya."
   }
 }

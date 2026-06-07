@@ -226,5 +226,28 @@
     "errReceived": "Ilagay ang halagang natanggap.",
     "errAccount": "Pumili ng account.",
     "errCreateCat": "Hindi magawa ang kategorya."
+  },
+  "search": {
+    "placeholder": "Maghanap ng tala…",
+    "clear": "I-clear",
+    "hint": "Mag-type ng hindi bababa sa 2 karakter para maghanap ng transaksyon.",
+    "searching": "Naghahanap…",
+    "noMatch": "Walang transaksyong tumugma sa “{{term}}”."
+  },
+  "accountDetail": {
+    "notFound": "Hindi nahanap ang account.",
+    "daily": "Araw-araw",
+    "monthly": "Buwanan",
+    "yearly": "Taunan",
+    "billingCycle": "Billing cycle",
+    "allYears": "Lahat ng taon",
+    "jumpToday": "Pumunta sa ngayon",
+    "spentCycle": "Nagastos ngayong cycle",
+    "paidCycle": "Nabayaran ngayong cycle",
+    "noneInPeriod": "Walang transaksyon sa panahong ito.",
+    "balance": "Balanse",
+    "txnsNet_other": "{{count}} transaksyon · net {{net}}",
+    "endBalance": "Huling balanse",
+    "tapToEdit": "I-tap ang transaksyon para i-edit."
   }
 }

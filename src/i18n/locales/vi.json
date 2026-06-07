@@ -226,5 +226,28 @@
     "errReceived": "Nhập số tiền nhận.",
     "errAccount": "Chọn tài khoản.",
     "errCreateCat": "Không thể tạo danh mục."
+  },
+  "search": {
+    "placeholder": "Tìm ghi chú…",
+    "clear": "Xóa",
+    "hint": "Nhập ít nhất 2 ký tự để tìm giao dịch.",
+    "searching": "Đang tìm…",
+    "noMatch": "Không có giao dịch khớp với “{{term}}”."
+  },
+  "accountDetail": {
+    "notFound": "Không tìm thấy tài khoản.",
+    "daily": "Theo ngày",
+    "monthly": "Theo tháng",
+    "yearly": "Theo năm",
+    "billingCycle": "Kỳ sao kê",
+    "allYears": "Tất cả các năm",
+    "jumpToday": "Về hôm nay",
+    "spentCycle": "Đã chi kỳ này",
+    "paidCycle": "Đã trả kỳ này",
+    "noneInPeriod": "Không có giao dịch trong kỳ này.",
+    "balance": "Số dư",
+    "txnsNet_other": "{{count}} giao dịch · ròng {{net}}",
+    "endBalance": "Số dư cuối",
+    "tapToEdit": "Chạm vào giao dịch để sửa."
   }
 }

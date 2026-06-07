@@ -228,5 +228,29 @@
     "errReceived": "Enter the received amount.",
     "errAccount": "Choose an account.",
     "errCreateCat": "Could not create the category."
+  },
+  "search": {
+    "placeholder": "Search notes…",
+    "clear": "Clear",
+    "hint": "Type at least 2 characters to search your transactions.",
+    "searching": "Searching…",
+    "noMatch": "No transactions match “{{term}}”."
+  },
+  "accountDetail": {
+    "notFound": "Account not found.",
+    "daily": "Daily",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "billingCycle": "Billing cycle",
+    "allYears": "All years",
+    "jumpToday": "Jump to today",
+    "spentCycle": "Spent this cycle",
+    "paidCycle": "Paid this cycle",
+    "noneInPeriod": "No transactions in this period.",
+    "balance": "Balance",
+    "txnsNet_one": "{{count}} transaction · net {{net}}",
+    "txnsNet_other": "{{count}} transactions · net {{net}}",
+    "endBalance": "End balance",
+    "tapToEdit": "Tap a transaction to edit it."
   }
 }

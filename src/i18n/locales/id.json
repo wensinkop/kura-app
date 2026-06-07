@@ -226,5 +226,28 @@
     "errReceived": "Masukkan jumlah yang diterima.",
     "errAccount": "Pilih akun.",
     "errCreateCat": "Tidak bisa membuat kategori."
+  },
+  "search": {
+    "placeholder": "Cari catatan…",
+    "clear": "Hapus",
+    "hint": "Ketik minimal 2 karakter untuk mencari transaksi.",
+    "searching": "Mencari…",
+    "noMatch": "Tidak ada transaksi yang cocok dengan “{{term}}”."
+  },
+  "accountDetail": {
+    "notFound": "Akun tidak ditemukan.",
+    "daily": "Harian",
+    "monthly": "Bulanan",
+    "yearly": "Tahunan",
+    "billingCycle": "Siklus tagihan",
+    "allYears": "Semua tahun",
+    "jumpToday": "Ke hari ini",
+    "spentCycle": "Terpakai siklus ini",
+    "paidCycle": "Dibayar siklus ini",
+    "noneInPeriod": "Tidak ada transaksi pada periode ini.",
+    "balance": "Saldo",
+    "txnsNet_other": "{{count}} transaksi · bersih {{net}}",
+    "endBalance": "Saldo akhir",
+    "tapToEdit": "Ketuk transaksi untuk mengeditnya."
   }
 }

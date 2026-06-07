@@ -8,24 +8,29 @@
 // pages through cycles.
 
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { listAccounts, listAccountTransactionsFull, listCategories } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
-import { formatAbs, amountColor, dayLabel } from '../lib/format'
+import { formatAbs, amountColor, dayLabel, monthYearLabel } from '../lib/format'
 import { Segmented } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
 import Sidebar from '../components/Sidebar'
+import i18n from '../i18n'
 import { ChevronLeft, ChevronRight } from '../lib/icons'
 import SwipePager from '../components/SwipePager'
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`
 const isoOfDate = (dt) => iso(dt.getFullYear(), dt.getMonth(), dt.getDate())
 const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return isoOfDate(new Date(y, m - 1, d + n)) }
 const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate()
 const settleIso = (y, m, day) => iso(y, m, Math.min(day, daysInMonth(y, m)))
-function shortDate(s) { const [, m, d] = s.split('-').map(Number); return `${d} ${MONTHS[m - 1]}` }
+// "5 Jul" with the month name in the UI language.
+function shortDate(s) {
+  const [y, m, d] = s.split('-').map(Number)
+  return `${d} ${new Date(y, m - 1, d).toLocaleDateString(i18n.language || 'en', { month: 'short' })}`
+}
 
 // Billing-cycle helpers (cycle ends on the settlement day).
 function cycleEndFor(dateIso, settleDay) {
@@ -51,6 +56,7 @@ function shiftCycleEnd(endIso, delta, settleDay) {
 }
 
 export default function AccountDetail() {
+  const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
   // Seed from the session cache so opening an account is instant. The ledger now
@@ -109,13 +115,13 @@ export default function AccountDetail() {
   const scope = useMemo(() => {
     if (isCC && cycleEnd) {
       const start = cycleStartFromEnd(cycleEnd, account.settlement_day)
-      return { start, end: addDays(cycleEnd, 1), label: `${shortDate(start)} – ${shortDate(cycleEnd)}`, sub: 'Billing cycle' }
+      return { start, end: addDays(cycleEnd, 1), label: `${shortDate(start)} – ${shortDate(cycleEnd)}`, sub: t('accountDetail.billingCycle') }
     }
     const y = anchor.getFullYear(), m = anchor.getMonth()
-    if (mode === 'day') return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label: `${MONTHS[m]} ${y}` }
+    if (mode === 'day') return { start: iso(y, m, 1), end: m === 11 ? iso(y + 1, 0, 1) : iso(y, m + 1, 1), label: monthYearLabel(y, m) }
     if (mode === 'month') return { start: iso(y, 0, 1), end: iso(y + 1, 0, 1), label: String(y) }
-    return { start: null, end: null, label: 'All years' } // yearly
-  }, [isCC, cycleEnd, mode, anchor, account])
+    return { start: null, end: null, label: t('accountDetail.allYears') } // yearly
+  }, [isCC, cycleEnd, mode, anchor, account, t])
 
   const canNavigate = isCC || mode !== 'year'
   function shift(d) {
@@ -164,7 +170,7 @@ export default function AccountDetail() {
 
   const groupLabel = (key) => {
     if (isCC || mode === 'day') return dayLabel(key)
-    if (mode === 'month') { const [y, m] = key.split('-'); return `${MONTHS[Number(m) - 1]} ${y}` }
+    if (mode === 'month') { const [y, m] = key.split('-'); return monthYearLabel(Number(y), Number(m) - 1) }
     return key
   }
 
@@ -178,30 +184,30 @@ export default function AccountDetail() {
       <Sidebar />
       <div className="flex-1 flex flex-col h-[100dvh] min-w-0">
         <header className="shrink-0 bg-surface border-b border-border px-4 pt-[calc(0.625rem_+_env(safe-area-inset-top))] pb-2.5 flex items-center gap-2">
-          <button onClick={() => navigate('/accounts')} aria-label="Back" className="w-8 h-8 -ml-1 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
+          <button onClick={() => navigate('/accounts')} aria-label={t('common.back')} className="w-8 h-8 -ml-1 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
-          <div className="min-w-0 flex-1"><div className="font-bold text-[15px] truncate">{account?.name ?? 'Account'}</div></div>
+          <div className="min-w-0 flex-1"><div className="font-bold text-[15px] truncate">{account?.name ?? t('nav.accounts')}</div></div>
           {account && <div className={`font-extrabold text-[15px] tabular shrink-0 ${amountColor(currentBalance)}`}>{formatAbs(currentBalance, currency)}</div>}
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-clip px-4 py-3.5 desk:px-8 w-full">
           <div className="max-w-[760px] mx-auto">
             {loading ? (
-              <p className="text-muted text-sm py-8 text-center">Loading…</p>
+              <p className="text-muted text-sm py-8 text-center">{t('common.loading')}</p>
             ) : !account ? (
-              <p className="text-muted text-sm py-8 text-center">Account not found.</p>
+              <p className="text-muted text-sm py-8 text-center">{t('accountDetail.notFound')}</p>
             ) : (
               <>
                 {!isCC && (
                   <div className="mb-2.5">
                     <Segmented value={mode} onChange={setMode} options={[
-                      { value: 'day', label: 'Daily' }, { value: 'month', label: 'Monthly' }, { value: 'year', label: 'Yearly' },
+                      { value: 'day', label: t('accountDetail.daily') }, { value: 'month', label: t('accountDetail.monthly') }, { value: 'year', label: t('accountDetail.yearly') },
                     ]} />
                   </div>
                 )}
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <button onClick={() => shift(-1)} aria-label="Previous" disabled={!canNavigate}
+                  <button onClick={() => shift(-1)} aria-label={t('month.previous')} disabled={!canNavigate}
                     className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-0">
                     <ChevronLeft className="w-[18px] h-[18px]" />
                   </button>
@@ -210,11 +216,11 @@ export default function AccountDetail() {
                     {scope.sub && <div className="text-[11px] text-faint">{scope.sub}</div>}
                     {canNavigate && !atCurrent && (
                       <button onClick={goCurrent} className="text-[11px] font-semibold text-primary hover:underline mt-0.5">
-                        Jump to today
+                        {t('accountDetail.jumpToday')}
                       </button>
                     )}
                   </div>
-                  <button onClick={() => shift(1)} aria-label="Next" disabled={!canNavigate}
+                  <button onClick={() => shift(1)} aria-label={t('month.next')} disabled={!canNavigate}
                     className="w-9 h-9 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2 disabled:opacity-0">
                     <ChevronRight className="w-[18px] h-[18px]" />
                   </button>
@@ -226,12 +232,12 @@ export default function AccountDetail() {
                 {isCC && (
                   <div className="bg-surface border border-border rounded-[14px] mb-3 flex overflow-hidden text-center">
                     <div className="flex-1 py-2.5 px-3">
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">Spent this cycle</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('accountDetail.spentCycle')}</div>
                       <div className="text-[15px] font-extrabold tabular text-expense leading-tight mt-0.5">{formatAbs(cycleSpent, currency)}</div>
                     </div>
                     {cyclePaid > 0 && (
                       <div className="flex-1 py-2.5 px-3 border-l border-border">
-                        <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">Paid this cycle</div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">{t('accountDetail.paidCycle')}</div>
                         <div className="text-[15px] font-extrabold tabular text-income leading-tight mt-0.5">{formatAbs(cyclePaid, currency)}</div>
                       </div>
                     )}
@@ -239,7 +245,7 @@ export default function AccountDetail() {
                 )}
 
                 {groups.length === 0 ? (
-                  <p className="text-muted text-sm py-10 text-center">No transactions in this period.</p>
+                  <p className="text-muted text-sm py-10 text-center">{t('accountDetail.noneInPeriod')}</p>
                 ) : detailed ? (
                   groups.map((g) => (
                     <div key={g.key} className="mb-4">
@@ -250,7 +256,7 @@ export default function AccountDetail() {
                             className="w-full px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
                             <div className="flex"><TxRowContent t={t} catMap={catMap} hideAccount /></div>
                             <div className="text-[11px] text-faint text-right mt-1 tabular">
-                              Balance <span className="font-semibold text-muted">{formatAbs(balance, currency)}</span>
+                              {t('accountDetail.balance')} <span className="font-semibold text-muted">{formatAbs(balance, currency)}</span>
                             </div>
                           </button>
                         ))}
@@ -264,18 +270,18 @@ export default function AccountDetail() {
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-[14.5px]">{groupLabel(g.key)}</div>
                           <div className="text-[12px] text-muted mt-0.5">
-                            {g.rows.length} transaction{g.rows.length === 1 ? '' : 's'} · net <span className={amountColor(g.net)}>{formatAbs(g.net, currency)}</span>
+                            {t('accountDetail.txnsNet', { count: g.rows.length, net: formatAbs(g.net, currency) })}
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="text-[10px] text-faint uppercase tracking-wide">End balance</div>
+                          <div className="text-[10px] text-faint uppercase tracking-wide">{t('accountDetail.endBalance')}</div>
                           <div className="text-[13.5px] font-bold tabular text-text">{formatAbs(g.endBalance, currency)}</div>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-                {detailed && groups.length > 0 && <p className="text-[11px] text-faint text-center mt-2 mb-8">Tap a transaction to edit it.</p>}
+                {detailed && groups.length > 0 && <p className="text-[11px] text-faint text-center mt-2 mb-8">{t('accountDetail.tapToEdit')}</p>}
                 </SwipePager>
               </>
             )}
