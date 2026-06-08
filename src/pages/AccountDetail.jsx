@@ -6,18 +6,23 @@
 //   • Yearly  — all years; a summary row per year.
 // Credit cards are scoped to a billing cycle (from the settlement day); prev/next
 // pages through cycles.
+//
+// View state (mode + period) is mirrored to the URL so that opening a transaction
+// and coming back (edit/delete → navigate(-1)) restores the same spot instead of
+// snapping to today. The detailed (daily / credit-card) view also supports
+// long-press multi-select + bulk delete, mirroring Home.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
-import { listAccounts, listAccountTransactionsFull, listCategories } from '../lib/data'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { listAccounts, listAccountTransactionsFull, listCategories, deleteTransactions } from '../lib/data'
 import { cacheGet, cacheSet } from '../lib/cache'
 import { formatMoney, formatSigned, amountColor, dayLabel, monthYearLabel } from '../lib/format'
-import { Segmented } from '../components/ui'
+import { Segmented, ConfirmDialog } from '../components/ui'
 import TxRowContent from '../components/TxRowContent'
 import Sidebar from '../components/Sidebar'
 import i18n from '../i18n'
-import { ChevronLeft, ChevronRight } from '../lib/icons'
+import { ChevronLeft, ChevronRight, TrashIcon, CloseIcon } from '../lib/icons'
 import SwipePager from '../components/SwipePager'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -68,10 +73,30 @@ export default function AccountDetail() {
   const [txns, setTxns] = useState(() => cacheGet(txKey) ?? [])
   const [catMap, setCatMap] = useState(() => new Map((cacheGet('categories') ?? []).map((x) => [x.id, x])))
   const [loading, setLoading] = useState(() => !(cacheGet('accounts') !== undefined && cacheGet(txKey) !== undefined && cacheGet('categories') !== undefined))
-  const [mode, setMode] = useState('day') // day | month | year (non-credit)
-  const [anchor, setAnchor] = useState(new Date())
-  const [cycleEnd, setCycleEnd] = useState(() =>
-    (seedAcc?.type === 'credit_card' && seedAcc.settlement_day) ? cycleEndFor(isoOfDate(new Date()), seedAcc.settlement_day) : null)
+
+  // View state is seeded from the URL so it survives a round-trip to a
+  // transaction screen (bug: it used to reset to the current month on back).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [mode, setMode] = useState(() => {
+    const v = searchParams.get('view')
+    return v === 'month' || v === 'year' ? v : 'day'
+  }) // day | month | year (non-credit)
+  const [anchor, setAnchor] = useState(() => {
+    const m = searchParams.get('m')
+    if (m && /^\d{4}-\d{2}$/.test(m)) { const [y, mm] = m.split('-').map(Number); return new Date(y, mm - 1, 1) }
+    return new Date()
+  })
+  const [cycleEnd, setCycleEnd] = useState(() => {
+    const c = searchParams.get('cycle')
+    if (c && /^\d{4}-\d{2}-\d{2}$/.test(c)) return c
+    return (seedAcc?.type === 'credit_card' && seedAcc.settlement_day) ? cycleEndFor(isoOfDate(new Date()), seedAcc.settlement_day) : null
+  })
+
+  // Multi-select (long-press) → bulk delete, mirroring Home.
+  const [selectMode, setSelectMode] = useState(false)
+  const [selected, setSelected] = useState(() => new Set())
+  const [confirmBulk, setConfirmBulk] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     Promise.all([listAccounts(), listAccountTransactionsFull(id), listCategories()]).then(([a, t, c]) => {
@@ -80,13 +105,56 @@ export default function AccountDetail() {
       if (!a.error) cacheSet('accounts', a.data ?? [])
       if (!t.error) { setTxns(t.data ?? []); cacheSet(txKey, t.data ?? []) }
       if (!c.error) { setCatMap(new Map((c.data ?? []).map((x) => [x.id, x]))); cacheSet('categories', c.data ?? []) }
-      if (acc?.type === 'credit_card' && acc.settlement_day) setCycleEnd(cycleEndFor(isoOfDate(new Date()), acc.settlement_day))
+      // Don't clobber a cycle restored from the URL.
+      if (acc?.type === 'credit_card' && acc.settlement_day) setCycleEnd((prev) => prev ?? cycleEndFor(isoOfDate(new Date()), acc.settlement_day))
       setLoading(false)
     })
   }, [id, txKey])
 
   const isCC = account?.type === 'credit_card' && !!account?.settlement_day
   const currency = account?.currency ?? 'IDR'
+
+  // Mirror the view state into the URL (replace, so paging doesn't pile up
+  // history). On return from a transaction, navigate(-1) restores this URL and
+  // the useState seeders above pick the period back up.
+  useEffect(() => {
+    const sp = new URLSearchParams()
+    if (mode !== 'day') sp.set('view', mode)
+    if (isCC) { if (cycleEnd) sp.set('cycle', cycleEnd) }
+    else if (mode !== 'year') sp.set('m', `${anchor.getFullYear()}-${pad(anchor.getMonth() + 1)}`)
+    setSearchParams(sp, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, anchor, cycleEnd, isCC])
+
+  function refetch() {
+    Promise.all([listAccounts(), listAccountTransactionsFull(id), listCategories()]).then(([a, tt, c]) => {
+      const acc = (a.data ?? []).find((x) => x.id === id) ?? null
+      if (acc) setAccount(acc)
+      if (!a.error) cacheSet('accounts', a.data ?? [])
+      if (!tt.error) { setTxns(tt.data ?? []); cacheSet(txKey, tt.data ?? []) }
+      if (!c.error) { setCatMap(new Map((c.data ?? []).map((x) => [x.id, x]))); cacheSet('categories', c.data ?? []) }
+    })
+  }
+
+  function enterSelect(rowId) { setSelectMode(true); setSelected(new Set([rowId])) }
+  function exitSelect() { setSelectMode(false); setSelected(new Set()) }
+  function toggle(rowId) {
+    setSelected((prev) => {
+      const n = new Set(prev)
+      if (n.has(rowId)) n.delete(rowId); else n.add(rowId)
+      if (n.size === 0) setSelectMode(false)
+      return n
+    })
+  }
+  function activate(tx) { if (selectMode) toggle(tx.id); else navigate(`/tx/${tx.id}`) }
+  async function deleteSelected() {
+    setDeleting(true)
+    await deleteTransactions([...selected])
+    setDeleting(false)
+    setConfirmBulk(false)
+    exitSelect()
+    refetch()
+  }
 
   const delta = (t) => {
     const amt = Number(t.amount) || 0
@@ -208,7 +276,7 @@ export default function AccountDetail() {
               <>
                 {!isCC && (
                   <div className="mb-2.5">
-                    <Segmented value={mode} onChange={setMode} options={[
+                    <Segmented value={mode} onChange={(m) => { setMode(m); exitSelect() }} options={[
                       { value: 'day', label: t('accountDetail.daily') }, { value: 'month', label: t('accountDetail.monthly') }, { value: 'year', label: t('accountDetail.yearly') },
                     ]} />
                   </div>
@@ -233,7 +301,7 @@ export default function AccountDetail() {
                   </button>
                 </div>
 
-                <SwipePager enabled={canNavigate} onPrev={() => shift(-1)} onNext={() => shift(1)}>
+                <SwipePager enabled={canNavigate && !selectMode} onPrev={() => shift(-1)} onNext={() => shift(1)}>
                 {/* Per-period summary: income in, expenses out, ending balance.
                     (The header shows the current balance across all time.) */}
                 <div className="bg-surface border border-border rounded-[14px] mb-3 flex overflow-hidden text-center">
@@ -259,13 +327,9 @@ export default function AccountDetail() {
                       <div className="text-[12px] font-bold text-muted px-1 mb-1.5">{groupLabel(g.key)}</div>
                       <div className="bg-surface border border-border rounded-[14px] overflow-hidden">
                         {g.rows.map(({ t: tx, balance }) => (
-                          <button key={tx.id} onClick={() => navigate(`/tx/${tx.id}`)}
-                            className="w-full px-3.5 py-3 border-t border-border first:border-t-0 text-left hover:bg-surface-2">
-                            <div className="flex"><TxRowContent t={tx} catMap={catMap} hideAccount /></div>
-                            <div className="text-[11px] text-faint text-right mt-1 tabular">
-                              {t('accountDetail.balance')} <span className="font-semibold text-muted">{formatSigned(balance, currency)}</span>
-                            </div>
-                          </button>
+                          <LedgerRow key={tx.id} tx={tx} balance={balance} currency={currency} catMap={catMap}
+                            selectMode={selectMode} selected={selected.has(tx.id)}
+                            onActivate={activate} onLongPress={(x) => enterSelect(x.id)} />
                         ))}
                       </div>
                     </div>
@@ -294,6 +358,72 @@ export default function AccountDetail() {
             )}
           </div>
         </main>
+      </div>
+
+      {/* Floating selection action bar (mirrors Home) */}
+      {selectMode && (
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[76px] desk:bottom-6 z-40 bg-surface border border-border rounded-full shadow-lg flex items-center gap-1.5 pl-2 pr-2 py-1.5">
+          <button onClick={exitSelect} aria-label={t('home.cancelSelection')}
+            className="w-9 h-9 grid place-items-center rounded-full text-muted hover:bg-surface-2">
+            <CloseIcon className="w-[18px] h-[18px]" />
+          </button>
+          <span className="text-sm font-semibold px-1 tabular">{t('home.selected', { count: selected.size })}</span>
+          <button onClick={() => setConfirmBulk(true)} disabled={selected.size === 0}
+            className="flex items-center gap-1.5 bg-expense text-white font-bold text-sm rounded-full px-4 py-2 disabled:opacity-50">
+            <TrashIcon className="w-4 h-4" /> {t('home.delete')}
+          </button>
+        </div>
+      )}
+
+      {confirmBulk && (
+        <ConfirmDialog
+          title={t('home.deleteTitle', { count: selected.size })}
+          message={t('home.deleteMessage')}
+          confirmLabel={t('home.delete')}
+          busy={deleting}
+          onConfirm={deleteSelected}
+          onClose={() => setConfirmBulk(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// One ledger row (daily / credit-card view): tap opens the transaction; long-press
+// (touch hold or right-click) enters multi-select, mirroring Home's TxRow. Uses
+// `tx` (not `t`) for the transaction so it never shadows the translator.
+function LedgerRow({ tx, balance, currency, catMap, selectMode, selected, onActivate, onLongPress }) {
+  const { t } = useTranslation()
+  const timer = useRef(null)
+  const longFired = useRef(false)
+  const startPress = () => { longFired.current = false; timer.current = setTimeout(() => { longFired.current = true; onLongPress(tx) }, 450) }
+  const cancelPress = () => clearTimeout(timer.current)
+  const handleClick = () => { if (longFired.current) { longFired.current = false; return } onActivate(tx) }
+
+  return (
+    <div
+      onClick={handleClick}
+      onContextMenu={(e) => { e.preventDefault(); onLongPress(tx) }}
+      onTouchStart={startPress} onTouchEnd={cancelPress} onTouchMove={cancelPress}
+      onMouseDown={startPress} onMouseUp={cancelPress} onMouseLeave={cancelPress}
+      role={selectMode ? 'checkbox' : undefined}
+      aria-checked={selectMode ? selected : undefined}
+      className={`w-full px-3.5 py-3 border-t border-border first:border-t-0 text-left cursor-pointer select-none ${
+        selected ? 'bg-primary-soft' : 'hover:bg-surface-2'
+      }`}
+    >
+      <div className="flex gap-3">
+        {selectMode && (
+          <span aria-hidden="true" className={`mt-0.5 w-5 h-5 rounded-full border grid place-items-center shrink-0 text-[11px] font-bold ${
+            selected ? 'bg-primary border-primary text-on-primary' : 'border-border text-transparent'
+          }`}>✓</span>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex"><TxRowContent t={tx} catMap={catMap} hideAccount /></div>
+          <div className="text-[11px] text-faint text-right mt-1 tabular">
+            {t('accountDetail.balance')} <span className="font-semibold text-muted">{formatSigned(balance, currency)}</span>
+          </div>
+        </div>
       </div>
     </div>
   )
