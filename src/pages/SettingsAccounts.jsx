@@ -43,9 +43,11 @@ export default function SettingsAccounts() {
     })
   }, [])
 
-  const visibleAccounts = accounts.filter((a) => showArchived || !a.archived)
+  // Goal accounts are managed in Goals, not here — exclude them everywhere on this page.
+  const manageable = accounts.filter((a) => !a.is_goal)
+  const visibleAccounts = manageable.filter((a) => showArchived || !a.archived)
   const inGroup = (gid) => visibleAccounts.filter((a) => (a.group_id ?? null) === gid)
-  const archivedCount = accounts.filter((a) => a.archived).length
+  const archivedCount = manageable.filter((a) => a.archived).length
   const groupOptions = [{ value: '', label: 'No group' }, ...groups.map((g) => ({ value: g.id, label: g.name }))]
 
   async function moveAccounts(list, index, dir) {
@@ -124,7 +126,7 @@ export default function SettingsAccounts() {
   if (loading) return <p className="text-muted text-sm py-8 text-center">Loading…</p>
 
   const ungrouped = inGroup(null)
-  const hasNothing = accounts.length === 0 && groups.length === 0
+  const hasNothing = manageable.length === 0 && groups.length === 0
 
   return (
     <div className="max-w-[640px] mx-auto">
