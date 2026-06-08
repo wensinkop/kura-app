@@ -6,7 +6,7 @@ import {
   createBudget, updateBudget, deleteBudget, upsertBudgetAmount,
 } from '../lib/data'
 import {
-  periodRange, shiftAnchor, endExclusive, spendFor, rollupByParentCurrency,
+  periodRange, shiftAnchor, endExclusive, spendFor,
   budgetStatus, windowState, carryover, amountForMonth,
 } from '../lib/budgets'
 import { formatMoney, formatDate } from '../lib/format'
@@ -49,7 +49,6 @@ export default function Budget() {
 
   const [sheet, setSheet] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
-  const [showUnbudgeted, setShowUnbudgeted] = useState(false)
   const [showPast, setShowPast] = useState(false)
 
   const catMap = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats])
@@ -134,7 +133,6 @@ export default function Budget() {
   }, [customKey])
 
   const recurring = useMemo(() => budgets.filter((b) => b.period === period), [budgets, period])
-  const rollup = useMemo(() => rollupByParentCurrency(rangeTxns), [rangeTxns])
 
   // Historical txns for rollover budgets in view (one fetch).
   const rollBudgets = useMemo(() => recurring.filter((b) => b.rollover && b.rollover !== 'none'), [recurring])
@@ -208,18 +206,6 @@ export default function Budget() {
     }
     return [...m.values()]
   }, [groups])
-
-  const unbudgeted = useMemo(() => {
-    const have = new Set()
-    for (const grp of groups) have.add(`${grp.parentId}|${grp.currency}`)
-    const out = []
-    for (const { pid, currency, spent } of rollup.values()) {
-      if (spent <= 0 || have.has(`${pid}|${currency}`)) continue
-      if (!catMap.has(pid)) continue
-      out.push({ pid, currency, spent })
-    }
-    return out.sort((a, b) => b.spent - a.spent)
-  }, [rollup, groups, catMap])
 
   const tISO = todayISO()
   const customRows = useMemo(() => {
@@ -362,34 +348,6 @@ export default function Budget() {
             </div>
           )}
 
-          {unbudgeted.length > 0 && (
-            <div className="mt-4">
-              <button onClick={() => setShowUnbudgeted((s) => !s)}
-                className="text-xs font-bold uppercase tracking-wide text-faint px-1 hover:text-muted">
-                {showUnbudgeted ? t('budget.unbudgetedHide', { count: unbudgeted.length }) : t('budget.unbudgetedShow', { count: unbudgeted.length })}
-              </button>
-              {showUnbudgeted && (
-                <>
-                <p className="text-[12px] text-muted px-1 mt-1.5">{t('budget.unbudgetedHint')}</p>
-                <div className="bg-surface border border-border rounded-[14px] overflow-hidden mt-2">
-                  {unbudgeted.map(({ pid, currency, spent }) => (
-                    <button key={`${pid}|${currency}`}
-                      onClick={() => setSheet({ prefill: { period, category_id: pid, currency } })}
-                      className="w-full flex items-center gap-3 px-3.5 py-3 border-t border-border first:border-t-0 hover:bg-surface-2 text-left">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-[14.5px] truncate">
-                          {catMap.get(pid)?.name ?? '…'}{currencyList.length > 1 ? ` · ${currency}` : ''}
-                        </div>
-                        <div className="text-[12px] text-muted tabular">{t('budget.spent', { amount: formatMoney(spent, currency) })}</div>
-                      </div>
-                      <span className="text-[12px] font-semibold text-primary shrink-0">{t('budget.setBudget')} ›</span>
-                    </button>
-                  ))}
-                </div>
-                </>
-              )}
-            </div>
-          )}
           </SwipePager>
 
           {(activeCustom.length > 0 || pastCustom.length > 0) && (
