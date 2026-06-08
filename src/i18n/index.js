@@ -18,7 +18,11 @@ import en from './locales/en.json'
 // AI draft awaiting native review (none active right now).
 export const LANGUAGES = [
   { code: 'en', label: 'English', beta: false },
-  { code: 'id', label: 'Bahasa Indonesia', beta: false },
+  // English-only for now (Stanley's call, Session 15). With a single entry the
+  // language picker is hidden in Settings and the app is forced to English
+  // (a stored 'id' falls back via LANGUAGE_CODES). Re-add the line below to
+  // restore the switcher — the id/ms/th/vi/fil strings are still on disk.
+  // { code: 'id', label: 'Bahasa Indonesia', beta: false },
 ]
 export const LANGUAGE_CODES = LANGUAGES.map((l) => l.code)
 export const STORAGE_KEY = 'kura-lang'

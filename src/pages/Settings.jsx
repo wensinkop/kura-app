@@ -109,12 +109,14 @@ export default function Settings() {
 
       <SectionTitle>{t('settings.preferences')}</SectionTitle>
       <Group>
-        <Row
-          title={t('settings.language')}
-          sub={t('settings.languageSub')}
-          right={<span className="flex items-center gap-1.5"><span className="text-faint font-semibold">{currentLang.label}</span>{Chevron}</span>}
-          onClick={() => setLangOpen(true)}
-        />
+        {LANGUAGES.length > 1 && (
+          <Row
+            title={t('settings.language')}
+            sub={t('settings.languageSub')}
+            right={<span className="flex items-center gap-1.5"><span className="text-faint font-semibold">{currentLang.label}</span>{Chevron}</span>}
+            onClick={() => setLangOpen(true)}
+          />
+        )}
         <Row
           title={t('settings.baseCurrency')}
           sub={t('settings.baseCurrencySub')}
