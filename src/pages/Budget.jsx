@@ -369,6 +369,8 @@ export default function Budget() {
                 {showUnbudgeted ? t('budget.unbudgetedHide', { count: unbudgeted.length }) : t('budget.unbudgetedShow', { count: unbudgeted.length })}
               </button>
               {showUnbudgeted && (
+                <>
+                <p className="text-[12px] text-muted px-1 mt-1.5">{t('budget.unbudgetedHint')}</p>
                 <div className="bg-surface border border-border rounded-[14px] overflow-hidden mt-2">
                   {unbudgeted.map(({ pid, currency, spent }) => (
                     <button key={`${pid}|${currency}`}
@@ -384,6 +386,7 @@ export default function Budget() {
                     </button>
                   ))}
                 </div>
+                </>
               )}
             </div>
           )}
@@ -493,9 +496,9 @@ function GroupCard({ t, grp, multiCurrency, catMap, effectiveMap, rangeTxns, onE
         </div>
         <div className="flex items-center gap-1 shrink-0 -mr-1.5 -mt-1">
           <span className={`text-[11px] font-semibold tabular ${st.over ? 'text-expense' : 'text-faint'}`}>{st.pct}%</span>
-          <button onClick={onEditParent} aria-label={t('budget.editBudget')}
+          <button onClick={onEditParent} aria-label={grp.parentBudget ? t('budget.editBudget') : t('budget.setBudget')}
             className="w-8 h-8 rounded-[9px] grid place-items-center text-muted hover:bg-surface-2">
-            <PencilIcon className="w-[16px] h-[16px]" />
+            {grp.parentBudget ? <PencilIcon className="w-[16px] h-[16px]" /> : <PlusIcon className="w-[16px] h-[16px]" />}
           </button>
         </div>
       </div>
@@ -524,11 +527,14 @@ function GroupCard({ t, grp, multiCurrency, catMap, effectiveMap, rangeTxns, onE
               const sp = spendFor(rangeTxns, catMap.get(b.category_id), b.currency)
               const sst = budgetStatus(sp, eff.amount)
               return (
-                <button key={b.id} onClick={() => onEditSub(b)} className="text-left">
+                <button key={b.id} onClick={() => onEditSub(b)} aria-label={t('budget.editBudget')} className="text-left">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-[13px] font-medium text-text truncate">{catMap.get(b.category_id)?.name ?? '…'}</span>
-                    <span className="text-[11px] tabular shrink-0 text-muted">
-                      {formatMoney(sp, b.currency)} <span className="text-faint">{t('budget.of')}</span> {formatMoney(eff.amount, b.currency)}
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-[11px] tabular text-muted">
+                        {formatMoney(sp, b.currency)} <span className="text-faint">{t('budget.of')}</span> {formatMoney(eff.amount, b.currency)}
+                      </span>
+                      <PencilIcon className="w-3 h-3 text-faint" />
                     </span>
                   </div>
                   <Bar status={sst} />
