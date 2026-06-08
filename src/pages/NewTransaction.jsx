@@ -72,7 +72,8 @@ export default function NewTransaction() {
   useEffect(() => {
     Promise.all([listAccounts(), listGroups(), listCategories(), recentNotes()]).then(
       ([a, g, c, n]) => {
-        const active = (a.data ?? []).filter((x) => !x.archived)
+        // Goal accounts are funded via "Add to goal", not manual entry — exclude them.
+        const active = (a.data ?? []).filter((x) => !x.archived && !x.is_goal)
         setAccounts(active)
         setGroups(g.data ?? [])
         setCategories((c.data ?? []).filter((x) => !x.archived))

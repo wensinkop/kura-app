@@ -72,7 +72,11 @@ export default function EditTransaction() {
   const accountOptions = useMemo(() => {
     const gName = new Map(groups.map((g) => [g.id, g.name]))
     const gSort = new Map(groups.map((g) => [g.id, g.sort_order]))
+    // Hide goal accounts (funded via "Add to goal"), but keep one if this very
+    // transaction already uses it, so editing a contribution still shows it.
+    const keep = new Set([tx?.account_id, tx?.to_account_id].filter(Boolean))
     return [...accounts]
+      .filter((a) => !a.is_goal || keep.has(a.id))
       .sort((a, b) => {
         const ga = a.group_id ? gSort.get(a.group_id) ?? 0 : Infinity
         const gb = b.group_id ? gSort.get(b.group_id) ?? 0 : Infinity
@@ -80,7 +84,7 @@ export default function EditTransaction() {
         return (a.sort_order ?? 0) - (b.sort_order ?? 0)
       })
       .map((a) => ({ value: a.id, label: `${a.name} · ${a.currency}`, group: a.group_id ? gName.get(a.group_id) ?? 'Group' : 'Ungrouped' }))
-  }, [accounts, groups])
+  }, [accounts, groups, tx])
 
   const accountById = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts])
   const kind = form?.kind
