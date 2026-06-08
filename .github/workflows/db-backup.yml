@@ -4,10 +4,15 @@ name: Nightly DB backup
 # Runs pg_dump nightly and stores the dump as a downloadable artifact (90-day
 # retention). Restore with: pg_restore -d "<conn>" kura-backup-<stamp>.dump
 #
-# Requires one repo secret: SUPABASE_DB_URL
-#   Supabase dashboard -> Project Settings -> Database -> Connection string
-#   -> "Session pooler" (IPv4-friendly; transaction pooler does NOT support pg_dump)
-#   -> replace [YOUR-PASSWORD] with the DB password, paste the whole URI as the secret.
+# Connection is passed via standard libpq PG* env vars (no URL = no
+# url-encoding pitfalls). Host/user/db are NOT secret and live here; only the
+# DB password is a repo secret:
+#   SUPABASE_DB_PASSWORD  = your Supabase database password (raw, as typed)
+#   Add it in repo Settings -> Secrets and variables -> Actions -> New repository secret.
+#
+# Host/user come from the Supabase "Session pooler" (IPv4-friendly; the
+# transaction pooler on port 6543 does NOT support pg_dump). The pooler username
+# must include the project ref: postgres.<project-ref>.
 
 on:
   schedule:
@@ -27,16 +32,19 @@ jobs:
 
       - name: Dump database (public schema)
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PGHOST: aws-1-ap-southeast-1.pooler.supabase.com
+          PGPORT: "5432"
+          PGUSER: postgres.sxknuilzilwmkwltporg
+          PGDATABASE: postgres
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::SUPABASE_DB_URL secret is not set. Add it in repo Settings -> Secrets and variables -> Actions."
+          if [ -z "$PGPASSWORD" ]; then
+            echo "::error::SUPABASE_DB_PASSWORD secret is not set. Add it in repo Settings -> Secrets and variables -> Actions."
             exit 1
           fi
           ts=$(date -u +%Y%m%d-%H%M)
           echo "STAMP=$ts" >> "$GITHUB_ENV"
-          pg_dump "$SUPABASE_DB_URL" \
-            --schema=public --no-owner --no-privileges \
+          pg_dump --schema=public --no-owner --no-privileges \
             -Fc -f "kura-backup-$ts.dump"
           ls -lh kura-backup-*.dump
 
