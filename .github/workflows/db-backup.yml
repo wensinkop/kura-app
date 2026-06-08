@@ -1,0 +1,48 @@
+name: Nightly DB backup
+
+# Free safety net for the production Supabase DB (~6,500 real transactions).
+# Runs pg_dump nightly and stores the dump as a downloadable artifact (90-day
+# retention). Restore with: pg_restore -d "<conn>" kura-backup-<stamp>.dump
+#
+# Requires one repo secret: SUPABASE_DB_URL
+#   Supabase dashboard -> Project Settings -> Database -> Connection string
+#   -> "Session pooler" (IPv4-friendly; transaction pooler does NOT support pg_dump)
+#   -> replace [YOUR-PASSWORD] with the DB password, paste the whole URI as the secret.
+
+on:
+  schedule:
+    - cron: '0 18 * * *'   # 18:00 UTC daily (~01:00 WIB)
+  workflow_dispatch: {}     # lets you run it on demand from the Actions tab
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pg_dump 17
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Dump database (public schema)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set. Add it in repo Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+          ts=$(date -u +%Y%m%d-%H%M)
+          echo "STAMP=$ts" >> "$GITHUB_ENV"
+          pg_dump "$SUPABASE_DB_URL" \
+            --schema=public --no-owner --no-privileges \
+            -Fc -f "kura-backup-$ts.dump"
+          ls -lh kura-backup-*.dump
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kura-db-backup-${{ env.STAMP }}
+          path: kura-backup-*.dump
+          retention-days: 90
