@@ -81,10 +81,10 @@ const MobileSelect = forwardRef(function MobileSelect(
       </button>
 
       {open && createPortal(
-        <div className="fixed inset-0 z-50 flex items-end bg-black/45"
+        <div className="fixed inset-0 z-50 flex items-end bg-black/45 animate-backdrop-in"
           onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}>
           <div ref={sheetRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}
-            className="bg-surface w-full rounded-t-2xl border-t border-border max-h-[70vh] flex flex-col outline-none">
+            className="bg-surface w-full rounded-t-2xl border-t border-border max-h-[70vh] flex flex-col outline-none animate-sheet-up">
             <div className="flex items-start gap-3 px-4 py-3 border-b border-border">
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-[15px]">{creating ? t('select.newTitle', { title: title?.toLowerCase() ?? '' }) : title}</div>

@@ -115,3 +115,20 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-row-in { animation: none; }
 }
+
+/* Bottom-sheet entrance: the panel slides up and the dim backdrop fades in, so
+   the mobile pickers — and the category → sub-category hand-off — glide instead
+   of popping/blinking. */
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-sheet-up { animation: sheet-up 0.24s cubic-bezier(0.32, 0.72, 0, 1); }
+.animate-backdrop-in { animation: backdrop-in 0.2s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-up, .animate-backdrop-in { animation: none; }
+}

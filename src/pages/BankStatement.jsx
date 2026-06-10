@@ -439,6 +439,20 @@ export default function BankStatement() {
     return () => clearTimeout(id)
   }, [focusNoteFor])
 
+  // Dock the active note so its suggestion box sits just above the keyboard
+  // (mobile). scrollIntoView({block:'end'}) forces the note's bottom down to the
+  // scroll-padding line even when it's already on screen (scroll-padding alone
+  // won't pull a visible element down). Runs after the keyboard animates in and
+  // on every viewport resize.
+  useEffect(() => {
+    if (!editingNote || window.innerWidth >= 768) return
+    const dock = (behavior) => noteRefs.current[editingNote]?.scrollIntoView?.({ block: 'end', behavior })
+    const id = setTimeout(() => dock('smooth'), 300)
+    const onResize = () => dock('auto')
+    window.visualViewport?.addEventListener('resize', onResize)
+    return () => { clearTimeout(id); window.visualViewport?.removeEventListener('resize', onResize) }
+  }, [editingNote])
+
   // A review row → the createTransactions payload (currency comes from the account).
   function rowPayload(r) {
     if (r.kind === 'transfer') {
@@ -529,7 +543,7 @@ export default function BankStatement() {
           <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-2 py-0.5">Premium</span>
         </header>
 
-        <main className={`flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full ${step === 'review' ? 'scroll-pb-[7rem]' : ''}`}>
+        <main className={`flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full ${step === 'review' ? 'scroll-pb-[7.5rem]' : ''}`}>
           {/* The review step lays each row out as a wide table like New Transaction;
               the upload/map/teach steps stay a narrower single-column form. */}
           <div className={`mx-auto ${step === 'review' ? 'desk:max-w-[1100px]' : 'max-w-[760px]'}`}>
