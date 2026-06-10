@@ -18,9 +18,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { listAccounts, listGroups, listCategories, createTransactions, recentNotes, getAccountBalances, createImportBatch, setImportBatchCount, undoImport } from '../lib/data'
+import { listAccounts, listGroups, listCategories, createTransactions, recentNotes, getAccountBalances, createImportBatch, setImportBatchCount, undoImport, getSharedLayout, saveSharedLayout } from '../lib/data'
 import {
-  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint, detectNumberFormat,
+  parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint,
 } from '../lib/statement'
 import { extractPdfText } from '../lib/pdfStatement'
 import { supabase } from '../supabaseClient'
@@ -109,10 +109,6 @@ export default function BankStatement() {
   const [pdfFp, setPdfFp] = useState('') // bank fingerprint
   const [usedTaught, setUsedTaught] = useState(false)
 
-  // Teach mode
-  const [teachStep, setTeachStep] = useState(null) // null | 'date' | 'amount' | 'direction'
-  const [taught, setTaught] = useState({})
-
   // PDF password
   const [password, setPassword] = useState('')
   const [wrongPassword, setWrongPassword] = useState(false)
@@ -139,6 +135,14 @@ export default function BankStatement() {
   const [learnedFromAI, setLearnedFromAI] = useState(false) // AI taught Kura this format
   const aiAutoTried = useRef(false)               // auto-run AI at most once per upload
   const AI_CONSENT_KEY = 'kura.aiStatementConsent.v1'
+  const INTRO_KEY = 'kura.statementIntro.v1'
+  const [introOpen, setIntroOpen] = useState(() => {
+    try { return localStorage.getItem('kura.statementIntro.v1') !== 'seen' } catch { return false }
+  })
+  function closeIntro() {
+    try { localStorage.setItem(INTRO_KEY, 'seen') } catch { /* ignore */ }
+    setIntroOpen(false)
+  }
 
   // The raw text we hand to the AI: reconstructed PDF lines, or the CSV file text.
   function statementText() {
@@ -182,7 +186,11 @@ export default function BankStatement() {
       if (source === 'pdf' && pdfFp && Array.isArray(pdfLines) && recon?.status === 'ok') {
         try {
           const learned = learnPdfLayout(pdfLines, txs, currency)
-          if (learned) { savePdfMap(pdfFp, learned); setLearnedFromAI(true) }
+          if (learned) {
+            savePdfMap(pdfFp, learned)            // this device
+            setLearnedFromAI(true)
+            saveSharedLayout(pdfFp, learned, { userId: user?.id }) // share with every Kura user
+          }
         } catch { /* learning is best-effort */ }
       }
       setStep('review')
@@ -313,14 +321,23 @@ export default function BankStatement() {
     }
     const result = parsePdfStatement(res.lines, { targetCurrency: currency })
     const fp = statementFingerprint(res.lines)
-    const saved = loadPdfMap(fp)
+    // A known layout for this bank format: check this device first, then the
+    // shared store (any user's AI read may already have learned it). Cache a
+    // shared hit locally so the next read is instant offline too.
+    let known = loadPdfMap(fp)
+    if (!known) {
+      try {
+        const shared = await getSharedLayout(fp)
+        if (shared) { known = shared; savePdfMap(fp, shared) }
+      } catch { /* offline / signed-out — fall back to automatic */ }
+    }
     const base = { year: result.layout.year ?? new Date().getFullYear(), decimal: result.layout.decimal ?? '.', defaultKind: 'expense' }
     setSource('pdf')
     setPdfLines(res.lines)
     setPdfFp(fp)
-    if (saved) {
-      // Re-read this statement with the layout taught for this bank before.
-      setPdfLayout({ ...base, ...saved })
+    if (known) {
+      // Read with the layout already learned for this bank format.
+      setPdfLayout({ ...base, ...known })
       setUsedTaught(true)
     } else {
       setPdfLayout(base)
@@ -339,48 +356,7 @@ export default function BankStatement() {
     finally { setReading(false) }
   }
 
-  // ---- Teach mode: user shows Kura where the date & amount(s) are ----------
-  function beginTeach() { setTaught({}); setTeachStep('date'); setStep('teach') }
-
-  function onTeachToken(item) {
-    if (teachStep === 'date') { setTaught((t) => ({ ...t, dateX: item.x })); setTeachStep('mode') }
-    else if (teachStep === 'amount') { setTaught((t) => ({ ...t, amountX: item.x })); setTeachStep('direction') }
-    else if (teachStep === 'debit') { setTaught((t) => ({ ...t, debitX: item.x })); setTeachStep('credit') }
-    else if (teachStep === 'credit') {
-      const decimal = decimalForColumns([taught.debitX, item.x])
-      applyTaught({ dateX: taught.dateX, debitX: taught.debitX, creditX: item.x, mode: 'debit_credit', balanceX: null, decimal })
-    }
-  }
-
-  function chooseTeachMode(m) { setTeachStep(m === 'single' ? 'amount' : 'debit') }
-
-  function finishTeach(defaultKind) {
-    const decimal = decimalForColumns([taught.amountX])
-    applyTaught({ dateX: taught.dateX, amountX: taught.amountX, mode: 'single', balanceX: null, defaultKind, decimal })
-  }
-
-  // Detect the decimal style (1,234.56 vs 1.234,56) from the money values sitting
-  // in the taught amount column(s) — auto-detection had nothing to go on if the
-  // statement didn't parse, so we sample the column the user just pointed at.
-  function decimalForColumns(xs) {
-    const samples = []
-    for (const l of pdfLines ?? []) {
-      for (const it of l.items) {
-        if (xs.some((x) => x != null && Math.abs(it.x - x) < 12) && /^\d[\d.,]*\d$/.test(it.s) && /[.,]/.test(it.s)) samples.push(it.s)
-      }
-    }
-    return detectNumberFormat(samples).decimal
-  }
-
-  function applyTaught(layout) {
-    savePdfMap(pdfFp, layout)
-    setPdfLayout((l) => ({ ...l, ...layout }))
-    setUsedTaught(true)
-    setTeachStep(null)
-    setStep('map')
-  }
-
-  // Forget a taught layout for this bank and go back to automatic reading.
+  // Forget the learned layout for this bank on this device and read fresh.
   function forgetTaught() {
     removePdfMap(pdfFp)
     const result = parsePdfStatement(pdfLines, { targetCurrency: currency })
@@ -655,7 +631,9 @@ export default function BankStatement() {
           <button onClick={onBack} aria-label="Back" className="w-8 h-8 -ml-1 grid place-items-center rounded-[10px] text-muted hover:bg-surface-2">
             <ChevronLeft />
           </button>
-          <div className="font-bold text-[15px] flex-1">Import bank statement</div>
+          <div className="font-bold text-[15px] flex-1">Bank Statement Upload</div>
+          <button onClick={() => setIntroOpen(true)} aria-label="How it works"
+            className="w-7 h-7 grid place-items-center rounded-full border border-border text-muted hover:text-primary hover:border-primary text-[13px] font-bold leading-none">?</button>
           <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-2 py-0.5">Premium</span>
         </header>
 
@@ -680,8 +658,6 @@ export default function BankStatement() {
               renderUpload()
             ) : step === 'password' ? (
               renderPassword()
-            ) : step === 'teach' ? (
-              renderTeach()
             ) : step === 'map' ? (
               renderMap()
             ) : step === 'done' ? (
@@ -731,6 +707,17 @@ export default function BankStatement() {
           </button>
         )}
 
+        {introOpen && (
+          <Modal title="How Bank Statement Upload works" onClose={closeIntro}
+            footer={<Button className="flex-1" onClick={closeIntro}>Got it</Button>}>
+            <ul className="space-y-3 text-[14px] text-muted leading-relaxed">
+              <li className="flex gap-2.5"><span className="shrink-0">📄</span><span><span className="font-semibold text-text">Pick an account and upload</span> your statement (PDF or CSV). Kura already reads many bank formats automatically.</span></li>
+              <li className="flex gap-2.5"><span className="shrink-0">✨</span><span>If it’s a format Kura hasn’t seen, <span className="font-semibold text-text">let AI read it</span>. Kura then learns that format — so the next statement of it (any period) reads instantly, for everyone.</span></li>
+              <li className="flex gap-2.5"><span className="shrink-0">🔒</span><span><span className="font-semibold text-text">Your data stays yours.</span> Only the statement’s text is sent to read it — never the file, your name or account details — only when you tap “Use AI”, and it’s never stored or used to train AI. Learned formats hold no financial data, just column positions.</span></li>
+            </ul>
+          </Modal>
+        )}
+
         {consentOpen && (
           <Modal title="Read this statement with AI?" onClose={() => setConsentOpen(false)}
             footer={
@@ -757,7 +744,6 @@ export default function BankStatement() {
   function onBack() {
     if (step === 'done') { navigate('/'); return }
     if (step === 'review') { setStep('map'); return }
-    if (step === 'teach') { setTeachStep(null); setStep('map'); return }
     if (step === 'map' || step === 'password') {
       setStep('upload'); setAnalysis(null); setPdfLines(null); setPassword(''); setWrongPassword(false); setError('')
       return
@@ -808,6 +794,7 @@ export default function BankStatement() {
   }
 
   function renderPdfConfirm() {
+    const accurate = previewRows.length > 0 && pdfRecon?.status === 'ok'
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
@@ -819,22 +806,19 @@ export default function BankStatement() {
 
         {usedTaught && (
           <div className="rounded-xl border border-primary/30 bg-primary-soft/40 px-3.5 py-2.5 text-[12.5px] text-muted flex items-center justify-between gap-3">
-            <span>Using the settings you taught Kura for this bank.</span>
-            <button onClick={forgetTaught} className="text-primary font-semibold shrink-0 hover:underline">Use automatic</button>
+            <span>Kura recognises this bank’s format and read it for you.</span>
+            <button onClick={forgetTaught} className="text-primary font-semibold shrink-0 hover:underline">Read fresh</button>
           </div>
         )}
 
         {previewRows.length === 0 && (
           <div className="rounded-xl border border-transfer/40 bg-transfer/10 px-3.5 py-3 text-[13px] text-transfer space-y-2.5">
             <div>
-              <div className="font-semibold mb-1">Kura couldn’t read this layout on its own.</div>
-              Let AI read it for you, or show Kura where the data is and it’ll remember this bank.
+              <div className="font-semibold mb-1">Kura hasn’t seen this format before.</div>
+              Let AI read it — Kura will remember this format, so next time is instant and free.
             </div>
             <Button onClick={requestAI} disabled={aiBusy} className="w-full">{aiBusy ? 'Reading with AI…' : '✨ Read this statement with AI'}</Button>
             {aiError && <p className="text-[12.5px] text-expense">{aiError}</p>}
-            <button type="button" onClick={beginTeach} className="w-full text-center text-[12.5px] font-semibold text-primary hover:underline">
-              Or teach Kura where the data is →
-            </button>
           </div>
         )}
 
@@ -874,86 +858,18 @@ export default function BankStatement() {
           </p>
         </div>
 
-        {/* Always offer teaching when some rows were read — the auto-parse may be
-            wrong (missed rows, wrong column) even when the count isn't zero. */}
-        {previewRows.length > 0 && (
-          <button type="button" onClick={beginTeach}
-            className="w-full text-center text-[12.5px] font-semibold text-primary hover:underline">
-            Not reading this right? Teach Kura where the data is →
-          </button>
-        )}
-        {previewRows.length > 0 && (
+        {/* Recovery only when the read didn't check out — AI replaces the old teach flow. */}
+        {previewRows.length > 0 && !accurate && (
           <button type="button" onClick={requestAI} disabled={aiBusy}
             className="w-full text-center text-[12.5px] font-semibold text-primary hover:underline">
-            {aiBusy ? 'Reading with AI…' : '✨ Or read this statement with AI →'}
+            {aiBusy ? 'Reading with AI…' : '✨ Not reading this right? Read with AI →'}
           </button>
         )}
-        {aiError && previewRows.length > 0 && <p className="text-[12.5px] text-expense text-center">{aiError}</p>}
+        {aiError && previewRows.length > 0 && !accurate && <p className="text-[12.5px] text-expense text-center">{aiError}</p>}
 
         <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
           Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
         </Button>
-      </div>
-    )
-  }
-
-  // Teach mode: the user shows Kura where the date and amount(s) are. Handles a
-  // single amount column or separate money-out / money-in columns.
-  function renderTeach() {
-    const prompts = {
-      date: 'Tap the DATE of any one transaction below.',
-      amount: 'Tap the AMOUNT of any transaction.',
-      direction: 'For most rows, is the money going OUT or IN?',
-      debit: 'Tap a MONEY-OUT amount (a payment, purchase or withdrawal row).',
-      credit: 'Tap a MONEY-IN amount (a deposit, salary or refund row).',
-    }
-    const rows = (pdfLines ?? []).filter((l) => l.items.length > 1).slice(0, 90)
-    const tappable = teachStep === 'date' || teachStep === 'amount' || teachStep === 'debit' || teachStep === 'credit'
-    return (
-      <div className="space-y-3">
-        <div className="rounded-xl border border-primary/40 bg-primary-soft/50 px-3.5 py-3 text-[13.5px] text-text font-semibold">
-          {teachStep === 'mode' ? 'How are the amounts shown on this statement?' : (prompts[teachStep] ?? '')}
-        </div>
-
-        {teachStep === 'mode' && (
-          <div className="space-y-2">
-            <Button variant="ghost" className="w-full" onClick={() => chooseTeachMode('single')}>One amount column</Button>
-            <Button variant="ghost" className="w-full" onClick={() => chooseTeachMode('debit_credit')}>Separate money-out & money-in columns</Button>
-          </div>
-        )}
-        {teachStep === 'direction' && (
-          <div className="flex gap-2.5">
-            <Button variant="ghost" className="flex-1" onClick={() => finishTeach('expense')}>Money out (expense)</Button>
-            <Button variant="ghost" className="flex-1" onClick={() => finishTeach('income')}>Money in (income)</Button>
-          </div>
-        )}
-        {tappable && (
-          <p className="text-[12px] text-faint px-1">
-            {taught.dateX != null && <span className="text-income font-semibold">✓ date</span>}
-            {taught.debitX != null && <span className="text-income font-semibold"> · ✓ money-out</span>}
-            {' '}Tap the matching value in any row — tokens are grouped just like the PDF.
-          </p>
-        )}
-
-        {teachStep !== 'mode' && teachStep !== 'direction' && (
-          <div className="bg-surface border border-border rounded-[14px] divide-y divide-border/60 max-h-[56dvh] overflow-y-auto">
-            {rows.map((l, i) => (
-              <div key={i} className="flex flex-wrap gap-1.5 px-3 py-2">
-                {l.items.map((it, j) => {
-                  const picked = (teachStep !== 'date' && taught.dateX != null && Math.abs(it.x - taught.dateX) < 8) ||
-                    (taught.debitX != null && Math.abs(it.x - taught.debitX) < 8)
-                  return (
-                    <button key={j} type="button" onClick={() => onTeachToken(it)}
-                      className={`text-[12px] px-1.5 py-0.5 rounded border ${picked ? 'border-primary bg-primary-soft text-primary' : 'border-border text-muted hover:border-primary hover:text-primary'}`}>
-                      {it.s}
-                    </button>
-                  )
-                })}
-              </div>
-            ))}
-          </div>
-        )}
-        <Button variant="ghost" onClick={() => { setTeachStep(null); setStep('map') }} className="w-full">Cancel</Button>
       </div>
     )
   }

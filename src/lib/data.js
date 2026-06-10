@@ -890,3 +890,28 @@ export async function persistOrder(table, orderedIds) {
   )
   return results.find((r) => r.error) ?? { error: null }
 }
+
+// ---- Shared statement layouts ---------------------------------------------
+// When the AI reader figures out a new bank's statement format, Kura saves the
+// column "recipe" (positions only — NO financial data) to a shared store keyed
+// by a format fingerprint. Everyone signed in can READ it, so once any user's
+// AI read learns a format, every user's normal parser can read that format with
+// no AI. Only Premium users (the ones who run AI) contribute (enforced by RLS).
+export async function getSharedLayout(fingerprint) {
+  if (!fingerprint) return null
+  const { data, error } = await supabase
+    .from('statement_layouts')
+    .select('layout')
+    .eq('fingerprint', fingerprint)
+    .maybeSingle()
+  if (error) return null
+  return data?.layout ?? null
+}
+
+export function saveSharedLayout(fingerprint, layout, { source = 'pdf', userId = null, comment = null } = {}) {
+  if (!fingerprint || !layout) return Promise.resolve({ error: null })
+  return supabase.from('statement_layouts').upsert(
+    { fingerprint, source, layout, created_by: userId, comment, updated_at: new Date().toISOString() },
+    { onConflict: 'fingerprint' },
+  )
+}
