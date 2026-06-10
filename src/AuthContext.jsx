@@ -63,9 +63,11 @@ export function AuthProvider({ children }) {
     return { data, error }
   }
 
-  async function signOut() {
+  // scope 'local' (default) signs out just this device; 'global' signs out
+  // everywhere (all devices); 'others' keeps this device and revokes the rest.
+  async function signOut(scope = 'local') {
     cacheClear() // don't leak one user's cached lists into the next session
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope })
   }
 
   const value = {

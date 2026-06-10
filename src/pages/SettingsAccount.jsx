@@ -85,10 +85,21 @@ export default function SettingsAccount() {
     const { error: verifyErr } = await supabase.auth.signInWithPassword({ email: user.email, password: curPw })
     if (verifyErr) { setPwBusy(false); setPwMsg({ tone: 'err', text: 'Current password is incorrect.' }); return }
     const { error } = await supabase.auth.updateUser({ password: newPw })
+    if (error) { setPwBusy(false); setPwMsg({ tone: 'err', text: error.message }); return }
+    // Security: changing the password boots every other signed-in device
+    // (keeps this one). 'others' revokes their refresh tokens.
+    await supabase.auth.signOut({ scope: 'others' })
     setPwBusy(false)
-    if (error) { setPwMsg({ tone: 'err', text: error.message }); return }
     setCurPw(''); setNewPw(''); setConfirmPw('')
-    setPwMsg({ tone: 'ok', text: 'Password updated.' })
+    setPwMsg({ tone: 'ok', text: 'Password updated. Any other devices have been signed out.' })
+  }
+
+  // ---- Sessions ------------------------------------------------------------
+  const [sessBusy, setSessBusy] = useState(false)
+  async function signOutEverywhere() {
+    setSessBusy(true)
+    await signOut('global') // this device + all others
+    navigate('/signin', { replace: true }) // onAuthStateChange also redirects; this is a fallback
   }
 
   // ---- Delete account ------------------------------------------------------
@@ -150,6 +161,19 @@ export default function SettingsAccount() {
           <Button type="submit" disabled={pwBusy}>{pwBusy ? 'Updating…' : 'Update password'}</Button>
         </form>
         <Banner msg={pwMsg} />
+      </Card>
+
+      <SectionTitle>Devices</SectionTitle>
+      <Card>
+        <div className="font-semibold text-[14.5px] text-text">Sign out of all devices</div>
+        <p className="text-xs text-muted mt-1 leading-relaxed">
+          Signs you out of Kura everywhere — this device and any others (a shared phone, an old device,
+          or a partner you no longer want to have access). You’ll need to sign in again. Changing your
+          password also signs out other devices automatically.
+        </p>
+        <Button variant="ghost" className="mt-3" onClick={signOutEverywhere} disabled={sessBusy}>
+          {sessBusy ? 'Signing out…' : 'Sign out of all devices'}
+        </Button>
       </Card>
 
       <SectionTitle>Danger zone</SectionTitle>

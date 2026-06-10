@@ -183,7 +183,7 @@ export default function Settings() {
 
       <div className="mt-5">
         <Group>
-          <Row title={t('settings.signOut')} onClick={signOut} right={Chevron} />
+          <Row title={t('settings.signOut')} onClick={() => signOut()} right={Chevron} />
         </Group>
       </div>
 
