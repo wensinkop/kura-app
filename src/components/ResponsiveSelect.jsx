@@ -9,14 +9,14 @@ import { inputClass } from './ui'
 // callers can pop the sheet open automatically (e.g. sub-category after a
 // category with children is chosen).
 const ResponsiveSelect = forwardRef(function ResponsiveSelect(
-  { title, placeholder, value, onChange, options, noneLabel, onCreate, tabIndex },
+  { title, placeholder, value, onChange, options, noneLabel, onCreate, tabIndex, subtitle },
   ref
 ) {
   return (
     <>
       <div className="desk:hidden">
         <MobileSelect ref={ref} title={title} placeholder={placeholder} noneLabel={noneLabel}
-          value={value} onChange={onChange} options={options} onCreate={onCreate} />
+          value={value} onChange={onChange} options={options} onCreate={onCreate} subtitle={subtitle} />
       </div>
       <div className="hidden desk:block">
         <SearchableSelect value={value} onChange={onChange} options={options} className={inputClass} placeholder={placeholder} onCreate={onCreate} tabIndex={tabIndex} />

@@ -331,6 +331,7 @@ export default function BankStatement() {
     if (source === 'csv' && sig) saveMapping(sig, { mapping, formats })
     setReviewRows(previewRows.map((r) => ({
       tempId: uuid(), kind: r.kind, date: r.date, amount: r.amount, categoryId: '', subId: '', note: r.note,
+      desc: r.note, // original bank description, kept for the picker context even after the note is edited
       // transfer fields (used when the user switches a row to Transfer):
       otherAccountId: '', transferDir: r.kind === 'income' ? 'in' : 'out',
     })))
@@ -399,6 +400,19 @@ export default function BankStatement() {
     const nextCat = next && catRefs.current[next.tempId]
     if (nextCat) nextCat.open()              // opening the sheet blurs the note → keyboard closes
     else noteRefs.current[tempId]?.blur?.()  // last row (or next is a transfer, no category) → dismiss
+  }
+  // Mobile "Tab" button: if a note suggestion is showing, accept it (and stay);
+  // otherwise advance to the next row — mirroring the desktop Tab behaviour.
+  function tabFromNote(tempId) {
+    if (noteRefs.current[tempId]?.acceptHighlighted?.()) return
+    gotoNextRow(tempId)
+  }
+  // Context shown atop the category/sub picker so the user knows which statement
+  // transaction they're categorising while the sheet covers the row card.
+  function rowContext(row) {
+    const amt = formatMoney(Number(row.amount) || 0, currency)
+    const desc = (row.desc ?? row.note ?? '').trim()
+    return desc ? `${amt} · ${desc}` : amt
   }
 
   // Deferred one tick so the just-closed category sheet (which refocuses its
@@ -564,16 +578,17 @@ export default function BankStatement() {
           </div>
         )}
 
-        {/* Mobile keyboard accessory: replaces the save bar while a note is being
-            typed, so the row card gets the freed space. "Tab" jumps to the next
-            row's Category, mirroring the desktop Tab flow. onMouseDown +
-            preventDefault keeps the note focused so the buttons don't blur it. */}
+        {/* Mobile: a round floating "Tab" button above the keyboard (right side)
+            while a note is being typed. Tap = accept the shown suggestion, else
+            jump to the next row's Category. onMouseDown + preventDefault keeps the
+            note focused so the tap doesn't blur it first. The save bar stays hidden
+            (editingNote) so the row card has the space. */}
         {editingNote && (
-          <div className="shrink-0 desk:hidden bg-surface border-t border-border px-4 py-2 flex items-center gap-2.5">
-            <span className="text-[12px] text-muted flex-1">Editing note</span>
-            <Button variant="ghost" onMouseDown={(e) => { e.preventDefault(); noteRefs.current[editingNote]?.blur?.() }}>Done</Button>
-            <Button onMouseDown={(e) => { e.preventDefault(); gotoNextRow(editingNote) }}>Tab → next row</Button>
-          </div>
+          <button type="button" aria-label="Accept suggestion or go to next row"
+            onMouseDown={(e) => { e.preventDefault(); tabFromNote(editingNote) }}
+            className="desk:hidden fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg grid place-items-center text-[26px] leading-none active:scale-95">
+            ⇥
+          </button>
         )}
       </div>
     </div>
@@ -923,12 +938,12 @@ export default function BankStatement() {
                 ) : (
                   <>
                     <RField label="Category" full={subs.length === 0}>
-                      <ResponsiveSelect ref={(el) => { catRefs.current[row.tempId] = el }} title="Category" placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => pickCategory(row.tempId, v)} options={catOptionsFor(row.kind)} />
+                      <ResponsiveSelect ref={(el) => { catRefs.current[row.tempId] = el }} title="Category" subtitle={rowContext(row)} placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => pickCategory(row.tempId, v)} options={catOptionsFor(row.kind)} />
                     </RField>
                     {/* Stable sub-category column on desktop; hidden on mobile when empty. */}
                     <RField label="Sub-category" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
                       {subs.length > 0 ? (
-                        <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }} title="Sub-category" placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => pickSub(row.tempId, v)} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
+                        <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }} title="Sub-category" subtitle={rowContext(row)} placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => pickSub(row.tempId, v)} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
                       ) : (
                         <div className={`${inputClass} flex items-center text-faint`} aria-hidden="true">—</div>
                       )}
@@ -945,7 +960,7 @@ export default function BankStatement() {
                       className={`${inputClass} ${row.note ? 'pr-9' : ''}`}
                       multiline={isMobile}
                       selectOnFocus={isMobile}
-                      inputRef={(el) => { noteRefs.current[row.tempId] = el }}
+                      ref={(el) => { noteRefs.current[row.tempId] = el }}
                       onFocus={() => { if (isMobile) setEditingNote(row.tempId) }}
                       onBlur={() => { if (isMobile) setEditingNote((cur) => (cur === row.tempId ? null : cur)) }}
                     />

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 // Plain-text input with a typeahead dropdown. Ported from Gelato; restyled to
 // Kura tokens. Suggestions are filtered case-insensitively by substring.
@@ -8,14 +8,17 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 //
 // Opt-in extras (used by the mobile bank-statement review flow):
 // - multiline: render a textarea that auto-grows to fit its text (so a long note
-//   is fully visible). In multiline mode Enter inserts a newline and is NOT used
-//   to accept a suggestion (tap a suggestion instead) — there's no Tab key on
-//   mobile, so the parent drives row-to-row navigation.
+//   is fully visible). In multiline mode Enter inserts a newline; Tab still
+//   accepts the highlighted suggestion (and is otherwise swallowed so it never
+//   inserts a tab character — there's no row-to-row Tab on mobile, the parent's
+//   floating button handles that).
 // - selectOnFocus: select all text on focus so typing replaces the note wholesale.
-// - inputRef: callback ref receiving the underlying input/textarea node, so the
-//   parent can focus()/blur() it as part of the keyboard-driven flow.
 // - onFocus / onBlur: pass-throughs so the parent can track which note is active.
-export default function AutocompleteInput({
+//
+// Imperative handle (via ref): { focus, blur, scrollIntoView, acceptHighlighted }.
+// acceptHighlighted() accepts the open suggestion if there is one and returns
+// whether it did — the mobile "Tab" button uses this to accept-then-navigate.
+const AutocompleteInput = forwardRef(function AutocompleteInput({
   value,
   onChange,
   suggestions,
@@ -25,19 +28,13 @@ export default function AutocompleteInput({
   minChars = 2,
   multiline = false,
   selectOnFocus = false,
-  inputRef,
   onFocus,
   onBlur,
-}) {
+}, ref) {
   const [open, setOpen] = useState(false)
   const [hoverIdx, setHoverIdx] = useState(0)
   const wrapperRef = useRef(null)
   const elRef = useRef(null)
-
-  function setEl(el) {
-    elRef.current = el
-    if (typeof inputRef === 'function') inputRef(el)
-  }
 
   const filtered = useMemo(() => {
     const q = (value ?? '').trim().toLowerCase()
@@ -46,6 +43,25 @@ export default function AutocompleteInput({
       .filter((s) => s.toLowerCase().includes(q) && s.toLowerCase() !== q)
       .slice(0, maxItems)
   }, [value, suggestions, maxItems, minChars])
+
+  // Keep live values in refs so the (stable) imperative handle never goes stale.
+  const liveRef = useRef({})
+  liveRef.current = { open, filtered, hoverIdx, onChange }
+
+  useImperativeHandle(ref, () => ({
+    focus: () => elRef.current?.focus(),
+    blur: () => elRef.current?.blur(),
+    scrollIntoView: (opts) => elRef.current?.scrollIntoView(opts),
+    acceptHighlighted: () => {
+      const s = liveRef.current
+      if (s.open && s.filtered.length > 0) {
+        s.onChange(s.filtered[s.hoverIdx])
+        setOpen(false)
+        return true
+      }
+      return false
+    },
+  }), [])
 
   useEffect(() => {
     function onDocClick(e) {
@@ -72,13 +88,18 @@ export default function AutocompleteInput({
   }
 
   function handleKey(e) {
+    if (e.key === 'Tab') {
+      if (open && filtered.length > 0) { e.preventDefault(); accept(hoverIdx) } // accept suggestion
+      else if (multiline) e.preventDefault()                                    // don't insert a tab char
+      return                                                                    // single-line, no suggestion → natural Tab
+    }
     if (!open || filtered.length === 0) return
     if (e.key === 'ArrowDown') {
       e.preventDefault(); setHoverIdx((i) => (i + 1) % filtered.length)
     } else if (e.key === 'ArrowUp') {
       e.preventDefault(); setHoverIdx((i) => (i - 1 + filtered.length) % filtered.length)
-    } else if (!multiline && (e.key === 'Tab' || e.key === 'Enter')) {
-      e.preventDefault(); accept(hoverIdx)
+    } else if (e.key === 'Enter') {
+      if (!multiline) { e.preventDefault(); accept(hoverIdx) } // multiline Enter = newline
     } else if (e.key === 'Escape') {
       setOpen(false)
     }
@@ -89,21 +110,19 @@ export default function AutocompleteInput({
     setHoverIdx(0)
     if (selectOnFocus) {
       const el = e.target
-      // Defer so the selection sticks after the browser's own focus handling.
       requestAnimationFrame(() => { try { el.select() } catch { /* noop */ } })
     }
     onFocus?.(e)
   }
 
   const fieldProps = {
-    ref: setEl,
+    ref: elRef,
     value,
     onChange: (e) => { onChange(e.target.value); setOpen(true); setHoverIdx(0) },
     onFocus: handleFocus,
     onBlur: (e) => onBlur?.(e),
     onKeyDown: handleKey,
     placeholder,
-    className,
     autoComplete: 'off',
   }
 
@@ -112,7 +131,7 @@ export default function AutocompleteInput({
       {multiline ? (
         <textarea {...fieldProps} rows={1} className={`${className} resize-none overflow-hidden`} />
       ) : (
-        <input type="text" {...fieldProps} />
+        <input type="text" {...fieldProps} className={className} />
       )}
       {open && filtered.length > 0 && (
         <ul className="absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg max-h-56 overflow-auto">
@@ -137,4 +156,6 @@ export default function AutocompleteInput({
       )}
     </div>
   )
-}
+})
+
+export default AutocompleteInput
