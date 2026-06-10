@@ -370,6 +370,54 @@ export default function BankStatement() {
     return [...set]
   }, [notes, reviewRows])
 
+  // ---- Mobile keyboard-driven review flow ----------------------------------
+  // Mirrors the desktop Tab flow on touch: pick Category → (Sub) → land on the
+  // Note (text selected); a "Tab" button above the keyboard jumps to the next
+  // row's Category. The save bar hides while a note is being typed so the whole
+  // row card stays visible.
+  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  const catRefs = useRef({})
+  const subRefs = useRef({})
+  const noteRefs = useRef({})
+  const [editingNote, setEditingNote] = useState(null) // tempId of the note being typed (mobile)
+  const [openSubFor, setOpenSubFor] = useState(null)
+  const [focusNoteFor, setFocusNoteFor] = useState(null)
+
+  function pickCategory(tempId, v) {
+    updateRow(tempId, { categoryId: v, subId: '' })
+    if (!isMobile) return
+    if (v && subsFor(v).length) setOpenSubFor(tempId) // category has children → pick a sub next
+    else setFocusNoteFor(tempId)                      // no children → straight to the note
+  }
+  function pickSub(tempId, v) {
+    updateRow(tempId, { subId: v })
+    if (isMobile) setFocusNoteFor(tempId)
+  }
+  function gotoNextRow(tempId) {
+    const idx = reviewRows.findIndex((r) => r.tempId === tempId)
+    const next = reviewRows[idx + 1]
+    const nextCat = next && catRefs.current[next.tempId]
+    if (nextCat) nextCat.open()              // opening the sheet blurs the note → keyboard closes
+    else noteRefs.current[tempId]?.blur?.()  // last row (or next is a transfer, no category) → dismiss
+  }
+
+  // Deferred one tick so the just-closed category sheet (which refocuses its
+  // trigger) doesn't steal the sub sheet / note focus.
+  useEffect(() => {
+    if (!openSubFor) return
+    const id = setTimeout(() => { subRefs.current[openSubFor]?.open?.(); setOpenSubFor(null) }, 0)
+    return () => clearTimeout(id)
+  }, [openSubFor])
+  useEffect(() => {
+    if (!focusNoteFor) return
+    const id = setTimeout(() => {
+      const el = noteRefs.current[focusNoteFor]
+      if (el) { el.focus(); el.scrollIntoView?.({ block: 'center', behavior: 'smooth' }) }
+      setFocusNoteFor(null)
+    }, 60)
+    return () => clearTimeout(id)
+  }, [focusNoteFor])
+
   // A review row → the createTransactions payload (currency comes from the account).
   function rowPayload(r) {
     if (r.kind === 'transfer') {
@@ -496,7 +544,7 @@ export default function BankStatement() {
         {/* Save bar (review step only). With rows ticked it acts on the
             selection (save → into the app + off the list, or remove); with
             none ticked it saves everything. */}
-        {step === 'review' && !loading && (
+        {step === 'review' && !loading && !editingNote && (
           <div className="shrink-0 bg-surface border-t border-border px-4 py-3 desk:px-8 flex items-center gap-2.5">
             {selected.size > 0 ? (
               <>
@@ -513,6 +561,18 @@ export default function BankStatement() {
                 <Button onClick={saveAll} disabled={saving || !validReview}>{saving ? 'Saving…' : `Save ${reviewRows.length}`}</Button>
               </>
             )}
+          </div>
+        )}
+
+        {/* Mobile keyboard accessory: replaces the save bar while a note is being
+            typed, so the row card gets the freed space. "Tab" jumps to the next
+            row's Category, mirroring the desktop Tab flow. onMouseDown +
+            preventDefault keeps the note focused so the buttons don't blur it. */}
+        {editingNote && (
+          <div className="shrink-0 desk:hidden bg-surface border-t border-border px-4 py-2 flex items-center gap-2.5">
+            <span className="text-[12px] text-muted flex-1">Editing note</span>
+            <Button variant="ghost" onMouseDown={(e) => { e.preventDefault(); noteRefs.current[editingNote]?.blur?.() }}>Done</Button>
+            <Button onMouseDown={(e) => { e.preventDefault(); gotoNextRow(editingNote) }}>Tab → next row</Button>
           </div>
         )}
       </div>
@@ -863,12 +923,12 @@ export default function BankStatement() {
                 ) : (
                   <>
                     <RField label="Category" full={subs.length === 0}>
-                      <ResponsiveSelect title="Category" placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => updateRow(row.tempId, { categoryId: v, subId: '' })} options={catOptionsFor(row.kind)} />
+                      <ResponsiveSelect ref={(el) => { catRefs.current[row.tempId] = el }} title="Category" placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => pickCategory(row.tempId, v)} options={catOptionsFor(row.kind)} />
                     </RField>
                     {/* Stable sub-category column on desktop; hidden on mobile when empty. */}
                     <RField label="Sub-category" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
                       {subs.length > 0 ? (
-                        <ResponsiveSelect title="Sub-category" placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => updateRow(row.tempId, { subId: v })} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
+                        <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }} title="Sub-category" placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => pickSub(row.tempId, v)} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
                       ) : (
                         <div className={`${inputClass} flex items-center text-faint`} aria-hidden="true">—</div>
                       )}
@@ -883,11 +943,16 @@ export default function BankStatement() {
                       suggestions={noteOptions}
                       placeholder="Note"
                       className={`${inputClass} ${row.note ? 'pr-9' : ''}`}
+                      multiline={isMobile}
+                      selectOnFocus={isMobile}
+                      inputRef={(el) => { noteRefs.current[row.tempId] = el }}
+                      onFocus={() => { if (isMobile) setEditingNote(row.tempId) }}
+                      onBlur={() => { if (isMobile) setEditingNote((cur) => (cur === row.tempId ? null : cur)) }}
                     />
                     {row.note && (
                       <button type="button" tabIndex={-1} onClick={() => updateRow(row.tempId, { note: '' })}
                         aria-label="Clear note"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 grid place-items-center rounded-full text-faint hover:text-expense hover:bg-surface-2">
+                        className="absolute right-2 top-2 desk:top-1/2 desk:-translate-y-1/2 w-6 h-6 grid place-items-center rounded-full text-faint hover:text-expense hover:bg-surface-2">
                         ✕
                       </button>
                     )}
