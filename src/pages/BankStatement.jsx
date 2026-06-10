@@ -134,6 +134,7 @@ export default function BankStatement() {
   const [aiBusy, setAiBusy] = useState(false)
   const [aiError, setAiError] = useState('')
   const [consentOpen, setConsentOpen] = useState(false)
+  const [aiRecon, setAiRecon] = useState(null)    // sanity-check of AI rows vs the statement's own totals
   const aiAutoTried = useRef(false)               // auto-run AI at most once per upload
   const AI_CONSENT_KEY = 'kura.aiStatementConsent.v1'
 
@@ -170,6 +171,7 @@ export default function BankStatement() {
           otherAccountId: '', transferDir: t.kind === 'income' ? 'in' : 'out',
         }
       }))
+      setAiRecon(computeAiRecon(txs, data.summary))
       setStep('review')
     } catch {
       setAiError('Couldn’t reach the AI reader — check your connection and try again.')
@@ -188,6 +190,25 @@ export default function BankStatement() {
     try { localStorage.setItem(AI_CONSENT_KEY, 'yes') } catch { /* ignore */ }
     setConsentOpen(false)
     readWithAI()
+  }
+
+  // Cross-check the AI's rows against the totals the statement printed about
+  // itself (when it prints any) — gives the user a clear "adds up ✓" / "doesn't
+  // match ⚠️" signal, the same trust check the deterministic PDF parser does.
+  function computeAiRecon(txs, summary) {
+    if (!summary) return null
+    const near = (got, want) => Math.abs(got - want) <= Math.max(1, Math.abs(want) * 0.005)
+    const inSum = txs.filter((t) => t.kind === 'income').reduce((s, t) => s + Number(t.amount || 0), 0)
+    const outSum = txs.filter((t) => t.kind === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0)
+    const checks = []
+    if (typeof summary.total_out === 'number') checks.push({ label: 'Money out', ok: near(outSum, summary.total_out), got: outSum, want: summary.total_out })
+    if (typeof summary.total_in === 'number') checks.push({ label: 'Money in', ok: near(inSum, summary.total_in), got: inSum, want: summary.total_in })
+    if (typeof summary.opening_balance === 'number' && typeof summary.closing_balance === 'number') {
+      const end = summary.opening_balance + inSum - outSum
+      checks.push({ label: 'Ending balance', ok: near(end, summary.closing_balance), got: end, want: summary.closing_balance })
+    }
+    if (!checks.length) return { status: 'none', checks }
+    return { status: checks.every((c) => c.ok) ? 'ok' : 'warn', checks }
   }
 
   useEffect(() => {
@@ -225,6 +246,7 @@ export default function BankStatement() {
     if (!file) return
     setError('')
     setAiError('')
+    setAiRecon(null)
     aiAutoTried.current = false
     setReading(true)
     try {
@@ -408,6 +430,7 @@ export default function BankStatement() {
   // ---- Step 2 → 3: confirm, build editable rows ----------------------------
   function startReview() {
     if (source === 'csv' && sig) saveMapping(sig, { mapping, formats })
+    setAiRecon(null) // deterministic path, not AI
     setReviewRows(previewRows.map((r) => ({
       tempId: uuid(), kind: r.kind, date: r.date, amount: r.amount, categoryId: '', subId: '', note: r.note,
       desc: r.note, // original bank description, kept for the picker context even after the note is edited
@@ -1021,6 +1044,26 @@ export default function BankStatement() {
     const anyNotes = reviewRows.some((r) => (r.note ?? '').trim())
     return (
       <div>
+        {aiRecon && (
+          aiRecon.status === 'none' ? (
+            <div className="mb-3 rounded-xl border border-border bg-surface-2 px-3.5 py-2.5 text-[12.5px] text-muted">
+              ✨ Read by AI. This statement didn’t print its own totals, so please look over the rows — especially money in vs out — before saving.
+            </div>
+          ) : (
+            <div className={`mb-3 rounded-xl border px-3.5 py-3 text-[13px] ${aiRecon.status === 'ok' ? 'border-income/40 bg-income/10 text-income' : 'border-transfer/50 bg-transfer/10 text-transfer'}`}>
+              <div className="font-semibold">
+                {aiRecon.status === 'ok'
+                  ? '✨ Read by AI — adds up against the statement’s own totals ✓'
+                  : '✨ Read by AI, but it doesn’t match the statement’s totals — check money in vs out before saving'}
+              </div>
+              <ul className="mt-1 text-[12px] space-y-0.5">
+                {aiRecon.checks.map((c, i) => (
+                  <li key={i}>{c.ok ? '✓' : '✗'} {c.label}: {formatMoney(c.got, currency)}{!c.ok && <> vs statement {formatMoney(c.want, currency)}</>}</li>
+                ))}
+              </ul>
+            </div>
+          )
+        )}
         <p className="text-[13px] text-muted mb-3">
           Check each row, set a category if you like, and fix anything that looks off. Spending is an <span className="text-expense font-semibold">expense</span>, money in is <span className="text-income font-semibold">income</span> — change the type on any row. Tick rows to save or remove just those.
         </p>
