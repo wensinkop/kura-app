@@ -134,7 +134,7 @@ const AutocompleteInput = forwardRef(function AutocompleteInput({
         <input type="text" {...fieldProps} className={className} />
       )}
       {open && filtered.length > 0 && (
-        <ul className={`absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg overflow-auto ${multiline ? 'max-h-[9rem]' : 'max-h-56'}`}>
+        <ul className={`absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg overflow-auto ${multiline ? 'max-h-[6.5rem]' : 'max-h-56'}`}>
           {filtered.map((s, idx) => (
             <li
               key={s}
@@ -149,9 +149,11 @@ const AutocompleteInput = forwardRef(function AutocompleteInput({
               {s}
             </li>
           ))}
-          <li className="px-3 py-1.5 text-xs text-faint border-t border-border bg-surface-2">
-            ↑↓ navigate · Tab/Enter accept · Esc close
-          </li>
+          {!multiline && (
+            <li className="px-3 py-1.5 text-xs text-faint border-t border-border bg-surface-2">
+              ↑↓ navigate · Tab/Enter accept · Esc close
+            </li>
+          )}
         </ul>
       )}
     </div>

@@ -409,13 +409,13 @@ export default function BankStatement() {
   }
   // Context shown atop the category/sub picker so the user knows which statement
   // transaction they're categorising while the sheet covers the row card.
-  function rowContext(row) {
+  function rowContext(row, idx) {
     const amt = formatMoney(Number(row.amount) || 0, currency)
     const typeLabel = KIND_OPTIONS.find((o) => o.value === row.kind)?.label ?? row.kind
     const desc = (row.desc ?? row.note ?? '').trim()
     return (
       <>
-        <div className="text-[11.5px] text-faint">{typeLabel} · {dayLabel(row.date)} · {amt}</div>
+        <div className="text-[11.5px] text-faint">Row {idx + 1} · {typeLabel} · {dayLabel(row.date)} · {amt}</div>
         {desc && <div className="text-[13px] text-muted mt-0.5 break-words whitespace-pre-wrap">{desc}</div>}
       </>
     )
@@ -529,7 +529,7 @@ export default function BankStatement() {
           <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-2 py-0.5">Premium</span>
         </header>
 
-        <main className={`flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full ${step === 'review' ? 'scroll-pb-[11rem]' : ''}`}>
+        <main className={`flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full ${step === 'review' ? 'scroll-pb-[7rem]' : ''}`}>
           {/* The review step lays each row out as a wide table like New Transaction;
               the upload/map/teach steps stay a narrower single-column form. */}
           <div className={`mx-auto ${step === 'review' ? 'desk:max-w-[1100px]' : 'max-w-[760px]'}`}>
@@ -948,12 +948,12 @@ export default function BankStatement() {
                 ) : (
                   <>
                     <RField label="Category" full={subs.length === 0}>
-                      <ResponsiveSelect ref={(el) => { catRefs.current[row.tempId] = el }} title="Category" subtitle={rowContext(row)} placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => pickCategory(row.tempId, v)} options={catOptionsFor(row.kind)} />
+                      <ResponsiveSelect ref={(el) => { catRefs.current[row.tempId] = el }} title="Category" subtitle={rowContext(row, idx)} placeholder="— none —" noneLabel="— none —" value={row.categoryId} onChange={(v) => pickCategory(row.tempId, v)} options={catOptionsFor(row.kind)} />
                     </RField>
                     {/* Stable sub-category column on desktop; hidden on mobile when empty. */}
                     <RField label="Sub-category" className={subs.length === 0 ? 'max-desk:hidden' : ''}>
                       {subs.length > 0 ? (
-                        <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }} title="Sub-category" subtitle={rowContext(row)} placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => pickSub(row.tempId, v)} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
+                        <ResponsiveSelect ref={(el) => { subRefs.current[row.tempId] = el }} title="Sub-category" subtitle={rowContext(row, idx)} placeholder="— none —" noneLabel="— none —" value={row.subId} onChange={(v) => pickSub(row.tempId, v)} options={subs.map((s) => ({ value: s.id, label: s.name }))} />
                       ) : (
                         <div className={`${inputClass} flex items-center text-faint`} aria-hidden="true">—</div>
                       )}
