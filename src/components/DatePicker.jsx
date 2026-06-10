@@ -48,7 +48,7 @@ function CalendarGlyph() {
 }
 
 const DatePicker = forwardRef(function DatePicker(
-  { value, onChange, min, max, className, ...rest },
+  { value, onChange, min, max, className, tabIndex, ...rest },
   forwardedRef
 ) {
   const { t } = useTranslation()
@@ -123,6 +123,7 @@ const DatePicker = forwardRef(function DatePicker(
             inputMode="numeric"
             placeholder={SEG[key].ph}
             aria-label={SEG[key].ph}
+            tabIndex={tabIndex}
             className={`${SEG[key].w} bg-transparent text-center tabular outline-none rounded px-0.5 focus:bg-primary-soft focus:text-primary placeholder:text-faint`}
             {...(i === 0 ? rest : {})}
           />

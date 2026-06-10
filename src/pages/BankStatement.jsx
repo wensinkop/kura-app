@@ -362,6 +362,13 @@ export default function BankStatement() {
   const selectedRows = reviewRows.filter((r) => selected.has(r.tempId))
   const selectedValid = selectedRows.length > 0 && selectedRows.every(rowValid)
   const reviewTotal = useMemo(() => reviewRows.reduce((s, r) => s + (Number(r.amount) || 0), 0), [reviewRows])
+  // Note suggestions = saved-history notes PLUS notes already typed on other rows
+  // in this same (unsaved) batch, so a note entered on row 1 is offered on row 2.
+  const noteOptions = useMemo(() => {
+    const set = new Set(notes)
+    for (const r of reviewRows) { const n = (r.note ?? '').trim(); if (n) set.add(n) }
+    return [...set]
+  }, [notes, reviewRows])
 
   // A review row → the createTransactions payload (currency comes from the account).
   function rowPayload(r) {
@@ -453,7 +460,7 @@ export default function BankStatement() {
           <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-2 py-0.5">Premium</span>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full">
+        <main className={`flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full ${step === 'review' ? 'scroll-pb-[35dvh]' : ''}`}>
           {/* The review step lays each row out as a wide table like New Transaction;
               the upload/map/teach steps stay a narrower single-column form. */}
           <div className={`mx-auto ${step === 'review' ? 'desk:max-w-[1100px]' : 'max-w-[760px]'}`}>
@@ -824,20 +831,23 @@ export default function BankStatement() {
             <div key={row.tempId} className={`bg-surface border rounded-[14px] p-3 mt-2.5 first:mt-0 ${isSel ? 'border-primary ring-1 ring-primary/30' : 'border-border'}`}>
               <div className="flex justify-between items-center mb-2">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input type="checkbox" checked={isSel} onChange={() => toggleSelect(row.tempId)} className="w-4 h-4 accent-primary" />
+                  <input type="checkbox" tabIndex={-1} checked={isSel} onChange={() => toggleSelect(row.tempId)} className="w-4 h-4 accent-primary" />
                   <span className="text-[11px] font-bold uppercase tracking-wide text-faint">Row {idx + 1}</span>
                 </label>
-                <button type="button" onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
+                <button type="button" tabIndex={-1} onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ Remove</button>
               </div>
               <div className="grid grid-cols-2 gap-2.5 desk:flex desk:flex-wrap desk:items-end">
+                {/* Type / Date / Amount come parsed from the statement and are
+                    usually correct, so Tab skips them (tabIndex -1) and lands on
+                    Category — the field that actually needs setting. Click to edit. */}
                 <RField label="Type" deskW="desk:w-[120px] desk:flex-none">
-                  <ResponsiveSelect title="Type" value={row.kind} onChange={(v) => setRowKind(row.tempId, v)} options={KIND_OPTIONS} />
+                  <ResponsiveSelect title="Type" value={row.kind} onChange={(v) => setRowKind(row.tempId, v)} options={KIND_OPTIONS} tabIndex={-1} />
                 </RField>
                 <RField label="Date" deskW="desk:w-[158px] desk:flex-none">
-                  <DatePicker value={row.date} onChange={(v) => updateRow(row.tempId, { date: v })} className={inputClass} />
+                  <DatePicker value={row.date} onChange={(v) => updateRow(row.tempId, { date: v })} className={inputClass} tabIndex={-1} />
                 </RField>
                 <RField label="Amount" deskW="desk:w-[140px] desk:flex-none">
-                  <NumberInput value={row.amount} onChange={(v) => updateRow(row.tempId, { amount: v })} locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" />
+                  <NumberInput value={row.amount} onChange={(v) => updateRow(row.tempId, { amount: v })} locale={localeFor(currency)} currency={currency} decimals={currencyDecimals(currency)} placeholder="0" tabIndex={-1} />
                 </RField>
                 {row.kind === 'transfer' ? (
                   <>
@@ -870,12 +880,12 @@ export default function BankStatement() {
                     <AutocompleteInput
                       value={row.note ?? ''}
                       onChange={(v) => updateRow(row.tempId, { note: v })}
-                      suggestions={notes}
+                      suggestions={noteOptions}
                       placeholder="Note"
                       className={`${inputClass} ${row.note ? 'pr-9' : ''}`}
                     />
                     {row.note && (
-                      <button type="button" onClick={() => updateRow(row.tempId, { note: '' })}
+                      <button type="button" tabIndex={-1} onClick={() => updateRow(row.tempId, { note: '' })}
                         aria-label="Clear note"
                         className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 grid place-items-center rounded-full text-faint hover:text-expense hover:bg-surface-2">
                         ✕

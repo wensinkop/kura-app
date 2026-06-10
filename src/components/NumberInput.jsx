@@ -123,6 +123,7 @@ export default function NumberInput({
   name,
   required = false,
   ariaLabel,
+  tabIndex,
 }) {
   const seps = useMemo(() => resolveSeparators(locale), [locale])
   const effectiveDecimals = useMemo(
@@ -272,6 +273,7 @@ export default function NumberInput({
         name={name}
         required={required}
         aria-label={ariaLabel}
+        tabIndex={tabIndex}
         className={
           'w-full rounded-xl border border-border bg-surface-2 px-3 py-2 tabular ' +
           'text-text placeholder:text-faint ' +

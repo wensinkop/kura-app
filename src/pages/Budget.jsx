@@ -599,7 +599,16 @@ function BudgetSheet({ t, initial, prefill, catOptions, currencyList, base, budg
         )}
 
         {kind === 'recurring' ? (
-          !monthlyEdit && (
+          monthlyEdit ? (
+            // Editing a monthly budget: the interval can't change (it would scramble
+            // the per-month amount schedule), but show it read-only so the setting
+            // is always visible rather than hidden.
+            <Field label={t('budget.repeats')}>
+              <div className="rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-[14px] text-muted">
+                {t('budget.monthly')} · {t('budget.recurring')}
+              </div>
+            </Field>
+          ) : (
             <Field label={t('budget.repeats')}>
               <Segmented value={period} onChange={setPeriod}
                 options={[{ value: 'week', label: t('budget.weekly') }, { value: 'month', label: t('budget.monthly') }, { value: 'year', label: t('budget.yearly') }]} />
@@ -647,7 +656,7 @@ function BudgetSheet({ t, initial, prefill, catOptions, currencyList, base, budg
           </Field>
         )}
 
-        {kind === 'recurring' && !monthlyEdit && (
+        {kind === 'recurring' && (
           <Field label={t('budget.rollover')} hint={ROLL_HINT[rollover]}>
             <Segmented value={rollover} onChange={setRollover}
               options={[{ value: 'none', label: t('budget.rollOff') }, { value: 'forgiving', label: t('budget.rollForgiving') }, { value: 'strict', label: t('budget.rollStrict') }]} />

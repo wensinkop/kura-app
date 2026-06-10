@@ -69,6 +69,14 @@ export default function NewTransaction() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
 
+  // Note suggestions = saved-history notes PLUS notes already typed on other rows
+  // in this same (unsaved) batch, so a note entered on row 1 is offered on row 2.
+  const noteOptions = useMemo(() => {
+    const set = new Set(notes)
+    for (const r of rows) { const n = (r.note ?? '').trim(); if (n) set.add(n) }
+    return [...set]
+  }, [notes, rows])
+
   useEffect(() => {
     Promise.all([listAccounts(), listGroups(), listCategories(), recentNotes()]).then(
       ([a, g, c, n]) => {
@@ -329,7 +337,7 @@ export default function NewTransaction() {
                     ref={(el) => { rowRefs.current[row.tempId] = el }}
                     data-row-card
                     onFocusCapture={(e) => handleCardFocus(e, row.tempId)}
-                    className={`bg-surface border rounded-[14px] p-3 mt-2.5 first:mt-0 desk:mt-2 ${err ? 'border-expense' : 'border-border'} ${enteringIds.has(row.tempId) ? 'animate-row-in' : ''}`}>
+                    className={`bg-surface border rounded-[14px] p-3 mt-2.5 first:mt-1.5 desk:mt-2 ${err ? 'border-expense' : 'border-border'} ${enteringIds.has(row.tempId) ? 'animate-row-in' : ''}`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[11px] font-bold uppercase tracking-wide text-faint">{t('tx.row', { n: idx + 1 })}</span>
                       <button type="button" onClick={() => removeRow(row.tempId)} className="text-xs text-faint hover:text-expense">✕ {t('tx.remove')}</button>
@@ -399,7 +407,7 @@ export default function NewTransaction() {
 
                       <MField label={t('tx.note')} field="note" full deskW="desk:flex-1 desk:min-w-[160px]">
                         <AutocompleteInput value={row.note} onChange={(v) => update(row.tempId, { note: v })}
-                          suggestions={notes} placeholder={t('tx.notePlaceholder')} className={inputClass} />
+                          suggestions={noteOptions} placeholder={t('tx.notePlaceholder')} className={inputClass} />
                       </MField>
                     </div>
 

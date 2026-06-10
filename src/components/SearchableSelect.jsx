@@ -17,6 +17,7 @@ export default function SearchableSelect({
   placeholder,
   className,
   onCreate,
+  tabIndex,
 }) {
   const { t } = useTranslation()
   const ph = placeholder ?? t('select.placeholder')
@@ -116,6 +117,7 @@ export default function SearchableSelect({
         placeholder={ph}
         className={className}
         autoComplete="off"
+        tabIndex={tabIndex}
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
