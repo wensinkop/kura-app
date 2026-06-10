@@ -411,8 +411,14 @@ export default function BankStatement() {
   // transaction they're categorising while the sheet covers the row card.
   function rowContext(row) {
     const amt = formatMoney(Number(row.amount) || 0, currency)
+    const typeLabel = KIND_OPTIONS.find((o) => o.value === row.kind)?.label ?? row.kind
     const desc = (row.desc ?? row.note ?? '').trim()
-    return desc ? `${amt} · ${desc}` : amt
+    return (
+      <>
+        <div className="text-[11.5px] text-faint">{typeLabel} · {dayLabel(row.date)} · {amt}</div>
+        {desc && <div className="text-[13px] text-muted mt-0.5 break-words whitespace-pre-wrap">{desc}</div>}
+      </>
+    )
   }
 
   // Deferred one tick so the just-closed category sheet (which refocuses its
@@ -425,8 +431,9 @@ export default function BankStatement() {
   useEffect(() => {
     if (!focusNoteFor) return
     const id = setTimeout(() => {
-      const el = noteRefs.current[focusNoteFor]
-      if (el) { el.focus(); el.scrollIntoView?.({ block: 'center', behavior: 'smooth' }) }
+      // focus() scrolls the note into view respecting the scroll-padding above —
+      // enough to clear the keyboard and show ~3 suggestions, without over-scrolling.
+      noteRefs.current[focusNoteFor]?.focus()
       setFocusNoteFor(null)
     }, 60)
     return () => clearTimeout(id)
@@ -522,7 +529,7 @@ export default function BankStatement() {
           <span className="text-[10px] font-bold uppercase tracking-wide text-primary border border-primary/40 rounded-full px-2 py-0.5">Premium</span>
         </header>
 
-        <main className={`flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full ${step === 'review' ? 'scroll-pb-[35dvh]' : ''}`}>
+        <main className={`flex-1 overflow-y-auto px-4 py-4 desk:px-8 desk:py-6 w-full ${step === 'review' ? 'scroll-pb-[11rem]' : ''}`}>
           {/* The review step lays each row out as a wide table like New Transaction;
               the upload/map/teach steps stay a narrower single-column form. */}
           <div className={`mx-auto ${step === 'review' ? 'desk:max-w-[1100px]' : 'max-w-[760px]'}`}>
@@ -586,8 +593,11 @@ export default function BankStatement() {
         {editingNote && (
           <button type="button" aria-label="Accept suggestion or go to next row"
             onMouseDown={(e) => { e.preventDefault(); tabFromNote(editingNote) }}
-            className="desk:hidden fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg grid place-items-center text-[26px] leading-none active:scale-95">
-            ⇥
+            className="desk:hidden fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-primary text-on-primary shadow-lg grid place-items-center active:scale-95">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 12h13" />
+              <path d="M13 6l6 6-6 6" />
+            </svg>
           </button>
         )}
       </div>

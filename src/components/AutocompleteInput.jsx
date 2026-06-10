@@ -134,7 +134,7 @@ const AutocompleteInput = forwardRef(function AutocompleteInput({
         <input type="text" {...fieldProps} className={className} />
       )}
       {open && filtered.length > 0 && (
-        <ul className="absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg max-h-56 overflow-auto">
+        <ul className={`absolute z-30 mt-1 w-full bg-surface border border-border rounded-xl shadow-lg overflow-auto ${multiline ? 'max-h-[9rem]' : 'max-h-56'}`}>
           {filtered.map((s, idx) => (
             <li
               key={s}

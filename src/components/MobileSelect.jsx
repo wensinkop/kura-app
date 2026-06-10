@@ -85,12 +85,13 @@ const MobileSelect = forwardRef(function MobileSelect(
           onMouseDown={(e) => { if (e.target === e.currentTarget) close() }}>
           <div ref={sheetRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}
             className="bg-surface w-full rounded-t-2xl border-t border-border max-h-[70vh] flex flex-col outline-none">
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+            <div className="flex items-start gap-3 px-4 py-3 border-b border-border">
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-[15px]">{creating ? t('select.newTitle', { title: title?.toLowerCase() ?? '' }) : title}</div>
                 {/* Optional context (e.g. the statement transaction being categorised),
-                    so the user knows what they're picking for while the sheet covers the row. */}
-                {!creating && subtitle && <div className="text-[12.5px] text-muted truncate mt-0.5">{subtitle}</div>}
+                    so the user knows what they're picking for while the sheet covers the row.
+                    Wraps fully (no truncation) so a long description stays readable. */}
+                {!creating && subtitle && <div className="mt-1">{subtitle}</div>}
               </div>
               <button onClick={close} aria-label={t('common.close')}
                 className="w-9 h-9 -mr-1.5 rounded-[10px] grid place-items-center text-muted hover:bg-surface-2">
