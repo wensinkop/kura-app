@@ -42,6 +42,11 @@ Rules:
 - description: a short human label (merchant or memo) from the statement. Trim obvious reference numbers and noise but keep it recognizable.
 - Preserve the order the transactions appear. Do not invent, merge, or split rows. If a value is unreadable, omit that row rather than guessing.
 - summary: ONLY if the statement prints its own totals, copy them as numbers (no separators): total_out (total debit / money out), total_in (total credit / money in), opening_balance (saldo awal), closing_balance (saldo akhir). Use null for any the statement does not state. Do NOT calculate these from the rows yourself — only copy figures the statement actually prints.
+
+Worked example — columns are Date · Description · Teller · Debet · Kredit · Saldo, flattened to spaces:
+"09/02/26 PNMPTN DEP DD4025377 STANLEY 0376052 3,000,000,000.00 0.00 0.00" → the three trailing numbers map to Debet=3,000,000,000.00, Kredit=0.00, Saldo=0.00. The non-zero amount is in the DEBET column, so kind="expense", amount=3000000000 — it is an expense even though the description says "DEP".
+"24/02/26 Reward Safeguard MCRMFT 0.00 1,380,822.00 3,353,424.00" → Debet=0.00, Kredit=1,380,822.00, Saldo=3,353,424.00. The non-zero amount is in the KREDIT column, so kind="income", amount=1380822.
+
 The account currency is given for context only — never convert amounts.`
 
 const NULLABLE_NUMBER = { anyOf: [{ type: 'number' }, { type: 'null' }] }
@@ -131,8 +136,9 @@ Deno.serve(async (req) => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: 'claude-sonnet-4-6',
         max_tokens: 16000,
+        temperature: 0, // deterministic extraction
         system: SYSTEM,
         messages: [{ role: 'user', content: userMsg }],
         output_config: { format: { type: 'json_schema', schema: SCHEMA } },
