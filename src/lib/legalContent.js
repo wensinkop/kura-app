@@ -21,7 +21,7 @@ We only collect what Kura needs to work for you:
 - **Account details** — your email address and a password (the password is never stored in readable form; it is securely hashed by our authentication provider).
 - **Profile** — your name, your chosen base currency, and your plan (free or premium).
 - **Financial data you enter** — the accounts you create (names, opening balances), your transactions (amounts, dates, types, notes), categories, transfers and exchange rates. This is the information you choose to record in Kura.
-- **Bank-statement files (Premium)** — see “Bank statement converter” below. The file itself is processed entirely on your own device and is never uploaded to us.
+- **Bank-statement files (Premium)** — see “Bank statement converter” below. The file is read on your own device and is never uploaded to us; only if you opt in to AI reading is the statement’s text sent to our AI provider to read it.
 - **Basic technical data** — like any web service, our hosting providers automatically receive standard request information (such as IP address and browser type) to deliver and secure the service.
 
 We do **not** connect to your bank, and we never ask for your online-banking login, card numbers or one-time passwords.
@@ -38,13 +38,16 @@ We do **not** sell your personal data, and we do **not** use it for advertising.
 We process your data to perform the service you have signed up for (our contract with you) and, where required by UU PDP, on the basis of your consent, which you give by creating an account and entering your data. You can withdraw consent at any time by deleting your account.
 
 ## Bank statement converter (Premium)
-Kura’s premium statement converter turns a PDF or CSV bank statement into rows you can review and save. This happens **entirely inside your browser, on your device** — the statement file is read locally and is never sent to or stored on our servers. If a statement is password protected, the password is used only on your device to open the file and is not transmitted or kept. Only the transactions you choose to save are added to your account. Any layout Kura “learns” to read your bank’s format is stored locally on your device, not on our servers.
+Kura’s premium statement converter turns a PDF or CSV bank statement into rows you can review and save. By default this happens **entirely inside your browser, on your device** — the statement file is read locally and is never sent to or stored on our servers. If a statement is password protected, the password is used only on your device to open the file and is not transmitted or kept. Any layout Kura “learns” to read your bank’s format is stored locally on your device, not on our servers.
+
+**AI reading (optional).** If Kura can’t read a statement automatically — or you ask it to — you can choose to have it read by AI. Only then, and only after you agree, is the **text of that statement** sent securely to our AI provider (Anthropic) to pull out the transactions. We ask for your consent the first time and remember your choice on that device. The statement text is used only to read that one statement; it is not used to train any AI model and is not retained for training. We never send the original file, your name, or your account details — only the statement text needed to read it. You can avoid this entirely by using Kura’s manual “teach” mode instead. Either way, only the transactions you choose to save are added to your account.
 
 ## Who processes your data (sub-processors)
 To run Kura we rely on a small number of trusted infrastructure providers:
 
 - **Supabase** — provides our database and authentication. Your account and financial data are stored here. Supabase hosts this data on Amazon Web Services in the **Singapore (ap-southeast-1)** region.
 - **Netlify** — hosts and delivers the Kura web app to your browser.
+- **Anthropic** — provides the AI model behind the optional AI statement reader (above). It receives the statement’s text **only** when you choose AI reading, processes it to return the transactions, and does not use it to train its models.
 
 ## International data transfer
 Because our database is hosted in Singapore, your personal data is stored and processed **outside Indonesia**. By using Kura you acknowledge this transfer. We only use providers that apply recognised security and data-protection safeguards.
@@ -200,7 +203,7 @@ Sorry about that — email [${CONTACT}](mailto:${CONTACT}) with what happened an
 
 // Slug → metadata + default body. Order is the order shown in the admin editor.
 export const DOCS = {
-  privacy: { slug: 'privacy', title: 'Privacy Policy', updated: '3 June 2026', kind: 'prose', body: PRIVACY_MD },
+  privacy: { slug: 'privacy', title: 'Privacy Policy', updated: '10 June 2026', kind: 'prose', body: PRIVACY_MD },
   terms:   { slug: 'terms',   title: 'Terms & Conditions', updated: '3 June 2026', kind: 'prose', body: TERMS_MD },
   help:    { slug: 'help',    title: 'Help & FAQ', updated: null, kind: 'faq', body: HELP_MD },
 }

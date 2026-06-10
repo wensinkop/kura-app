@@ -23,6 +23,7 @@ import {
   parseStatementText, analyzeGrid, buildStatementRows, parseDate, layoutSignature, parsePdfStatement, reconcilePdf, statementFingerprint, detectNumberFormat,
 } from '../lib/statement'
 import { extractPdfText } from '../lib/pdfStatement'
+import { supabase } from '../supabaseClient'
 import { localeFor, currencyDecimals } from '../lib/currencies'
 import { formatMoney, dayLabel } from '../lib/format'
 import NumberInput from '../components/NumberInput'
@@ -30,7 +31,7 @@ import ResponsiveSelect from '../components/ResponsiveSelect'
 import AutocompleteInput from '../components/AutocompleteInput'
 import DatePicker from '../components/DatePicker'
 import Sidebar from '../components/Sidebar'
-import { Button, Field, Segmented, TextInput, inputClass } from '../components/ui'
+import { Button, Field, Modal, Segmented, TextInput, inputClass } from '../components/ui'
 import { ChevronLeft, UploadIcon } from '../lib/icons'
 
 const KIND_OPTIONS = [
@@ -128,6 +129,67 @@ export default function BankStatement() {
 
   const fileInput = useRef(null)
 
+  // ---- AI statement reader (Premium fallback) ------------------------------
+  const [rawText, setRawText] = useState('')      // raw CSV text (PDF uses pdfLines)
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiError, setAiError] = useState('')
+  const [consentOpen, setConsentOpen] = useState(false)
+  const aiAutoTried = useRef(false)               // auto-run AI at most once per upload
+  const AI_CONSENT_KEY = 'kura.aiStatementConsent.v1'
+
+  // The raw text we hand to the AI: reconstructed PDF lines, or the CSV file text.
+  function statementText() {
+    if (source === 'pdf') return (pdfLines ?? []).map((l) => l.items.map((i) => i.s).join(' ')).join('\n')
+    return rawText ?? ''
+  }
+
+  async function readWithAI() {
+    const text = statementText().trim()
+    if (text.length < 10) { setAiError('There’s no statement text to read.'); return }
+    setAiBusy(true); setAiError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-statement-ai`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.access_token ?? ''}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ text, currency }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) { setAiError(data?.error || 'The AI reader couldn’t process this statement.'); return }
+      const txs = (data.transactions ?? []).filter((t) => t && t.date && Number(t.amount) > 0)
+      if (!txs.length) { setAiError('The AI couldn’t find any transactions in this statement.'); return }
+      setReviewRows(txs.map((t) => {
+        const desc = String(t.description ?? '').trim()
+        return {
+          tempId: uuid(), kind: t.kind === 'income' ? 'income' : 'expense', date: t.date,
+          amount: Number(t.amount), categoryId: '', subId: '', note: desc, desc,
+          otherAccountId: '', transferDir: t.kind === 'income' ? 'in' : 'out',
+        }
+      }))
+      setStep('review')
+    } catch {
+      setAiError('Couldn’t reach the AI reader — check your connection and try again.')
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  // Gate the first AI use behind a one-time consent (statement text leaves the device).
+  function requestAI() {
+    setAiError('')
+    if (localStorage.getItem(AI_CONSENT_KEY) === 'yes') readWithAI()
+    else setConsentOpen(true)
+  }
+  function grantConsentAndRead() {
+    try { localStorage.setItem(AI_CONSENT_KEY, 'yes') } catch { /* ignore */ }
+    setConsentOpen(false)
+    readWithAI()
+  }
+
   useEffect(() => {
     Promise.all([listAccounts(), listGroups(), listCategories(), recentNotes()]).then(([a, g, c, n]) => {
       const active = (a.data ?? []).filter((x) => !x.archived)
@@ -162,6 +224,8 @@ export default function BankStatement() {
     e.target.value = ''
     if (!file) return
     setError('')
+    setAiError('')
+    aiAutoTried.current = false
     setReading(true)
     try {
       setFileName(file.name)
@@ -170,7 +234,9 @@ export default function BankStatement() {
         pendingBuffer.current = await file.arrayBuffer()
         await loadPdf(undefined)
       } else {
-        const grid = parseStatementText(await file.text()).grid
+        const fileText = await file.text()
+        setRawText(fileText)
+        const grid = parseStatementText(fileText).grid
         if (!grid.length) { setError('That file looks empty.'); return }
         const a = analyzeGrid(grid)
         setSource('csv')
@@ -299,6 +365,19 @@ export default function BankStatement() {
 
   // Unified rows shown in the preview + carried into review.
   const previewRows = source === 'pdf' ? (pdfResult?.rows ?? []) : built.rows
+
+  // "Auto on failure": when the deterministic parser finds nothing, run the AI
+  // reader once (Premium + prior consent). The manual button covers every other case.
+  useEffect(() => {
+    if (step !== 'map' || aiBusy || aiAutoTried.current) return
+    if (previewRows.length > 0) return
+    if (localStorage.getItem(AI_CONSENT_KEY) !== 'yes') return
+    if (statementText().trim().length < 10) return
+    aiAutoTried.current = true
+    const id = setTimeout(() => readWithAI(), 0) // defer so it's not a synchronous setState-in-effect
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, previewRows.length, aiBusy])
   const previewSkipped = source === 'pdf' ? 0 : built.skipped.length
 
   // Auto-check the PDF parse against the statement's own totals (when present).
@@ -614,6 +693,25 @@ export default function BankStatement() {
             </svg>
           </button>
         )}
+
+        {consentOpen && (
+          <Modal title="Read this statement with AI?" onClose={() => setConsentOpen(false)}
+            footer={
+              <>
+                <Button variant="ghost" className="flex-1" onClick={() => setConsentOpen(false)}>Cancel</Button>
+                <Button className="flex-1" onClick={grantConsentAndRead}>Use AI</Button>
+              </>
+            }>
+            <p className="text-[14px] text-muted leading-relaxed">
+              For statements Kura can’t read on its own, the statement’s <span className="font-semibold text-text">text</span> is sent securely to Kura’s AI provider (Anthropic) to pull out the transactions.
+            </p>
+            <ul className="text-[13px] text-muted leading-relaxed mt-3 space-y-1.5">
+              <li className="flex gap-2"><span className="text-primary shrink-0">•</span> Used only to read this statement — never to train AI, and not stored.</li>
+              <li className="flex gap-2"><span className="text-primary shrink-0">•</span> Nothing is sent until you tap “Use AI”.</li>
+              <li className="flex gap-2"><span className="text-primary shrink-0">•</span> We’ll remember your choice on this device.</li>
+            </ul>
+          </Modal>
+        )}
       </div>
     </div>
   )
@@ -693,9 +791,13 @@ export default function BankStatement() {
           <div className="rounded-xl border border-transfer/40 bg-transfer/10 px-3.5 py-3 text-[13px] text-transfer space-y-2.5">
             <div>
               <div className="font-semibold mb-1">Kura couldn’t read this layout on its own.</div>
-              Show it where the data is — Kura will remember this bank for next time.
+              Let AI read it for you, or show Kura where the data is and it’ll remember this bank.
             </div>
-            <Button onClick={beginTeach} className="w-full">Teach Kura to read this statement</Button>
+            <Button onClick={requestAI} disabled={aiBusy} className="w-full">{aiBusy ? 'Reading with AI…' : '✨ Read this statement with AI'}</Button>
+            {aiError && <p className="text-[12.5px] text-expense">{aiError}</p>}
+            <button type="button" onClick={beginTeach} className="w-full text-center text-[12.5px] font-semibold text-primary hover:underline">
+              Or teach Kura where the data is →
+            </button>
           </div>
         )}
 
@@ -743,6 +845,13 @@ export default function BankStatement() {
             Not reading this right? Teach Kura where the data is →
           </button>
         )}
+        {previewRows.length > 0 && (
+          <button type="button" onClick={requestAI} disabled={aiBusy}
+            className="w-full text-center text-[12.5px] font-semibold text-primary hover:underline">
+            {aiBusy ? 'Reading with AI…' : '✨ Or read this statement with AI →'}
+          </button>
+        )}
+        {aiError && previewRows.length > 0 && <p className="text-[12.5px] text-expense text-center">{aiError}</p>}
 
         <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
           Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
@@ -886,6 +995,12 @@ export default function BankStatement() {
             <ResponsiveSelect title="Description column" value={String(mapping.description)} onChange={(v) => setMap({ description: Number(v) })} options={colOptionsNone} />
           </Field>
         </div>
+
+        <button type="button" onClick={requestAI} disabled={aiBusy}
+          className="w-full text-center text-[12.5px] font-semibold text-primary hover:underline">
+          {aiBusy ? 'Reading with AI…' : '✨ Columns not lining up? Read this statement with AI →'}
+        </button>
+        {aiError && <p className="text-[12.5px] text-expense text-center">{aiError}</p>}
 
         <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
           Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
