@@ -1,0 +1,83 @@
+name: Migrate Kura DB to new project (one-off)
+
+# ONE-OFF migration: copies the schema + all data from the OLD Supabase project
+# to the NEW one ("The Moo Projects"). It is READ-ONLY on the old database
+# (pg_dump only) and writes solely to the new one, so it is safe to run while the
+# old project stays live. Run it once from the Actions tab, confirm the row
+# counts in the log, then delete this file.
+#
+# Required repo secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_DB_PASSWORD      = OLD project DB password  (already set, used by the backup)
+#   NEW_SUPABASE_DB_PASSWORD  = NEW project DB password  (add this before running)
+#
+# Both projects are in ap-southeast-1, so they share one session-pooler host
+# (port 5432; the transaction pooler on 6543 does NOT support pg_dump).
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      HOST: aws-1-ap-southeast-1.pooler.supabase.com
+      OLD_USER: postgres.sxknuilzilwmkwltporg
+      NEW_USER: postgres.dsdptauowyxgvdsxzhfx
+      OLD_PW: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      NEW_PW: ${{ secrets.NEW_SUPABASE_DB_PASSWORD }}
+    steps:
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Copy old -> new
+        run: |
+          set -euo pipefail
+          if [ -z "${OLD_PW:-}" ]; then echo "::error::SUPABASE_DB_PASSWORD secret is not set."; exit 1; fi
+          if [ -z "${NEW_PW:-}" ]; then echo "::error::NEW_SUPABASE_DB_PASSWORD secret is not set."; exit 1; fi
+
+          dump() { PGPASSWORD="$OLD_PW" pg_dump -h "$HOST" -p 5432 -U "$OLD_USER" -d postgres "$@"; }
+          run()  { PGPASSWORD="$NEW_PW" psql    -h "$HOST" -p 5432 -U "$NEW_USER" -d postgres -v ON_ERROR_STOP=1 "$@"; }
+
+          echo "== sanity: connect to both databases =="
+          PGPASSWORD="$OLD_PW" psql -h "$HOST" -p 5432 -U "$OLD_USER" -d postgres -tAc "select 'OLD connected'"
+          run -tAc "select 'NEW connected'"
+
+          echo "== 1/6 dump + load public schema (structure only) =="
+          dump --schema=public --schema-only --no-owner --no-privileges > schema.sql
+          run -f schema.sql
+
+          echo "== 2/6 grant new public objects to the API roles =="
+          run -c "grant usage on schema public to anon, authenticated, service_role;
+                  grant all on all tables    in schema public to anon, authenticated, service_role;
+                  grant all on all sequences in schema public to anon, authenticated, service_role;
+                  grant all on all functions in schema public to anon, authenticated, service_role;"
+
+          echo "== 3/6 copy auth users + identities (triggers/FK off) =="
+          dump --data-only --no-owner -t auth.users -t auth.identities > auth.sql
+          { echo "set session_replication_role = replica;"; cat auth.sql; } | run
+
+          echo "== 4/6 copy public data (triggers/FK off) =="
+          dump --schema=public --data-only --no-owner > data.sql
+          { echo "set session_replication_role = replica;"; cat data.sql; } | run
+
+          echo "== 5/6 recreate the auth sign-up trigger (for future sign-ups) =="
+          run -c "drop trigger if exists on_auth_user_created on auth.users;
+                  create trigger on_auth_user_created after insert on auth.users
+                  for each row execute function public.handle_new_user();"
+
+          echo "== 6/6 VERIFY row counts on the NEW project =="
+          run -c "select 'auth.users'     as table, count(*) from auth.users
+                  union all select 'profiles',       count(*) from public.profiles
+                  union all select 'accounts',       count(*) from public.accounts
+                  union all select 'categories',     count(*) from public.categories
+                  union all select 'transactions',   count(*) from public.transactions
+                  union all select 'budgets',        count(*) from public.budgets
+                  union all select 'goals',          count(*) from public.goals
+                  union all select 'import_batches', count(*) from public.import_batches
+                  order by 1;"
+
+          echo "Migration finished. Compare the counts above with the old project."
