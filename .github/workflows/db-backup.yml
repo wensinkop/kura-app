@@ -34,7 +34,7 @@ jobs:
         env:
           PGHOST: aws-1-ap-southeast-1.pooler.supabase.com
           PGPORT: "5432"
-          PGUSER: postgres.sxknuilzilwmkwltporg
+          PGUSER: postgres.dsdptauowyxgvdsxzhfx
           PGDATABASE: postgres
           PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
