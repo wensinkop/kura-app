@@ -24,6 +24,7 @@ import {
 } from '../lib/statement'
 import { extractPdfText } from '../lib/pdfStatement'
 import { supabase } from '../supabaseClient'
+import { learnPdfLayout } from '../lib/learnLayout'
 import { localeFor, currencyDecimals } from '../lib/currencies'
 import { formatMoney, dayLabel } from '../lib/format'
 import NumberInput from '../components/NumberInput'
@@ -135,6 +136,7 @@ export default function BankStatement() {
   const [aiError, setAiError] = useState('')
   const [consentOpen, setConsentOpen] = useState(false)
   const [aiRecon, setAiRecon] = useState(null)    // sanity-check of AI rows vs the statement's own totals
+  const [learnedFromAI, setLearnedFromAI] = useState(false) // AI taught Kura this format
   const aiAutoTried = useRef(false)               // auto-run AI at most once per upload
   const AI_CONSENT_KEY = 'kura.aiStatementConsent.v1'
 
@@ -171,7 +173,18 @@ export default function BankStatement() {
           otherAccountId: '', transferDir: t.kind === 'income' ? 'in' : 'out',
         }
       }))
-      setAiRecon(computeAiRecon(txs, data.summary))
+      const recon = computeAiRecon(txs, data.summary)
+      setAiRecon(recon)
+      // Teach Kura this PDF format from the AI's read — but ONLY when the read
+      // reconciles against the statement's own totals (so we never learn a wrong
+      // layout). Next statement of this format is then read by the normal parser,
+      // no AI. learnPdfLayout re-verifies before returning a layout.
+      if (source === 'pdf' && pdfFp && Array.isArray(pdfLines) && recon?.status === 'ok') {
+        try {
+          const learned = learnPdfLayout(pdfLines, txs, currency)
+          if (learned) { savePdfMap(pdfFp, learned); setLearnedFromAI(true) }
+        } catch { /* learning is best-effort */ }
+      }
       setStep('review')
     } catch {
       setAiError('Couldn’t reach the AI reader — check your connection and try again.')
@@ -247,6 +260,7 @@ export default function BankStatement() {
     setError('')
     setAiError('')
     setAiRecon(null)
+    setLearnedFromAI(false)
     aiAutoTried.current = false
     setReading(true)
     try {
@@ -1061,6 +1075,9 @@ export default function BankStatement() {
                   <li key={i}>{c.ok ? '✓' : '✗'} {c.label}: {formatMoney(c.got, currency)}{!c.ok && <> vs statement {formatMoney(c.want, currency)}</>}</li>
                 ))}
               </ul>
+              {learnedFromAI && (
+                <div className="mt-1.5 text-[12px] font-semibold">🧠 Kura learned this bank’s layout — your next statement of this format reads instantly, without AI.</div>
+              )}
             </div>
           )
         )}
