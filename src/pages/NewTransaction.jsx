@@ -160,7 +160,9 @@ export default function NewTransaction() {
   const liftToTop = useCallback((el, smooth = false) => {
     const sc = scrollRef.current
     if (!el || !sc) return
-    const y = sc.scrollTop + (el.getBoundingClientRect().top - sc.getBoundingClientRect().top) - 8
+    // Leave a comfortable gap below the header so a lifted card (e.g. a freshly
+    // added row) doesn't sit flush against it. ~20px matches the first row's rest gap.
+    const y = sc.scrollTop + (el.getBoundingClientRect().top - sc.getBoundingClientRect().top) - 20
     sc.scrollTo({ top: Math.max(0, y), behavior: smooth ? 'smooth' : 'auto' })
   }, [])
 
