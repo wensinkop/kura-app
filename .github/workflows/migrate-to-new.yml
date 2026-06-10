@@ -51,7 +51,8 @@ jobs:
           # The new project already has a public schema, so drop the schema-level
           # statements pg_dump emits (CREATE / ALTER OWNER / COMMENT) — we only want
           # to create the objects *inside* public.
-          sed -i -E '/^CREATE SCHEMA public;$/d; /^ALTER SCHEMA public OWNER/d; /^COMMENT ON SCHEMA public/d' schema.sql
+          sed -i -E '/^CREATE SCHEMA public;/d; /^ALTER SCHEMA public OWNER/d; /^COMMENT ON SCHEMA public/d' schema.sql
+          echo "  (stripped schema-level lines; loading objects into existing public)"
           run -f schema.sql
 
           echo "== 2/6 grant new public objects to the API roles =="
