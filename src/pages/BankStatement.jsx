@@ -287,8 +287,18 @@ export default function BankStatement() {
         setAnalysis(a)
         const signature = layoutSignature(a.headers)
         setSig(signature)
-        // Reuse a remembered mapping for this layout if its columns still fit.
-        const saved = loadSavedMapping(signature)
+        // Reuse a remembered mapping for this layout if its columns still fit —
+        // this device first, then the shared store (another user's confirmed
+        // import may already have it). Cache a shared hit locally so the next
+        // read is instant and works offline. Keyed "csv:" so it can't collide
+        // with a PDF fingerprint in the same table.
+        let saved = loadSavedMapping(signature)
+        if (!saved && signature) {
+          try {
+            const shared = await getSharedLayout('csv:' + signature)
+            if (shared) { saved = shared; saveMapping(signature, shared) }
+          } catch { /* offline / signed-out — fall back to auto-detect */ }
+        }
         const fits = saved && (saved.mapping?.amount ?? -1) < a.cols.length &&
           (saved.mapping?.date ?? -1) < a.cols.length
         if (saved && fits && signature) {
@@ -382,6 +392,7 @@ export default function BankStatement() {
   // reader once (Premium + prior consent). The manual button covers every other case.
   useEffect(() => {
     if (step !== 'map' || aiBusy || aiAutoTried.current) return
+    if (source !== 'pdf') return // AI reader is PDF-only; CSVs use the column mapper
     if (previewRows.length > 0) return
     if (localStorage.getItem(AI_CONSENT_KEY) !== 'yes') return
     if (statementText().trim().length < 10) return
@@ -419,7 +430,15 @@ export default function BankStatement() {
 
   // ---- Step 2 → 3: confirm, build editable rows ----------------------------
   function startReview() {
-    if (source === 'csv' && sig) saveMapping(sig, { mapping, formats })
+    if (source === 'csv' && sig) {
+      saveMapping(sig, { mapping, formats }) // this device
+      // Contribute the confirmed mapping to the shared store so every user reads
+      // this CSV format without re-mapping — but only on a clean parse, so we
+      // never publish a broken layout (the CSV analog of PDF's reconcile check).
+      // RLS allows the write only for Premium users; everyone can read it back.
+      const clean = previewRows.length > 0 && previewSkipped <= previewRows.length * 0.1
+      if (clean) saveSharedLayout('csv:' + sig, { mapping, formats }, { source: 'csv', userId: user?.id })
+    }
     setAiRecon(null) // deterministic path, not AI
     setReviewRows(previewRows.map((r) => ({
       tempId: uuid(), kind: r.kind, date: r.date, amount: r.amount, categoryId: '', subId: '', note: r.note,
@@ -948,12 +967,6 @@ export default function BankStatement() {
             <ResponsiveSelect title="Description column" value={String(mapping.description)} onChange={(v) => setMap({ description: Number(v) })} options={colOptionsNone} />
           </Field>
         </div>
-
-        <button type="button" onClick={requestAI} disabled={aiBusy}
-          className="w-full text-center text-[12.5px] font-semibold text-primary hover:underline">
-          {aiBusy ? 'Reading with AI…' : '✨ Columns not lining up? Read this statement with AI →'}
-        </button>
-        {aiError && <p className="text-[12.5px] text-expense text-center">{aiError}</p>}
 
         <Button onClick={startReview} disabled={previewRows.length === 0} className="w-full">
           Review {previewRows.length} transaction{previewRows.length === 1 ? '' : 's'} →
