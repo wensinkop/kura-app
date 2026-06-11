@@ -1,6 +1,6 @@
-# Releasing Kura
+# Releasing Smara
 
-How to ship changes once Kura is live. **Kura updates through two separate
+How to ship changes once Smara is live. **Smara updates through two separate
 channels that do _not_ update together** — read this once and the rest is a
 checklist.
 
@@ -48,7 +48,7 @@ and still follow this exact list.
 
 ### Step 3 — Signed build (Stanley does this, in Android Studio)
 - [ ] **Build → Generate Signed App Bundle → Android App Bundle**.
-- [ ] Use the **existing** keystore (`kura-upload.jks`) + its password — **never
+- [ ] Use the **existing** keystore (`smara-upload`, in `kura-keystore/`) + its password — **never
       create a new one** (a different key = Play rejects the upload).
 - [ ] Variant `release` → Finish. Output: `android/app/release/app-release.aab`.
 
@@ -72,7 +72,7 @@ and still follow this exact list.
 - **versionName**: `MAJOR.MINOR.PATCH` shown to users. (Currently `1.0.0`.)
 
 ## Must-remember rules
-- 🔑 **One keystore forever.** `kura-upload.jks` + its password sign every update.
+- 🔑 **One keystore forever.** `smara-upload` (in `kura-keystore/`) + its password sign every update.
   Lose it and you can't update the app under the same listing (Play App Signing
   lets you *reset* the upload key via support, but don't rely on it). Keep it
   backed up in 2 places.

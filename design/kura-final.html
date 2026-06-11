@@ -4,12 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#047857" />
-<title>Kura — Locked UI Design</title>
+<title>Smara — Locked UI Design</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  /* ===== Kura locked design tokens: Emerald palette, neutral near-black dark ===== */
+  /* ===== Smara locked design tokens: Emerald palette, neutral near-black dark ===== */
   :root{
     --bg:#f2f5f3; --surface:#fff; --surface-2:#eef3f0; --text:#0d1a14; --muted:#5b6b63; --faint:#8a988f;
     --primary:#047857; --primary-press:#036249; --primary-soft:#d3f0e3; --on-primary:#fff; --border:#e2e9e5;
@@ -128,7 +128,7 @@
 <body>
 <div class="app">
   <div class="topbar">
-    <div class="brand" id="brand">Kura<span class="dot">·</span></div>
+    <div class="brand" id="brand">Smara<span class="dot">·</span></div>
     <div class="month-nav" id="monthnav">
       <button class="arrow" onclick="shiftMonth(-1)"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
       <button class="month-label" id="monthLabel">June 2026</button>
@@ -240,7 +240,7 @@
     <div class="acct-group">
       <div class="acct"><div class="meta"><div class="t">Profile &amp; security</div><div class="s">stan.leeansyah@gmail.com</div></div><span class="chev">›</span></div>
     </div>
-    <div class="note-mock">Kura · steady, patient, protected 🐢</div>
+    <div class="note-mock">Smara · steady, patient, protected 🐢</div>
   </div>
 
   <div class="bottomnav">
@@ -281,7 +281,7 @@
       ? '<path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/>'
       : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>';
   }
-  const titles={home:'Kura',stats:'Statistics',accounts:'Accounts',settings:'Settings'};
+  const titles={home:'Smara',stats:'Statistics',accounts:'Accounts',settings:'Settings'};
   function go(name){
     document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
     document.getElementById('screen-'+name).classList.remove('hidden');
@@ -290,7 +290,7 @@
     document.getElementById('monthnav').style.display=home?'flex':'none';
     document.getElementById('searchBtn').style.display=home?'grid':'none';
     document.getElementById('filterBtn').style.display=home?'grid':'none';
-    document.getElementById('brand').innerHTML = home?'Kura<span class="dot">·</span>':titles[name];
+    document.getElementById('brand').innerHTML = home?'Smara<span class="dot">·</span>':titles[name];
   }
   const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
   let mi=5, yr=2026;

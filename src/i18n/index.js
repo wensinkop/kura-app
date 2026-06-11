@@ -25,7 +25,7 @@ export const LANGUAGES = [
   // { code: 'id', label: 'Bahasa Indonesia', beta: false },
 ]
 export const LANGUAGE_CODES = LANGUAGES.map((l) => l.code)
-export const STORAGE_KEY = 'kura-lang'
+export const STORAGE_KEY = 'smara-lang'
 
 // Lazy loaders for the non-bundled locales (Vite turns each into its own chunk).
 const loaders = {

@@ -1,4 +1,4 @@
-# Kura 🐢
+# Smara 🐢
 
 Personal finance app — track **income, expenses and transfers** across multiple
 accounts and currencies. Web + Android (installable PWA). Name from *kura-kura*
@@ -47,7 +47,7 @@ src/
     AppShell.jsx       Responsive shell: desktop sidebar / mobile bottom-nav + FAB
     AuthLayout.jsx     Shared auth-screen card + field styles
     Placeholder.jsx    Styled empty-state for not-yet-built screens
-    NumberInput.jsx        ┐ ported from the Gelato app, reskinned to Kura tokens
+    NumberInput.jsx        ┐ ported from the Gelato app, reskinned to Smara tokens
     AutocompleteInput.jsx  │  (locale-aware money input, typeahead, combobox,
     SearchableSelect.jsx   │   native date) — power the Chunk 2 entry screen
     DatePicker.jsx         ┘

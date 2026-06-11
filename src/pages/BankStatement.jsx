@@ -1,6 +1,6 @@
 // Bank-statement converter (Chunk 6, premium). A full-screen, three-step flow:
 //
-//   1. Upload   — pick a CSV or PDF statement + the Kura account it belongs to.
+//   1. Upload   — pick a CSV or PDF statement + the Smara account it belongs to.
 //   2. Map      — confirm the auto-detected columns, date order and decimal
 //                 separator, with a live preview. Remembered per bank layout.
 //   3. Review   — edit the pre-filled rows (kind/date/amount/category/note) in
@@ -54,7 +54,7 @@ const DECIMAL_OPTIONS = [
 const uuid = () => crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)
 
 // ---- Remembered mappings (per bank layout, on this device) ------------------
-const MAP_KEY = (sig) => `kura.stmtmap.${sig}`
+const MAP_KEY = (sig) => `smara.stmtmap.${sig}`
 function loadSavedMapping(sig) {
   try {
     const raw = localStorage.getItem(MAP_KEY(sig))
@@ -67,7 +67,7 @@ function saveMapping(sig, payload) {
 
 // Taught PDF layouts, remembered per bank fingerprint. (v2: earlier single-only
 // taught layouts are intentionally ignored — they predate debit/credit teaching.)
-const PDFMAP_KEY = (fp) => `kura.pdfmap.v2.${fp}`
+const PDFMAP_KEY = (fp) => `smara.pdfmap.v2.${fp}`
 function loadPdfMap(fp) {
   try { const raw = fp && localStorage.getItem(PDFMAP_KEY(fp)); return raw ? JSON.parse(raw) : null } catch { return null }
 }
@@ -132,12 +132,12 @@ export default function BankStatement() {
   const [aiError, setAiError] = useState('')
   const [consentOpen, setConsentOpen] = useState(false)
   const [aiRecon, setAiRecon] = useState(null)    // sanity-check of AI rows vs the statement's own totals
-  const [learnedFromAI, setLearnedFromAI] = useState(false) // AI taught Kura this format
+  const [learnedFromAI, setLearnedFromAI] = useState(false) // AI taught Smara this format
   const aiAutoTried = useRef(false)               // auto-run AI at most once per upload
-  const AI_CONSENT_KEY = 'kura.aiStatementConsent.v1'
-  const INTRO_KEY = 'kura.statementIntro.v1'
+  const AI_CONSENT_KEY = 'smara.aiStatementConsent.v1'
+  const INTRO_KEY = 'smara.statementIntro.v1'
   const [introOpen, setIntroOpen] = useState(() => {
-    try { return localStorage.getItem('kura.statementIntro.v1') !== 'seen' } catch { return false }
+    try { return localStorage.getItem('smara.statementIntro.v1') !== 'seen' } catch { return false }
   })
   function closeIntro() {
     try { localStorage.setItem(INTRO_KEY, 'seen') } catch { /* ignore */ }
@@ -179,7 +179,7 @@ export default function BankStatement() {
       }))
       const recon = computeAiRecon(txs, data.summary)
       setAiRecon(recon)
-      // Teach Kura this PDF format from the AI's read — but ONLY when the read
+      // Teach Smara this PDF format from the AI's read — but ONLY when the read
       // reconciles against the statement's own totals (so we never learn a wrong
       // layout). Next statement of this format is then read by the normal parser,
       // no AI. learnPdfLayout re-verifies before returning a layout.
@@ -189,7 +189,7 @@ export default function BankStatement() {
           if (learned) {
             savePdfMap(pdfFp, learned)            // this device
             setLearnedFromAI(true)
-            saveSharedLayout(pdfFp, learned, { userId: user?.id }) // share with every Kura user
+            saveSharedLayout(pdfFp, learned, { userId: user?.id }) // share with every Smara user
           }
         } catch { /* learning is best-effort */ }
       }
@@ -730,8 +730,8 @@ export default function BankStatement() {
           <Modal title="How Bank Statement Upload works" onClose={closeIntro}
             footer={<Button className="flex-1" onClick={closeIntro}>Got it</Button>}>
             <ul className="space-y-3 text-[14px] text-muted leading-relaxed">
-              <li className="flex gap-2.5"><span className="shrink-0">📄</span><span><span className="font-semibold text-text">Pick an account and upload</span> your statement (PDF or CSV). Kura already reads many bank formats automatically.</span></li>
-              <li className="flex gap-2.5"><span className="shrink-0">✨</span><span>If it’s a format Kura hasn’t seen, <span className="font-semibold text-text">let AI read it</span>. Kura then learns that format — so the next statement of it (any period) reads instantly, for everyone.</span></li>
+              <li className="flex gap-2.5"><span className="shrink-0">📄</span><span><span className="font-semibold text-text">Pick an account and upload</span> your statement (PDF or CSV). Smara already reads many bank formats automatically.</span></li>
+              <li className="flex gap-2.5"><span className="shrink-0">✨</span><span>If it’s a format Smara hasn’t seen, <span className="font-semibold text-text">let AI read it</span>. Smara then learns that format — so the next statement of it (any period) reads instantly, for everyone.</span></li>
               <li className="flex gap-2.5"><span className="shrink-0">🔒</span><span><span className="font-semibold text-text">Your data stays yours.</span> Only the statement’s text is sent to read it — never the file, your name or account details — only when you tap “Use AI”, and it’s never stored or used to train AI. Learned formats hold no financial data, just column positions.</span></li>
             </ul>
           </Modal>
@@ -746,7 +746,7 @@ export default function BankStatement() {
               </>
             }>
             <p className="text-[14px] text-muted leading-relaxed">
-              For statements Kura can’t read on its own, the statement’s <span className="font-semibold text-text">text</span> is sent securely to Kura’s AI provider (Anthropic) to pull out the transactions.
+              For statements Smara can’t read on its own, the statement’s <span className="font-semibold text-text">text</span> is sent securely to Smara’s AI provider (Anthropic) to pull out the transactions.
             </p>
             <ul className="text-[13px] text-muted leading-relaxed mt-3 space-y-1.5">
               <li className="flex gap-2"><span className="text-primary shrink-0">•</span> Used only to read this statement — never to train AI, and not stored.</li>
@@ -775,7 +775,7 @@ export default function BankStatement() {
     return (
       <div className="space-y-4">
         <p className="text-[13.5px] text-muted leading-relaxed">
-          Turn a bank statement into ready-to-edit transactions. Choose the account it belongs to, then pick the statement file — a <strong>CSV</strong> or a text-based <strong>PDF</strong>. Kura reads the rows; you review and fix them before saving. Nothing is saved until you confirm.
+          Turn a bank statement into ready-to-edit transactions. Choose the account it belongs to, then pick the statement file — a <strong>CSV</strong> or a text-based <strong>PDF</strong>. Smara reads the rows; you review and fix them before saving. Nothing is saved until you confirm.
         </p>
         <Field label="Which account is this statement for?">
           <ResponsiveSelect title="Account" placeholder="Choose an account…" value={accountId} onChange={setAccountId} options={accountOptions} />
@@ -825,7 +825,7 @@ export default function BankStatement() {
 
         {usedTaught && (
           <div className="rounded-xl border border-primary/30 bg-primary-soft/40 px-3.5 py-2.5 text-[12.5px] text-muted flex items-center justify-between gap-3">
-            <span>Kura recognises this bank’s format and read it for you.</span>
+            <span>Smara recognises this bank’s format and read it for you.</span>
             <button onClick={forgetTaught} className="text-primary font-semibold shrink-0 hover:underline">Read fresh</button>
           </div>
         )}
@@ -833,8 +833,8 @@ export default function BankStatement() {
         {previewRows.length === 0 && (
           <div className="rounded-xl border border-transfer/40 bg-transfer/10 px-3.5 py-3 text-[13px] text-transfer space-y-2.5">
             <div>
-              <div className="font-semibold mb-1">Kura hasn’t seen this format before.</div>
-              Let AI read it — Kura will remember this format, so next time is instant and free.
+              <div className="font-semibold mb-1">Smara hasn’t seen this format before.</div>
+              Let AI read it — Smara will remember this format, so next time is instant and free.
             </div>
             <Button onClick={requestAI} disabled={aiBusy} className="w-full">{aiBusy ? 'Reading with AI…' : '✨ Read this statement with AI'}</Button>
             {aiError && <p className="text-[12.5px] text-expense">{aiError}</p>}
@@ -873,7 +873,7 @@ export default function BankStatement() {
             </Field>
           </div>
           <p className="text-[11.5px] text-faint leading-relaxed">
-            Kura read each transaction’s date, amount and whether it’s money in or out. You can check and fix everything, including the type, on the next screen.
+            Smara read each transaction’s date, amount and whether it’s money in or out. You can check and fix everything, including the type, on the next screen.
           </p>
         </div>
 
@@ -1005,7 +1005,7 @@ export default function BankStatement() {
                 ))}
               </ul>
               {learnedFromAI && (
-                <div className="mt-1.5 text-[12px] font-semibold">🧠 Kura learned this bank’s layout — your next statement of this format reads instantly, without AI.</div>
+                <div className="mt-1.5 text-[12px] font-semibold">🧠 Smara learned this bank’s layout — your next statement of this format reads instantly, without AI.</div>
               )}
             </div>
           )

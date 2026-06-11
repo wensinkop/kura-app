@@ -2,7 +2,7 @@
 //
 // Reusable numeric input with live locale-aware currency formatting.
 // Ported from the Gelato app (logic unchanged — it is battle-tested); only the
-// visual styling was swapped to Kura's design tokens.
+// visual styling was swapped to Smara's design tokens.
 //
 // Why this exists:
 // - Display "Rp 10.000.000,00" (id-ID) while the user types 10000000, and store
@@ -12,7 +12,7 @@
 // - The component owns caret placement when separators are inserted/removed.
 //
 // Multi-currency ready: `locale` and `currency` are props, so the same component
-// serves every Kura account currency (IDR 0-decimals, USD 2-decimals, …).
+// serves every Smara account currency (IDR 0-decimals, USD 2-decimals, …).
 //
 // Usage:
 //   <NumberInput value={amount} onChange={setAmount} />                       // Rp, 0 decimals

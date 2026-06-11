@@ -1,8 +1,8 @@
-// Kura — AI bank-statement reader (Premium).
+// Smara — AI bank-statement reader (Premium).
 //
 // Takes the raw text the client already extracted from a PDF/CSV statement and
 // asks Claude (Haiku) to return a clean list of transactions. Used only as a
-// fallback when Kura's deterministic parser can't read a statement, or when the
+// fallback when Smara's deterministic parser can't read a statement, or when the
 // user taps "Read with AI". Runs server-side so the Anthropic API key never
 // reaches the app.
 //
@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
     try {
       parsed = JSON.parse(raw)
     } catch {
-      return json(502, { error: 'The AI returned something Kura could not read.' })
+      return json(502, { error: 'The AI returned something Smara could not read.' })
     }
     const transactions = Array.isArray(parsed.transactions) ? parsed.transactions : []
     return json(200, { transactions, summary: parsed.summary ?? null })

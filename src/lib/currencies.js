@@ -1,4 +1,4 @@
-// Currency catalogue for Kura.
+// Currency catalogue for Smara.
 //
 // Each account fixes ONE currency at creation (locked decision, Session 0).
 // We need two things everywhere:
@@ -6,7 +6,7 @@
 //   2. a sensible locale per code -> NumberInput formats "Rp 10.000.000" vs "$ 10,000.00"
 //
 // The list is ISO-4217 (common subset, generous enough for real use). `POPULAR`
-// floats the codes most Kura users reach for to the top of the picker; the rest
+// floats the codes most Smara users reach for to the top of the picker; the rest
 // follow alphabetically. `localeFor` maps a code to the locale whose grouping /
 // decimal conventions match it, so NumberInput renders the right separators.
 

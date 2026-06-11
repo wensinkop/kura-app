@@ -167,7 +167,7 @@ export default function SettingsAccount() {
       <Card>
         <div className="font-semibold text-[14.5px] text-text">Sign out of all devices</div>
         <p className="text-xs text-muted mt-1 leading-relaxed">
-          Signs you out of Kura everywhere — this device and any others (a shared phone, an old device,
+          Signs you out of Smara everywhere — this device and any others (a shared phone, an old device,
           or a partner you no longer want to have access). You’ll need to sign in again. Changing your
           password also signs out other devices automatically.
         </p>

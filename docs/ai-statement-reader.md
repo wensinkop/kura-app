@@ -1,7 +1,7 @@
 # AI bank-statement reader
 
-Premium feature that reads bank/e-wallet statements Kura's deterministic parser
-can't handle, using Claude — and then **teaches Kura the format** so future
+Premium feature that reads bank/e-wallet statements Smara's deterministic parser
+can't handle, using Claude — and then **teaches Smara the format** so future
 statements of it read with no AI, for **every** user.
 
 ## How it flows (PDF)
@@ -10,7 +10,7 @@ statements of it read with no AI, for **every** user.
 2. **Known format?** On upload, `loadPdf` computes a bank **fingerprint**
    (`statementFingerprint`, which strips account numbers/dates so it matches any
    period) and looks for a saved column layout:
-   - local first (`loadPdfMap`, localStorage `kura.pdfmap.v2.<fp>`),
+   - local first (`loadPdfMap`, localStorage `smara.pdfmap.v2.<fp>`),
    - then the **shared store** (`getSharedLayout(fp)` → `public.statement_layouts`).
    A hit is read deterministically by `parsePdfStatement` — **no AI**. A shared
    hit is cached locally too.
@@ -24,11 +24,11 @@ statements of it read with no AI, for **every** user.
 6. **Learning:** only when it reconciles ✓, `learnPdfLayout` derives the column
    layout (date/debit/credit x-positions) from the AI rows, **re-parses to verify
    the totals match**, then saves it to local **and** the shared store
-   (`saveSharedLayout`). Review screen shows "🧠 Kura learned this layout".
-7. Manual "Teach Kura" mode was **removed** — AI replaces it.
+   (`saveSharedLayout`). Review screen shows "🧠 Smara learned this layout".
+7. Manual "Teach Smara" mode was **removed** — AI replaces it.
 
 "Read with AI" / teach options are hidden when a read reconciles ✓ (just preview).
-First-run "How it works" modal (localStorage `kura.statementIntro.v1`), reopenable
+First-run "How it works" modal (localStorage `smara.statementIntro.v1`), reopenable
 via the header "?" button.
 
 ## Pieces
@@ -64,4 +64,4 @@ curl -X POST "https://api.supabase.com/v1/projects/<REF>/functions/deploy?slug=p
   -F 'metadata={"name":"parse-statement-ai","entrypoint_path":"index.ts","verify_jwt":false};type=application/json' \
   -F 'file=@supabase/functions/parse-statement-ai/index.ts;type=application/typescript'
 ```
-(Project ref of "The Moo Projects" Kura: `dsdptauowyxgvdsxzhfx`.)
+(Project ref of "The Moo Projects" Smara: `dsdptauowyxgvdsxzhfx`.)

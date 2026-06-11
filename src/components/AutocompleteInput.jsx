@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 // Plain-text input with a typeahead dropdown. Ported from Gelato; restyled to
-// Kura tokens. Suggestions are filtered case-insensitively by substring.
+// Smara tokens. Suggestions are filtered case-insensitively by substring.
 // - ↑/↓ navigate · Tab/Enter accept · Esc close · click/tap to accept
 //
 // Per the spec, suggestions appear from the 2nd typed character (minChars=2).

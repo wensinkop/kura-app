@@ -14,7 +14,7 @@
         <item name="windowNoTitle">true</item>
         <!-- A real (DayNight) window background so the area briefly exposed when
              the soft keyboard opens shows the app colour, not a black rectangle. -->
-        <item name="android:windowBackground">@color/kuraWindowBg</item>
+        <item name="android:windowBackground">@color/smaraWindowBg</item>
     </style>
 
 

@@ -9,7 +9,7 @@ import { DownloadIcon, UploadIcon } from '../lib/icons'
 import {
   listGroups, listAccounts, listCategories, listRates,
   listAllTransactions, listAllTransactionsFull, listTransactionsInRange,
-  restoreFromBackup, importKuraTransactions,
+  restoreFromBackup, importSmaraTransactions,
   deleteAllTransactions, deleteAccountTransactions, fullReset,
 } from '../lib/data'
 import { transactionsToCSV, parseTransactionsCSV, buildImportTemplate, downloadFile, datedFilename } from '../lib/csv'
@@ -105,7 +105,7 @@ export default function SettingsData() {
       if (cats.error) throw cats.error
       const catById = new Map((cats.data ?? []).map((c) => [c.id, c]))
       const csv = transactionsToCSV(rows, catById)
-      downloadFile(datedFilename('kura-transactions', 'csv'), csv, 'text/csv;charset=utf-8')
+      downloadFile(datedFilename('smara-transactions', 'csv'), csv, 'text/csv;charset=utf-8')
       setStatus({ tone: 'ok', text: `Exported ${rows.length} transaction${rows.length === 1 ? '' : 's'} to CSV.` })
     } catch (e) {
       setStatus({ tone: 'err', text: e.message ?? 'Export failed.' })
@@ -124,7 +124,7 @@ export default function SettingsData() {
         baseCurrency: profile?.base_currency,
         groups: g.data, accounts: a.data, categories: c.data, transactions: t.data, rates: r.data,
       })
-      downloadFile(datedFilename('kura-backup', 'json'), JSON.stringify(obj, null, 2), 'application/json')
+      downloadFile(datedFilename('smara-backup', 'json'), JSON.stringify(obj, null, 2), 'application/json')
       setStatus({ tone: 'ok', text: `Backup downloaded — ${obj.data.transactions.length} transactions, ${obj.data.accounts.length} accounts.` })
     } catch (e) {
       setStatus({ tone: 'err', text: e.message ?? 'Backup failed.' })
@@ -165,7 +165,7 @@ export default function SettingsData() {
   // ---- Import --------------------------------------------------------------
   function handleTemplate() {
     setStatus(null)
-    downloadFile('kura-import-template.csv', buildImportTemplate(), 'text/csv;charset=utf-8')
+    downloadFile('smara-import-template.csv', buildImportTemplate(), 'text/csv;charset=utf-8')
   }
 
   async function onImportFile(e) {
@@ -185,7 +185,7 @@ export default function SettingsData() {
   async function confirmImport() {
     setBusy('import')
     try {
-      const res = await importKuraTransactions(user.id, pendingImport)
+      const res = await importSmaraTransactions(user.id, pendingImport)
       setPendingImport(null)
       await loadMeta()
       const parts = [`Imported ${res.inserted} transaction${res.inserted === 1 ? '' : 's'}`]
@@ -252,7 +252,7 @@ export default function SettingsData() {
       )}
 
       {/* ===== Switch from another app ===== */}
-      <SectionTitle>Switch to Kura</SectionTitle>
+      <SectionTitle>Switch to Smara</SectionTitle>
       <Card>
         <p className="text-[13px] text-muted mb-3">
           Moving from another expense tracker? Bring your whole history across — accounts, categories and transfers. <strong>Money Manager</strong> exports are recognised automatically; most other apps work by matching columns. A whole import can be undone in one tap.
@@ -295,7 +295,7 @@ export default function SettingsData() {
       <SectionTitle>Import</SectionTitle>
       <Card>
         <p className="text-[13px] text-muted mb-3">
-          Add transactions from a CSV in Kura’s format (the same one Export produces). Import never deletes.
+          Add transactions from a CSV in Smara’s format (the same one Export produces). Import never deletes.
         </p>
         <ol className="text-[12.5px] text-muted list-decimal pl-4 space-y-1 mb-3">
           <li>Download the template below and open it in Google Sheets or Excel.</li>
@@ -329,7 +329,7 @@ export default function SettingsData() {
         </Button>
         <input ref={restoreInput} type="file" accept="application/json,.json" className="hidden" onChange={onRestoreFile} />
         <p className="text-[11.5px] text-faint mt-2.5 leading-relaxed">
-          Use a Kura backup file (the <strong>.json</strong> you got from “Download backup” above) — not a CSV. Restore <strong>merges</strong> into your current data: matching accounts &amp; categories are reused, and the backup’s transactions are added. It never deletes.
+          Use a Smara backup file (the <strong>.json</strong> you got from “Download backup” above) — not a CSV. Restore <strong>merges</strong> into your current data: matching accounts &amp; categories are reused, and the backup’s transactions are added. It never deletes.
         </p>
       </Card>
 

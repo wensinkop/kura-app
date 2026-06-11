@@ -20,7 +20,7 @@
     "backupData": "Sandaran & data",
     "emailPassword": "E-mel & kata laluan",
     "settings": "Tetapan",
-    "kura": "Kura"
+    "smara": "Smara"
   },
   "common": {
     "confirm": "Sahkan",
@@ -101,7 +101,7 @@
     "privacy": "Dasar Privasi",
     "privacySub": "Cara data anda dikendalikan",
     "terms": "Terma & Syarat",
-    "termsSub": "Terma penggunaan Kura",
+    "termsSub": "Terma penggunaan Smara",
     "admin": "Admin",
     "users": "Pengguna",
     "usersSub": "Urus langganan & peranan",
@@ -349,8 +349,8 @@
     "addAccount": "Tambah akaun"
   },
   "onboarding": {
-    "welcomeTitle": "Selamat datang ke Kura, {{name}}",
-    "welcomeTitleNoName": "Selamat datang ke Kura",
+    "welcomeTitle": "Selamat datang ke Smara, {{name}}",
+    "welcomeTitleNoName": "Selamat datang ke Smara",
     "welcomeBody": "Tempat tenang dan peribadi untuk menjejak wang anda. Mari sediakan dahulu — hanya seminit.",
     "valuePrivate": "Peribadi dari awal — tanpa log masuk bank, data kekal milik anda",
     "valueMultiCurrency": "Pelbagai mata wang, untuk hidup merentas sempadan",

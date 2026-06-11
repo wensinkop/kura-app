@@ -6,7 +6,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================================================
-   Kura design tokens — ported verbatim from the LOCKED mockup design/kura-v5.html
+   Smara design tokens — ported verbatim from the LOCKED mockup design/kura-v5.html
    (Emerald palette; neutral near-black dark mode). Light = :root, dark = .dark.
    ========================================================================== */
 :root {

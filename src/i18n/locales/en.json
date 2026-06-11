@@ -22,7 +22,7 @@
     "backupData": "Backup & data",
     "emailPassword": "Email & password",
     "settings": "Settings",
-    "kura": "Kura"
+    "smara": "Smara"
   },
   "common": {
     "confirm": "Confirm",
@@ -108,7 +108,7 @@
     "privacy": "Privacy Policy",
     "privacySub": "How your data is handled",
     "terms": "Terms & Conditions",
-    "termsSub": "The terms of using Kura",
+    "termsSub": "The terms of using Smara",
     "admin": "Admin",
     "users": "Users",
     "usersSub": "Manage subscriptions & roles",
@@ -356,8 +356,8 @@
     "addAccount": "Add an account"
   },
   "onboarding": {
-    "welcomeTitle": "Welcome to Kura, {{name}}",
-    "welcomeTitleNoName": "Welcome to Kura",
+    "welcomeTitle": "Welcome to Smara, {{name}}",
+    "welcomeTitleNoName": "Welcome to Smara",
     "welcomeBody": "A calm, private place to track your money. Let’s set things up — it only takes a minute.",
     "valuePrivate": "Private by design — no bank logins, your data stays yours",
     "valueMultiCurrency": "Multi-currency, built for life across borders",

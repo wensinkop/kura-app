@@ -1,4 +1,4 @@
-// Small shared UI kit for the Chunk 1 settings screens, styled to Kura tokens.
+// Small shared UI kit for the Chunk 1 settings screens, styled to Smara tokens.
 // Kept deliberately lightweight (no dependencies) — Modal, Button, Field,
 // TextInput, Segmented, IconButton, ConfirmDialog.
 

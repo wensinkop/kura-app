@@ -570,12 +570,12 @@ export async function restoreFromBackup(userId, backup) {
   return summary
 }
 
-// Import a Kura-format transactions CSV (array of header-keyed row objects).
+// Import a Smara-format transactions CSV (array of header-keyed row objects).
 // Accounts must already exist (matched by name) — unknown ones are skipped and
 // reported (import never creates accounts or deletes anything). Missing
 // categories are auto-created. Returns { inserted, skipped:[{line,reason}],
 // categoriesCreated }.
-export async function importKuraTransactions(userId, parsedRows) {
+export async function importSmaraTransactions(userId, parsedRows) {
   cacheClear()
   const [accountsR, catsR] = await Promise.all([listAccounts(), listCategories()])
   if (accountsR.error) throw accountsR.error
@@ -662,7 +662,7 @@ export async function importKuraTransactions(userId, parsedRows) {
 
 // ---- App migration / import batches (Session 13) ---------------------------
 // Bring a whole history in from another expense tracker. Unlike
-// importKuraTransactions (which skips unknown accounts), migration RESOLVES
+// importSmaraTransactions (which skips unknown accounts), migration RESOLVES
 // every source account up front via an account plan the user confirmed —
 // creating new accounts or merging into existing ones — then tags every
 // inserted row with an import_batch_id so the whole import can be undone.
@@ -892,7 +892,7 @@ export async function persistOrder(table, orderedIds) {
 }
 
 // ---- Shared statement layouts ---------------------------------------------
-// When the AI reader figures out a new bank's statement format, Kura saves the
+// When the AI reader figures out a new bank's statement format, Smara saves the
 // column "recipe" (positions only — NO financial data) to a shared store keyed
 // by a format fingerprint. Everyone signed in can READ it, so once any user's
 // AI read learns a format, every user's normal parser can read that format with

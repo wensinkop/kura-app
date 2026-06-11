@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 
 const FilterContext = createContext({})
-const KEY = 'kura.accountFilter'
+const KEY = 'smara.accountFilter'
 
 // Account filter: a Set of selected account ids. An EMPTY set means "no filter"
 // (show every account). Lives above the routed pages and is persisted to

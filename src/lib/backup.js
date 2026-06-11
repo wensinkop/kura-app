@@ -1,9 +1,9 @@
-// JSON backup (de)serialization for Kura. Pure data shaping + validation only —
+// JSON backup (de)serialization for Smara. Pure data shaping + validation only —
 // the actual DB reads/writes live in lib/data.js (buildBackup gathers the rows,
 // restoreFromBackup merges them back in). Keeping this file side-effect-free
 // makes the file format easy to reason about and version.
 
-export const BACKUP_FORMAT = 'kura.backup'
+export const BACKUP_FORMAT = 'smara.backup'
 export const BACKUP_VERSION = 1
 
 // Assemble the downloadable object from already-fetched rows. We keep the
@@ -70,13 +70,13 @@ const pickRate = (r) => ({ currency: r.currency, rate: r.rate })
 // object on success; throws an Error with a user-facing message otherwise.
 export function validateBackup(obj) {
   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
-    throw new Error('That file is not a Kura backup.')
+    throw new Error('That file is not a Smara backup.')
   }
   if (obj.format !== BACKUP_FORMAT) {
-    throw new Error('That file is not a Kura backup (wrong format).')
+    throw new Error('That file is not a Smara backup (wrong format).')
   }
   if (typeof obj.version !== 'number' || obj.version > BACKUP_VERSION) {
-    throw new Error(`This backup was made by a newer version of Kura (v${obj.version}). Update the app, then try again.`)
+    throw new Error(`This backup was made by a newer version of Smara (v${obj.version}). Update the app, then try again.`)
   }
   const d = obj.data
   if (!d || typeof d !== 'object') throw new Error('This backup is missing its data.')

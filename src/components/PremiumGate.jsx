@@ -1,11 +1,12 @@
-// Reusable Premium gate. Wrap any premium-only screen with <PremiumGate>; users
-// whose profile.subscription_tier is 'premium' see the feature, everyone else
-// gets an on-brand upgrade screen. Billing is manual/admin-granted for now
-// (Chunk 8) — the upgrade action requests access by email; swap in a real
-// checkout later without touching the gated screens.
+// Reusable Premium gate. Wrap any premium-only screen with <PremiumGate>;
+// Premium users (resolved via isPremium — lifetime / active sub / active trial /
+// manual grant) see the feature, everyone else gets an on-brand upgrade screen.
+// Billing is manual/admin-granted for now (Chunk 8) — the upgrade action requests
+// access by email; swap in a real checkout later without touching the gated screens.
 
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
+import { isPremium } from '../lib/entitlement'
 import Sidebar from './Sidebar'
 import { Button } from './ui'
 import { ChevronLeft, SparkleIcon } from '../lib/icons'
@@ -31,10 +32,10 @@ export default function PremiumGate({
     )
   }
 
-  if (profile?.subscription_tier === 'premium') return children
+  if (isPremium(profile)) return children
 
-  const subject = `Kura Premium — request access`
-  const body = `Hi, I'd like to upgrade to Kura Premium.\n\nMy account email: ${user?.email ?? ''}\n`
+  const subject = `Smara Premium — request access`
+  const body = `Hi, I'd like to upgrade to Smara Premium.\n\nMy account email: ${user?.email ?? ''}\n`
   const mailto = `mailto:${UPGRADE_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 
   return (
@@ -93,7 +94,7 @@ export default function PremiumGate({
               </button>
             </div>
 
-            <p className="text-center text-xs text-faint py-6">Kura · steady, patient, protected 🐢</p>
+            <p className="text-center text-xs text-faint py-6">Smara · steady, patient, protected 🐢</p>
           </div>
         </main>
       </div>

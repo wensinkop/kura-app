@@ -3,5 +3,5 @@
     <!-- App window background, matching the web app background, so the strip
          exposed when the soft keyboard opens is the app colour, not black.
          Night variant is in values-night/colors.xml. -->
-    <color name="kuraWindowBg">#f2f5f3</color>
+    <color name="smaraWindowBg">#f2f5f3</color>
 </resources>

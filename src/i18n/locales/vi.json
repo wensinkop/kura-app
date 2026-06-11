@@ -20,7 +20,7 @@
     "backupData": "Sao lưu & dữ liệu",
     "emailPassword": "Email & mật khẩu",
     "settings": "Cài đặt",
-    "kura": "Kura"
+    "smara": "Smara"
   },
   "common": {
     "confirm": "Xác nhận",
@@ -101,7 +101,7 @@
     "privacy": "Chính sách bảo mật",
     "privacySub": "Cách dữ liệu của bạn được xử lý",
     "terms": "Điều khoản & điều kiện",
-    "termsSub": "Điều khoản sử dụng Kura",
+    "termsSub": "Điều khoản sử dụng Smara",
     "admin": "Quản trị",
     "users": "Người dùng",
     "usersSub": "Quản lý đăng ký & vai trò",
@@ -349,8 +349,8 @@
     "addAccount": "Thêm tài khoản"
   },
   "onboarding": {
-    "welcomeTitle": "Chào mừng đến với Kura, {{name}}",
-    "welcomeTitleNoName": "Chào mừng đến với Kura",
+    "welcomeTitle": "Chào mừng đến với Smara, {{name}}",
+    "welcomeTitleNoName": "Chào mừng đến với Smara",
     "welcomeBody": "Một nơi yên tĩnh và riêng tư để theo dõi tiền của bạn. Cùng thiết lập nào — chỉ mất một phút.",
     "valuePrivate": "Riêng tư từ đầu — không cần đăng nhập ngân hàng, dữ liệu là của bạn",
     "valueMultiCurrency": "Đa tiền tệ, cho cuộc sống xuyên biên giới",

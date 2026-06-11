@@ -4,7 +4,7 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { useAuth } from './AuthContext'
 
 const ThemeContext = createContext({})
-const STORAGE_KEY = 'kura-theme'
+const STORAGE_KEY = 'smara-theme'
 
 function initialTheme() {
   if (typeof window === 'undefined') return 'light'

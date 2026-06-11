@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Kura — UI Mockup v2 (green palettes)</title>
+<title>Smara — UI Mockup v2 (green palettes)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -159,7 +159,7 @@
   </div>
 
   <div class="topbar">
-    <div class="brand" id="brand">Kura<span class="dot">·</span></div>
+    <div class="brand" id="brand">Smara<span class="dot">·</span></div>
     <div class="month-nav" id="monthnav">
       <button class="arrow"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
       <button class="month-label">June 2026</button>
@@ -262,7 +262,7 @@
       <div class="acct"><span class="cat-dot" style="background:var(--primary)"></span><div class="meta"><div class="t">Bank statement upload</div><div class="s">PDF / CSV → pre-filled rows · Premium</div></div><span style="color:var(--faint)">›</span></div>
       <div class="acct"><span class="cat-dot"></span><div class="meta"><div class="t">Back up / Reset</div><div class="s">Full · keep structure · per-account</div></div><span style="color:var(--faint)">›</span></div>
     </div>
-    <div class="note-mock">Kura · steady, patient, protected 🐢</div>
+    <div class="note-mock">Smara · steady, patient, protected 🐢</div>
   </div>
 
   <div class="bottomnav">
@@ -309,7 +309,7 @@
       ? '<path d="M21 12.8A9 9 0 1111.2 3 7 7 0 0021 12.8z"/>'
       : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>';
   }
-  const titles={home:'Kura',stats:'Statistics',accounts:'Accounts',settings:'Settings'};
+  const titles={home:'Smara',stats:'Statistics',accounts:'Accounts',settings:'Settings'};
   function go(name){
     document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
     document.getElementById('screen-'+name).classList.remove('hidden');
@@ -318,7 +318,7 @@
     document.getElementById('monthnav').style.display=home?'flex':'none';
     document.getElementById('searchBtn').style.display=home?'grid':'none';
     document.getElementById('filterBtn').style.display=home?'grid':'none';
-    const b=document.getElementById('brand'); b.innerHTML = home?'Kura<span class="dot">·</span>':titles[name];
+    const b=document.getElementById('brand'); b.innerHTML = home?'Smara<span class="dot">·</span>':titles[name];
   }
   function openAdd(){document.getElementById('addOverlay').classList.add('open')}
   function closeAdd(){document.getElementById('addOverlay').classList.remove('open')}

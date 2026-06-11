@@ -1,7 +1,7 @@
-// CSV export/import for Kura transactions, plus a Blob download helper.
+// CSV export/import for Smara transactions, plus a Blob download helper.
 //
 // Pure string work only (no DB, no React) so it's easy to test by eye. The CSV
-// uses Kura's own column set; importing the same file round-trips cleanly. We
+// uses Smara's own column set; importing the same file round-trips cleanly. We
 // quote a field only when it needs it (comma, quote, or newline) and escape an
 // embedded quote by doubling it — the standard CSV (RFC 4180) rules.
 
@@ -121,7 +121,7 @@ export function parseCSV(text, delimiter = ',') {
   return rows
 }
 
-// Parse a Kura-format transactions CSV into objects keyed by header name.
+// Parse a Smara-format transactions CSV into objects keyed by header name.
 // Maps each data row against the header row (first non-empty row). Unknown
 // extra columns are ignored; missing columns read as ''. Returns
 // { rows: [{date, kind, amount, ...}], headers }.
@@ -164,7 +164,7 @@ export function buildImportTemplate() {
   ])
 }
 
-// "kura-transactions-2026-06-02.csv" — a stable, sortable, dated filename.
+// "smara-transactions-2026-06-02.csv" — a stable, sortable, dated filename.
 export function datedFilename(prefix, ext) {
   const d = new Date()
   const p = (n) => String(n).padStart(2, '0')

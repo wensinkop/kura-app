@@ -45,7 +45,7 @@ function DocFooter() {
         <Link to="/legal/privacy" className="text-muted hover:text-primary">Privacy Policy</Link>
         <Link to="/legal/terms" className="text-muted hover:text-primary">Terms &amp; Conditions</Link>
       </div>
-      <p className="text-center text-xs text-faint py-6">Kura · steady, patient, protected 🐢</p>
+      <p className="text-center text-xs text-faint py-6">Smara · steady, patient, protected 🐢</p>
     </div>
   )
 }
@@ -79,7 +79,7 @@ export default function LegalDoc({ title, updated, children }) {
         </button>
         <div className="font-extrabold text-[17px] truncate flex-1">{title}</div>
         <Link to="/" className="font-extrabold text-[17px] tracking-[-.3px] shrink-0">
-          Kura<span className="text-primary">·</span>
+          Smara<span className="text-primary">·</span>
         </Link>
       </header>
 

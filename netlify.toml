@@ -1,4 +1,4 @@
-# Netlify build + serving config for Kura.
+# Netlify build + serving config for Smara.
 
 [build]
   command = "npm run build"

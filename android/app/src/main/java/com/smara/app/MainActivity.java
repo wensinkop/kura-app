@@ -1,4 +1,4 @@
-package com.kura.app;
+package com.smara.app;
 
 import com.getcapacitor.BridgeActivity;
 

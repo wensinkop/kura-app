@@ -1,10 +1,10 @@
-// Kura brand mark — a turtle (steady, patient) on the Kura green, in a rounded
+// Smara brand mark — a turtle (steady, patient) on the Smara green, in a rounded
 // square so it reads the same as the app launcher icon. `BrandMark` is just the
-// badge; `Logo` is the badge + "Kura" wordmark used in headers and auth screens.
+// badge; `Logo` is the badge + "Smara" wordmark used in headers and auth screens.
 
 export function BrandMark({ className = 'w-7 h-7', rounded = 12 }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} role="img" aria-label="Kura" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 48 48" className={className} role="img" aria-label="Smara" xmlns="http://www.w3.org/2000/svg">
       <rect width="48" height="48" rx={rounded} fill="#047857" />
       {/* legs */}
       <g fill="#ffffff">
@@ -34,7 +34,7 @@ export default function Logo({ className = '', markClassName = 'w-7 h-7', textCl
   return (
     <span className={`inline-flex items-center gap-1.5 font-extrabold tracking-[-.3px] ${className}`}>
       <BrandMark className={markClassName} />
-      <span className={textClassName}>Kura</span>
+      <span className={textClassName}>Smara</span>
     </span>
   )
 }

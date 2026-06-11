@@ -45,7 +45,7 @@ export default function SettingsRates() {
   return (
     <div className="max-w-[640px] mx-auto">
       <p className="text-sm text-muted mb-4 px-1">
-        Set how much <strong>1 unit</strong> of each foreign currency is worth in {base}. Kura uses
+        Set how much <strong>1 unit</strong> of each foreign currency is worth in {base}. Smara uses
         these to convert balances into your net worth — update them whenever rates move.
       </p>
 

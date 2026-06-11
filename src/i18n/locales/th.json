@@ -20,7 +20,7 @@
     "backupData": "สำรองและข้อมูล",
     "emailPassword": "อีเมลและรหัสผ่าน",
     "settings": "ตั้งค่า",
-    "kura": "Kura"
+    "smara": "Smara"
   },
   "common": {
     "confirm": "ยืนยัน",
@@ -101,7 +101,7 @@
     "privacy": "นโยบายความเป็นส่วนตัว",
     "privacySub": "วิธีจัดการข้อมูลของคุณ",
     "terms": "ข้อกำหนดและเงื่อนไข",
-    "termsSub": "ข้อกำหนดการใช้ Kura",
+    "termsSub": "ข้อกำหนดการใช้ Smara",
     "admin": "ผู้ดูแล",
     "users": "ผู้ใช้",
     "usersSub": "จัดการการสมัครและบทบาท",
@@ -349,8 +349,8 @@
     "addAccount": "เพิ่มบัญชี"
   },
   "onboarding": {
-    "welcomeTitle": "ยินดีต้อนรับสู่ Kura, {{name}}",
-    "welcomeTitleNoName": "ยินดีต้อนรับสู่ Kura",
+    "welcomeTitle": "ยินดีต้อนรับสู่ Smara, {{name}}",
+    "welcomeTitleNoName": "ยินดีต้อนรับสู่ Smara",
     "welcomeBody": "พื้นที่ที่สงบและเป็นส่วนตัวสำหรับติดตามเงินของคุณ มาตั้งค่ากันก่อน — ใช้เวลาแค่ครู่เดียว",
     "valuePrivate": "เป็นส่วนตัวตั้งแต่ต้น — ไม่ต้องล็อกอินธนาคาร ข้อมูลเป็นของคุณ",
     "valueMultiCurrency": "หลายสกุลเงิน เพื่อชีวิตข้ามพรมแดน",

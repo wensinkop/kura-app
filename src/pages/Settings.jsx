@@ -187,7 +187,7 @@ export default function Settings() {
         </Group>
       </div>
 
-      <p className="text-center text-xs text-faint pt-6 pb-1.5">Kura · {t('settings.tagline')} 🐢</p>
+      <p className="text-center text-xs text-faint pt-6 pb-1.5">Smara · {t('settings.tagline')} 🐢</p>
       <p className="text-center text-[11px] text-faint pb-6">v1.0.0 · build {import.meta.env.VITE_BUILD_ID}</p>
 
       {langOpen && (

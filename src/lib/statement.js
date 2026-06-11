@@ -1,5 +1,5 @@
 // Generic bank-statement parsing engine (Chunk 6). Turns an arbitrary bank CSV
-// (or a grid reconstructed from a PDF) into reviewable Kura rows: detect the
+// (or a grid reconstructed from a PDF) into reviewable Smara rows: detect the
 // delimiter + header row, guess which column is the date / description /
 // amount (or debit+credit), detect the date order (DD/MM vs MM/DD) and the
 // decimal separator, then build {date, amount, kind, note} rows from a mapping.

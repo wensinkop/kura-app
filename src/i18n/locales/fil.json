@@ -20,7 +20,7 @@
     "backupData": "Backup at data",
     "emailPassword": "Email at password",
     "settings": "Mga Setting",
-    "kura": "Kura"
+    "smara": "Smara"
   },
   "common": {
     "confirm": "Kumpirmahin",
@@ -101,7 +101,7 @@
     "privacy": "Patakaran sa Privacy",
     "privacySub": "Paano hinahawakan ang iyong data",
     "terms": "Mga Tuntunin at Kondisyon",
-    "termsSub": "Ang mga tuntunin sa paggamit ng Kura",
+    "termsSub": "Ang mga tuntunin sa paggamit ng Smara",
     "admin": "Admin",
     "users": "Mga User",
     "usersSub": "Pamahalaan ang subscription at role",
@@ -349,8 +349,8 @@
     "addAccount": "Magdagdag ng account"
   },
   "onboarding": {
-    "welcomeTitle": "Maligayang pagdating sa Kura, {{name}}",
-    "welcomeTitleNoName": "Maligayang pagdating sa Kura",
+    "welcomeTitle": "Maligayang pagdating sa Smara, {{name}}",
+    "welcomeTitleNoName": "Maligayang pagdating sa Smara",
     "welcomeBody": "Isang panatag at pribadong lugar para subaybayan ang iyong pera. I-set up muna natin — sandali lang ito.",
     "valuePrivate": "Pribado mula sa simula — walang bank login, sa iyo ang iyong data",
     "valueMultiCurrency": "Multi-currency, para sa buhay sa iba't ibang bansa",

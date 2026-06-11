@@ -1,4 +1,4 @@
-// Shared SVG icons (stroke-based, currentColor) used across the Kura shell and
+// Shared SVG icons (stroke-based, currentColor) used across the Smara shell and
 // pages. Paths lifted from the locked mockup design/kura-v5.html so the app
 // matches the approved visual language. Pass `className` to size/recolor.
 

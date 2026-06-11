@@ -1,8 +1,8 @@
-// Kura service worker — minimal app-shell cache for PWA installability + basic
+// Smara service worker — minimal app-shell cache for PWA installability + basic
 // offline fallback. Kept intentionally simple for Chunk 0; can be upgraded to a
 // Workbox/precaching strategy in a later chunk if richer offline support is needed.
 
-const CACHE = 'kura-shell-v1'
+const CACHE = 'smara-shell-v1'
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/favicon.svg']
 
 self.addEventListener('install', (event) => {

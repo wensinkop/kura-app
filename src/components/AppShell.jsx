@@ -25,7 +25,7 @@ function titleKeyFor(pathname) {
   if (pathname === '/settings/data') return 'title.backupData'
   if (pathname === '/settings/account') return 'title.emailPassword'
   if (pathname.startsWith('/settings')) return 'title.settings'
-  return 'title.kura'
+  return 'title.smara'
 }
 
 // Settings sub-pages get a back arrow that returns to the Settings index.

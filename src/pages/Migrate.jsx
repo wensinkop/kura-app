@@ -4,8 +4,8 @@
 // Flow:
 //   1. Upload   — pick a CSV or Excel export. Money Manager (Realbyte) is
 //                 auto-detected; anything else falls to a column-mapping step.
-//   2. Map      — (generic files only) point Kura at the right columns.
-//   3. Accounts — for each account found in the file, Create a new Kura account
+//   2. Map      — (generic files only) point Smara at the right columns.
+//   3. Accounts — for each account found in the file, Create a new Smara account
 //                 (currency pre-filled) or Merge into an existing one.
 //   4. Review   — small imports show editable rows; large imports show a
 //                 summary + sample, then import in the background.
@@ -65,7 +65,7 @@ export default function Migrate() {
   const { user, profile } = useAuth()
   const baseCurrency = profile?.base_currency ?? 'IDR'
 
-  const [accounts, setAccounts] = useState([]) // existing Kura accounts (merge targets)
+  const [accounts, setAccounts] = useState([]) // existing Smara accounts (merge targets)
   const [loading, setLoading] = useState(true)
 
   const [step, setStep] = useState('upload') // upload|map|accounts|review|importing|done
@@ -340,11 +340,11 @@ export default function Migrate() {
     return (
       <div className="space-y-4">
         <p className="text-[13.5px] text-muted leading-relaxed">
-          Moving from another expense tracker? Export your history there, then drop the file here — Kura reads your accounts, categories and transfers, you confirm, and it’s all in. Nothing is saved until you confirm, and a whole import can be undone in one tap.
+          Moving from another expense tracker? Export your history there, then drop the file here — Smara reads your accounts, categories and transfers, you confirm, and it’s all in. Nothing is saved until you confirm, and a whole import can be undone in one tap.
         </p>
         <div className="rounded-xl border border-border bg-surface-2 px-3.5 py-3 text-[12.5px] text-muted leading-relaxed">
           <div className="font-semibold text-text mb-1">Works best with</div>
-          <strong>Money Manager</strong> (Realbyte) — exported as Excel — is recognised automatically. Money Lover, Wallet, Spendee, Mint and most others work too: you’ll just point Kura at the right columns.
+          <strong>Money Manager</strong> (Realbyte) — exported as Excel — is recognised automatically. Money Lover, Wallet, Spendee, Mint and most others work too: you’ll just point Smara at the right columns.
         </div>
         <Button onClick={() => fileInput.current?.click()} disabled={reading} className="w-full">
           <UploadIcon className="w-[18px] h-[18px]" />
@@ -366,7 +366,7 @@ export default function Migrate() {
           <div className="text-[13px] text-muted min-w-0 truncate"><span className="font-semibold text-text">{fileName}</span></div>
           <span className="text-[12px] text-faint shrink-0">{previewRows.length} ready · {built.skipped.length} skipped</span>
         </div>
-        <p className="text-[13px] text-muted">Kura couldn’t auto-detect this app, so tell it which column is which. Leave a column as “— none —” if your file doesn’t have it.</p>
+        <p className="text-[13px] text-muted">Smara couldn’t auto-detect this app, so tell it which column is which. Leave a column as “— none —” if your file doesn’t have it.</p>
 
         <div className="bg-surface border border-border rounded-[14px] p-4 space-y-3.5">
           <div className="text-xs font-bold uppercase tracking-wide text-faint">Columns</div>
@@ -452,7 +452,7 @@ export default function Migrate() {
     return (
       <div className="space-y-4">
         <p className="text-[13px] text-muted leading-relaxed">
-          We found <strong>{foundAccounts.length}</strong> account{foundAccounts.length === 1 ? '' : 's'} in <span className="font-semibold text-text">{fileName}</span>. For each, create a new Kura account or merge it into one you already have. Currency can’t change once an account exists, so check it now.
+          We found <strong>{foundAccounts.length}</strong> account{foundAccounts.length === 1 ? '' : 's'} in <span className="font-semibold text-text">{fileName}</span>. For each, create a new Smara account or merge it into one you already have. Currency can’t change once an account exists, so check it now.
         </p>
         {foundAccounts.map((f) => {
           const p = plan[f.name] ?? {}
@@ -604,7 +604,7 @@ export default function Migrate() {
       <div className="max-w-md mx-auto py-8 space-y-5">
         <div className="text-center space-y-2">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-income/15 text-income grid place-items-center text-2xl">✓</div>
-          <div className="text-[18px] font-extrabold text-text">Welcome to Kura 🐢</div>
+          <div className="text-[18px] font-extrabold text-text">Welcome to Smara 🐢</div>
           <p className="text-[13.5px] text-muted">
             <span className="font-semibold text-text">{r.inserted?.toLocaleString()}</span> transactions imported
             {r.accountsCreated ? <>, {r.accountsCreated} new account{r.accountsCreated === 1 ? '' : 's'}</> : null}

@@ -147,10 +147,10 @@ export default function App() {
                     feature="Bank statement upload"
                     tagline="A Premium feature"
                     perks={[
-                      'Turn a PDF or CSV statement into ready-to-review Kura rows',
+                      'Turn a PDF or CSV statement into ready-to-review Smara rows',
                       'Password-protected and multi-currency statements',
                       'Auto totals check so nothing is missed',
-                      'Kura learns each bank’s layout and remembers it',
+                      'Smara learns each bank’s layout and remembers it',
                     ]}
                   >
                     <BankStatement />

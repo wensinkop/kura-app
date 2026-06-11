@@ -1,5 +1,5 @@
 // App-migration adapters (Session 13). Turn another expense tracker's export
-// into reviewable Kura rows, so switching to Kura is painless.
+// into reviewable Smara rows, so switching to Smara is painless.
 //
 // Two paths share one intermediate row shape (below) and one downstream import
 // (data.js importMigration):
@@ -9,7 +9,7 @@
 //   • Generic column-mapper — for any other CSV/xlsx: reuses the statement
 //     converter's column-detection engine (lib/statement.js) and adds account /
 //     category / type columns, so Money Lover / Wallet / Spendee / Mint exports
-//     work by pointing Kura at the right columns.
+//     work by pointing Smara at the right columns.
 //
 // Pure string/number work only (no DB, no React). The page reads the file into
 // a string[][] grid (CSV via parseStatementText, xlsx via lib/xlsx readXlsxGrid)

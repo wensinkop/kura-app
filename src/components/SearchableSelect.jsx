@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 // Combobox: type-or-click select with a filtered, optionally grouped dropdown
 // and keyboard nav (↑/↓ move · Enter/Tab commit · Esc cancel).
-// Ported from Gelato; restyled to Kura tokens. Serves Kura's category /
+// Ported from Gelato; restyled to Smara tokens. Serves Smara's category /
 // sub-category picker and the grouped-account picker.
 //
 // Props:

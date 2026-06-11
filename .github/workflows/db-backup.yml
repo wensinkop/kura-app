@@ -2,7 +2,7 @@ name: Nightly DB backup
 
 # Free safety net for the production Supabase DB (~6,500 real transactions).
 # Runs pg_dump nightly and stores the dump as a downloadable artifact (90-day
-# retention). Restore with: pg_restore -d "<conn>" kura-backup-<stamp>.dump
+# retention). Restore with: pg_restore -d "<conn>" smara-backup-<stamp>.dump
 #
 # Connection is passed via standard libpq PG* env vars (no URL = no
 # url-encoding pitfalls). Host/user/db are NOT secret and live here; only the
@@ -45,12 +45,12 @@ jobs:
           ts=$(date -u +%Y%m%d-%H%M)
           echo "STAMP=$ts" >> "$GITHUB_ENV"
           pg_dump --schema=public --no-owner --no-privileges \
-            -Fc -f "kura-backup-$ts.dump"
-          ls -lh kura-backup-*.dump
+            -Fc -f "smara-backup-$ts.dump"
+          ls -lh smara-backup-*.dump
 
       - name: Upload backup artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kura-db-backup-${{ env.STAMP }}
-          path: kura-backup-*.dump
+          name: smara-db-backup-${{ env.STAMP }}
+          path: smara-backup-*.dump
           retention-days: 90

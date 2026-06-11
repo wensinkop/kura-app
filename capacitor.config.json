@@ -1,6 +1,6 @@
 {
-  "appId": "com.kura.app",
-  "appName": "Kura",
+  "appId": "com.smara.app",
+  "appName": "Smara",
   "webDir": "dist",
   "plugins": {
     "Keyboard": {
